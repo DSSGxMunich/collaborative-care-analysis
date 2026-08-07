@@ -29,9 +29,6 @@ Depression Treatment Navigator for Primary Care
 ├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
 │   └── figures        <- Generated graphics and figures to be used in reporting
 │
-├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
-│                         generated with `pip freeze > requirements.txt`
-│
 ├── setup.cfg          <- Configuration file for flake8
 │
 └── collaborative_care_analysis   <- Source code for use in this project.

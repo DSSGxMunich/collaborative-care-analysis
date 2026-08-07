@@ -1,16 +1,8 @@
-<<<<<<< HEAD
-# dssg-template documentation!
-
-## Description
-
-DSSGx lessgo
-=======
 # Collaborative Care Analysis documentation!
 
 ## Description
 
 Depression Treatment Navigator for Primary Care
->>>>>>> 865f245 (Address further PR change requests)
 
 ## Commands
 
