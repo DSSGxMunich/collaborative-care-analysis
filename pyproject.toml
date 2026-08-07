@@ -2,12 +2,16 @@
 requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
 [project]
-name = "idc"
+name = "collaborative_care_analysis"
 version = "0.0.1"
-description = "DSSGx lessgo"
+description = "Depression Treatment Navigator for Primary Care"
 authors = [
-  { name = "Alexander Richard" },
+  { name = "DSSGx Munich 2026 team" },
 ]
 
 readme = "README.md"
@@ -30,13 +34,13 @@ requires-python = "~=3.10.0"
 
 [tool.ruff]
 line-length = 99
-src = ["idc"]
-include = ["pyproject.toml", "idc/**/*.py"]
+src = ["collaborative_care_analysis"]
+include = ["pyproject.toml", "collaborative_care_analysis/**/*.py"]
 
 [tool.ruff.lint]
 extend-select = ["I"]  # Add import sorting
 
 [tool.ruff.lint.isort]
-known-first-party = ["idc"]
+known-first-party = ["collaborative_care_analysis"]
 force-sort-within-sections = true
 
