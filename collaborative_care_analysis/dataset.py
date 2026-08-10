@@ -20,10 +20,12 @@ def _matches_dataset_id(script_path: Path, dataset_id: str) -> bool:
     descriptive_id = "_".join(name_parts[2:])
     return dataset_id in (numeric_id, descriptive_id)
 
+
 @app.callback()
 def main():
     """Empty callback to require command names."""
     pass
+
 
 @app.command()
 def export(
