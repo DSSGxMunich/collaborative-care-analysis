@@ -3,17 +3,31 @@
 *.tsv
 *.xlsx
 *.xls
+*.ods
 *.parquet
 *.feather
+*.arrow
 *.pkl
 *.pickle
+*.npy
+*.npz
 *.h5
 *.hdf5
 *.db
 *.sqlite
 *.sqlite3
+
+# Stata, SAS, SPSS
 *.dta
+*.sas7bdat
+*.xpt
 *.sav
+*.zsav
+
+# R
+*.rds
+*.RData
+*.rda
 
 # Data
 /data/**
