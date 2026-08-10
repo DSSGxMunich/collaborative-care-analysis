@@ -1,17 +1,20 @@
-from pathlib import Path
-
 import pandas as pd
 
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-RAW_DATA_DIR = REPO_ROOT / "data" / "raw"
+from collaborative_care_analysis.config import RAW_DATA_DIR
+
+FILE_PATH = (
+    RAW_DATA_DIR
+    / "Individual Datasets"
+    / "23_Rollman_2009"
+    / "24_25_Rollman_OT_and_RELAX_trials_data_for_meta_analysis"
+    / "OT Meta Data_ Munich.xlsx"
+)
 
 
-def load(file_path):
-    """Load an Excel file from the data/raw directory."""
+def load():
+    """Load the Rollman 2009 dataset."""
 
-    file_path = RAW_DATA_DIR / file_path
+    if not FILE_PATH.exists():
+        raise FileNotFoundError(f"File not found: {FILE_PATH}")
 
-    if not file_path.exists():
-        raise FileNotFoundError(f"File not found: {file_path}")
-
-    return pd.read_excel(file_path, sheet_name=None)
+    return pd.read_excel(FILE_PATH, sheet_name=None)
