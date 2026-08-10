@@ -29,25 +29,33 @@ version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "loguru" },
-    { name = "mkdocs" },
     { name = "pip" },
-    { name = "pytest" },
     { name = "python-dotenv" },
-    { name = "ruff" },
     { name = "tqdm" },
     { name = "typer" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "mkdocs" },
+    { name = "pytest" },
+    { name = "ruff" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "loguru" },
-    { name = "mkdocs" },
     { name = "pip" },
-    { name = "pytest" },
     { name = "python-dotenv" },
-    { name = "ruff" },
     { name = "tqdm" },
     { name = "typer" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "mkdocs", specifier = ">=1.6.1" },
+    { name = "pytest", specifier = ">=9.1.1" },
+    { name = "ruff", specifier = ">=0.16.2" },
 ]
 
 [[package]]
