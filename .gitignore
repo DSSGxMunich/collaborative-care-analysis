@@ -1,5 +1,30 @@
+# Data files
+*.csv
+*.tsv
+*.xlsx
+*.xls
+*.parquet
+*.feather
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.db
+*.sqlite
+*.sqlite3
+*.dta
+*.sav
+
 # Data
-/data/
+/data/**
+!/data/external/
+!/data/internal/
+!/data/processed/
+!/data/raw/
+!/data/external/.gitkeep
+!/data/internal/.gitkeep
+!/data/processed/.gitkeep
+!/data/raw/.gitkeep
 
 # Mac OS-specific storage files
 .DS_Store
@@ -88,7 +113,9 @@ docs/site/
 target/
 
 # Jupyter Notebook
+*.ipynb
 .ipynb_checkpoints
+
 
 # IPython
 profile_default/
