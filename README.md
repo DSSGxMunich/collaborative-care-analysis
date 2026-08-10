@@ -52,3 +52,38 @@ Depression Treatment Navigator for Primary Care
 
 --------
 
+## Development
+
+### Setup
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if it is not already available, then create the project environment and install its dependencies:
+
+```bash
+uv sync
+```
+
+### Linting and Formatting
+
+Run the following command to check the code and apply formatting fixes:
+
+```bash
+uv run ruff check . --fix && uv run ruff format
+```
+
+### Tests
+
+Run the test suite with:
+
+```bash
+uv run pytest
+```
+
+### Pre-commit Hooks (optional)
+
+Register the repository hooks to run checks automatically before each commit:
+
+```bash
+uvx pre-commit install
+```
+
+This will automatically run checks, such as the linter and tests, before each commit. If any of the checks fail, the commit will be aborted.
