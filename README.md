@@ -6,6 +6,7 @@ Depression Treatment Navigator for Primary Care
 
 ```
 ├── LICENSE            <- Open-source license if one is chosen
+├── AGENTS.md <- Data privacy rules for AI coding agents.
 ├── README.md          <- The top-level README for developers using this project.
 ├── data
 │   ├── external       <- Data from third party sources.
