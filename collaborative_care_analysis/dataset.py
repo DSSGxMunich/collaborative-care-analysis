@@ -24,7 +24,6 @@ def _matches_dataset_id(script_path: Path, dataset_id: str) -> bool:
 @app.callback()
 def main():
     """Empty callback to require command names."""
-    pass
 
 
 @app.command()
