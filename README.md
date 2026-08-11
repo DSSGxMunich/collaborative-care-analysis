@@ -2,6 +2,18 @@
 
 Depression Treatment Navigator for Primary Care
 
+## Exporting Datasets
+
+Export datasets to the interim data directory by running the following command. You can optionally specify a dataset id to export a specific dataset. If no dataset id is specified, all datasets will be exported.
+
+```bash
+uv run collaborative_care_analysis/dataset.py export
+
+uv run collaborative_care_analysis/dataset.py export 04
+
+uv run collaborative_care_analysis/dataset.py export Bekelman_2018
+```
+
 ## Project Organization
 
 ```
