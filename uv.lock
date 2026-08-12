@@ -31,6 +31,7 @@ dependencies = [
     { name = "loguru" },
     { name = "pandas" },
     { name = "pip" },
+    { name = "pyreadstat" },
     { name = "python-dotenv" },
     { name = "tqdm" },
     { name = "typer" },
@@ -48,6 +49,7 @@ requires-dist = [
     { name = "loguru" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "pip" },
+    { name = "pyreadstat", specifier = ">=1.3.5" },
     { name = "python-dotenv" },
     { name = "tqdm" },
     { name = "typer" },
@@ -224,6 +226,15 @@ wheels = [
 ]
 
 [[package]]
+name = "narwhals"
+version = "2.24.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/1d/58946e5aab18393e793bd4add6985b95d0e01c3a2d832f38f54468b10dcd/narwhals-2.24.0.tar.gz", hash = "sha256:b5c0f684ccd9d7475b564111e319a4964abcf2baf79d3cf6b1003d06ac9b828d", size = 661143, upload-time = "2026-07-13T10:49:19.086Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7e/85/a5bfaebfd305ac18b57b0854d74e37e586809061a91fda62f0bd50c8518e/narwhals-2.24.0-py3-none-any.whl", hash = "sha256:42fdedf44e5b2ca7505630d45b4ac3058f38d8485cba9fe1652ca23152df7489", size = 461030, upload-time = "2026-07-13T10:49:17.571Z" },
+]
+
+[[package]]
 name = "numpy"
 version = "2.2.6"
 source = { registry = "https://pypi.org/simple" }
@@ -318,6 +329,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c3/b2/bc9c9196916376152d655522fdcebac55e66de6603a76a02bca1b6414f6c/pygments-2.20.0.tar.gz", hash = "sha256:6757cd03768053ff99f3039c1a36d6c0aa0b263438fcab17520b30a303a82b5f", size = 4955991, upload-time = "2026-03-29T13:29:33.898Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f4/7e/a72dd26f3b0f4f2bf1dd8923c85f7ceb43172af56d63c7383eb62b332364/pygments-2.20.0-py3-none-any.whl", hash = "sha256:81a9e26dd42fd28a23a2d169d86d7ac03b46e2f8b59ed4698fb4785f946d0176", size = 1231151, upload-time = "2026-03-29T13:29:30.038Z" },
+]
+
+[[package]]
+name = "pyreadstat"
+version = "1.3.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "narwhals" },
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4a/5d/0dce5f7c8570afd3a2595f95c5fa8f814adfcdcd5b248470e3b6f132eb33/pyreadstat-1.3.5.tar.gz", hash = "sha256:c7332a764b221193522cbf942ed07898aac48180fe1a4435a5dc9a2fdd81c1e1", size = 514802, upload-time = "2026-05-19T12:22:09.909Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7c/a3/8cb19a1c3cb043dd85f4fc5e454110bc78fb10039931222c5e3c45a0d37f/pyreadstat-1.3.5-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:0ccd4584a77b38d8ed22e20eab53fe33ad7d8ca4f29d784289f805762da2eac5", size = 768434, upload-time = "2026-05-19T12:21:20.467Z" },
+    { url = "https://files.pythonhosted.org/packages/49/59/98cff8774a8322cf69414b72ab24c25ec504b63c46a65648c741b1b90869/pyreadstat-1.3.5-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:e2bebea1c9c3b2de6770a94285ce67c7f3dd8d3f998ab57b94f66762a91f3b23", size = 729300, upload-time = "2026-05-19T12:21:22.65Z" },
+    { url = "https://files.pythonhosted.org/packages/be/a4/13e45b6f04d06e40ec5bbaf9a1fd67e3698b8c3024c701be65c92c1011da/pyreadstat-1.3.5-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:14940768eac1ddf6e9683be2d7f3d751705e71bbd0851879b42c4bb365b898b6", size = 2489546, upload-time = "2026-05-19T12:21:24.417Z" },
+    { url = "https://files.pythonhosted.org/packages/66/4c/e677373407f6cf3a3b68a8f5f9f28b93b242ee4fa5e13e1418c10db255cc/pyreadstat-1.3.5-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:58ef9ab49975fece97f94ce81630e396669b7aa000e3d19764c87a2c7d3649dc", size = 2561981, upload-time = "2026-05-19T12:21:26.464Z" },
+    { url = "https://files.pythonhosted.org/packages/fc/9c/3a1a043a3a4c8718215e7bf51351b74059006134e7e1c7e615f9256ec8d0/pyreadstat-1.3.5-cp310-cp310-win_amd64.whl", hash = "sha256:dcc6fb1fe0380ef042e78cbabeff79a8fe11a42e6f39c614d9a3615242545562", size = 2033416, upload-time = "2026-05-19T12:21:29.487Z" },
 ]
 
 [[package]]
