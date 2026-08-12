@@ -1,4 +1,3 @@
-import pandas as pd
 import pyreadstat
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
