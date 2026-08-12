@@ -16,6 +16,8 @@ classifiers = [
     
 ]
 dependencies = [
+    "jupyter>=1.1.1",
+    "lab>=8.10",
     "loguru",
     "pandas>=2.3.3",
     "pip",
