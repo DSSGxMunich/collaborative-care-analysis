@@ -21,6 +21,7 @@ dependencies = [
     "loguru",
     "pandas>=2.3.3",
     "pip",
+    "pyreadstat>=1.3.5",
     "python-dotenv",
     "tqdm",
     "typer",
