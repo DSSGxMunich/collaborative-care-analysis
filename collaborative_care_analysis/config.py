@@ -18,6 +18,7 @@ EXTERNAL_DATA_DIR = DATA_DIR / "external"
 
 RAW_DATASETS_DIR = RAW_DATA_DIR / "Individual Datasets"
 INTERIM_DATASETS_EXPORT_DIR = INTERIM_DATA_DIR / "exported_datasets"
+HARMONIZED_DATASETS_DIR = INTERIM_DATA_DIR / "harmonized_datasets"
 
 MODELS_DIR = PROJ_ROOT / "models"
 
