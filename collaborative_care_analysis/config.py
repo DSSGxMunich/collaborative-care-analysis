@@ -18,11 +18,15 @@ EXTERNAL_DATA_DIR = DATA_DIR / "external"
 
 RAW_DATASETS_DIR = RAW_DATA_DIR / "Individual Datasets"
 INTERIM_DATASETS_EXPORT_DIR = INTERIM_DATA_DIR / "exported_datasets"
+HARMONIZED_DATASETS_DIR = INTERIM_DATA_DIR / "harmonized_datasets"
 
 MODELS_DIR = PROJ_ROOT / "models"
 
 REPORTS_DIR = PROJ_ROOT / "reports"
 FIGURES_DIR = REPORTS_DIR / "figures"
+
+COLNAME_STUDYID = "STUDY_ID"
+COLNAME_ROWID = "ROW_ID"
 
 # If tqdm is installed, configure loguru with tqdm.write
 # https://github.com/Delgan/loguru/issues/135

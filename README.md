@@ -14,6 +14,18 @@ uv run collaborative_care_analysis/dataset.py export 04
 uv run collaborative_care_analysis/dataset.py export Bekelman_2018
 ```
 
+## Harmonizing Datasets
+
+Harmonize datasets by running the following command. This will load each dataset and apply any harmonization scripts found in `harmonization_*` folders, saving the results to the interim harmonized datasets directory. You can optionally specify a dataset id to harmonize a specific dataset.
+
+```bash
+uv run collaborative_care_analysis/dataset.py harmonize
+
+uv run collaborative_care_analysis/dataset.py harmonize 17
+
+uv run collaborative_care_analysis/dataset.py harmonize Katon_2001
+```
+
 ## Project Organization
 
 ```
