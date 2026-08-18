@@ -3,5 +3,7 @@ import pandas as pd
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
 
 
-def load(file_path=RAW_DATASETS_DIR / "02_03_Aragones_2012_2019" / "indi_christos.csv"):
+def load(
+    file_path=RAW_DATASETS_DIR / "02_03_Aragones_2012_2019" / "Aragones" / "indi_christos.csv",
+) -> pd.DataFrame:
     return pd.read_csv(file_path)
