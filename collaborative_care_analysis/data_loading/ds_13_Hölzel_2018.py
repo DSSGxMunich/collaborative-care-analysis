@@ -47,7 +47,6 @@ VALUE_TRANSLATION_MAP = {
     "perceived_financial_adequacy": {
         "ja": "yes",
         "es geht so": "manageable",
-        "nein, schlect": "no, poor",
         "nein, schlecht": "no, poor",
     },
 }
