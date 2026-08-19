@@ -86,3 +86,24 @@ dataset-specific codebooks.
 
 Missing or unknown values should remain missing and should not be automatically
 converted to `"no"` or another category.
+
+## 5. Follow-up Time
+
+Use `follow_up_months` to represent the timing of each measurement relative
+to baseline.
+
+The value should indicate the number of months since baseline.
+
+Example:
+
+patient_id | follow_up_months | phq9
+1          | 0                | 18
+1          | 3                | 12
+1          | 6                | 8
+
+Baseline should be represented as:
+
+`follow_up_months = 0`
+
+If the original dataset uses another variable to represent measurement timing,
+it should be harmonized to `follow_up_months`.
