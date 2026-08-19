@@ -40,18 +40,18 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         "scr_snf": "lives_in_facility",
         "scr_tele": "has_telephone_access",
         "timept": "timepoint",
-        "crf_sa": "alcohol_abuse_history",
+        "crf_sa": "has_alcohol_abuse_history",
         "crf_sao": "substance_abuse_history",
         "schfi04": "physical_activity_frequency",
-        "ins_priv": "private_insurance",  # <-- updated here
+        "ins_priv": "has_private_insurance",  # <-- updated here
     }
 
     df = df.rename(columns=rename_dict)
 
     # --- Step 3A: Harmonize private insurance (special case) ---
-    if "private_insurance" in df.columns:
-        df["private_insurance"] = (
-            df["private_insurance"]
+    if "has_private_insurance" in df.columns:
+        df["has_private_insurance"] = (
+            df["has_private_insurance"]
             .apply(lambda x: "Yes" if pd.notna(x) and str(x).strip() != "" else "No")
             .astype("string")
         )
@@ -107,7 +107,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         "lives_in_facility": {0: "No", 1: "Yes"},
         "has_telephone_access": {0: "No", 1: "Yes"},
         "timepoint": {1: "Baseline", 2: "3 months", 3: "6 months", 4: "12 months"},
-        "alcohol_abuse_history": {0: "No", 1: "Yes"},
+        "has_alcohol_abuse_history": {0: "No", 1: "Yes"},
         "substance_abuse_history": {0: "No", 1: "Yes"},
         "physical_activity_frequency": {
             1: "Never or rarely",
@@ -119,7 +119,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
 
     for var, mapping in category_maps.items():
         if var in df.columns:
-            df[var] = df[var].replace(mapping).astype("string")
+            df[var] = df[var].map(mapping).astype("string")
 
     # --- Step 4: Ensure age is numeric ---
     if "age" in df.columns:

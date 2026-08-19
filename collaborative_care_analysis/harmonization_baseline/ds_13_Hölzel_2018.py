@@ -75,6 +75,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "study_center",
             "intervention_cluster",
             "practice_id",
+            "follow_up_months",
         ]
     ]
 

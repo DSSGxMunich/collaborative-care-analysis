@@ -18,6 +18,7 @@ def load(
         df_wide,
         on="pt_id",
         how="left",
+        validate="many_to_one",
     )
 
     return df
