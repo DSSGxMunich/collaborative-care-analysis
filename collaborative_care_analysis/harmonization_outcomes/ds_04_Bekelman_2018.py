@@ -9,6 +9,7 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df[
         [
             COLNAME_STUDYID,
+            "studyid", # identifier for patient and caregiver
             "timept",  # 0-screening, 1-baseline, 2-3month, 3-6month, 4-12month
             "kccqos",  # overall KCCQ score, heart-failure-specific quality of life
             "phqtotal",  # depressive symptom (PHQ-9)
