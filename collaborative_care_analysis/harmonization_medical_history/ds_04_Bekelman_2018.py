@@ -108,8 +108,7 @@ def harmonize_medical_history(df: pd.DataFrame) -> pd.DataFrame:
     # NOTE: ROW_ID must be kept -- dataset.py's harmonize pipeline raises a
     # ValueError if a harmonization function drops it (see traceback from
     # running `uv run collaborative_care_analysis/dataset.py harmonize`).
-    # This differs from Loiruck's PR #20 (which dropped ROW_ID) -- that PR
-    # may predate this check being added, or may still need updating too.
+    
     return harmonized_df[
         [
             "STUDY_ID",
