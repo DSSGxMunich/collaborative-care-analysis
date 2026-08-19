@@ -2,9 +2,22 @@ import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
 
-# In this folder there is another datset (Schillok_PCDM_condensed_wide.csv) that has key demographic data (age, gender), that I didnt load yet but should do when we settle on the harmonization
-# I chose this dataset because it has all of the questionaire responses and the other one doesn´t
 
+def load(
+    long_file_path=RAW_DATASETS_DIR / "05_Bekelman_2015" / "Schillok_PCDM_condensed_long.csv",
+    wide_file_path=RAW_DATASETS_DIR / "05_Bekelman_2015" / "Schillok_PCDM_condensed_wide.csv",
+):
+    # Load long dataset containing questionnaire responses
+    df_long = pd.read_csv(long_file_path)
 
-def load(file_path=RAW_DATASETS_DIR / "05_Bekelman_2015" / "Schillok_PCDM_condensed_long.csv"):
-    return pd.read_csv(file_path)
+    # Load wide dataset containing demographic and patient-level data
+    df_wide = pd.read_csv(wide_file_path)
+
+    # Merge both datasets using patient ID
+    df = df_long.merge(
+        df_wide,
+        on="pt_id",
+        how="left",
+    )
+
+    return df
