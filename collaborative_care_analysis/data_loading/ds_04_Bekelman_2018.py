@@ -513,4 +513,13 @@ def load(
         print(f"  {len(OUTCOME_COLS)} outcome")
         print(f"  {len(CAREGIVER_COLS)} caregiver columns dropped")
 
+    cols_first = [
+        "patient_id",
+        "follow_up_months",
+        "arm",
+        "days_until_censoring",
+        "days_until_death",
+    ]
+    remaining = [c for c in df_long.columns if c not in cols_first]
+    df = df[cols_first + remaining]
     return df
