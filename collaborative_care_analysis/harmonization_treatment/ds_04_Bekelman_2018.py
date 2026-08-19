@@ -99,7 +99,7 @@ def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
             "STUDY_ID",
             "patient_id",
             "study_arm",
-            "follow_up_months"
+            "follow_up_months",
             "is_nurse_involved",
             "is_social_worker_involved",
             "is_palliative_care_specialist_involved",
