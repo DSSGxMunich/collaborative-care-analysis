@@ -28,12 +28,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         harmonized_df["timept"], timept_map, "timept"
     )
 
-    # study arm, human-readable (same convention as the treatment-info cluster)
-    study_arm_map = {1: "control", 2: "intervention"}
-    harmonized_df["study_arm"] = _map_with_check(
-        harmonized_df["arm"], study_arm_map, "arm"
-    )
-
     yes_no_map = {0: "no", 1: "yes"}
 
     # prior cardiac procedures
@@ -83,9 +77,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     # allergies, free text -- left as-is, just renamed
-    harmonized_df = harmonized_df.rename(
-        columns={"crf_allergies": "allergies_description"}
-    )
+    harmonized_df = harmonized_df.rename(columns={"crf_allergies": "allergies_description"})
 
     # return the harmonized dataset which has only the values we want
     return harmonized_df[
@@ -93,7 +85,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "STUDY_ID",
             "patient_id",
             "follow_up_months",
-            "study_arm",
             "has_had_percutaneous_coronary_intervention",
             "has_had_coronary_artery_bypass_graft",
             "has_no_cardiac_device",
