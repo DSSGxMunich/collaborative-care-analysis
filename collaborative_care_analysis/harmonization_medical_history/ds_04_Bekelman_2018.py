@@ -6,19 +6,6 @@ from collaborative_care_analysis.utils import map_with_check
 def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
 
-    # patient_id: renamed from raw "studyid" (which is actually the
-    # per-patient id within this trial, not a study-level id).
-    harmonized_df = harmonized_df.rename(columns={"studyid": "patient_id"}, errors="raise")
-
-    # follow_up_months: months since baseline (baseline = 0), per convention.
-    # Raw "timept" also has a value for the pre-baseline screening visit
-    # (0), which isn't a follow-up relative to baseline -- left as missing
-    # rather than forced into the numeric scale.
-    timept_map = {1: 0, 2: 3, 3: 6, 4: 12}
-    harmonized_df["follow_up_months"] = map_with_check(
-        harmonized_df["timept"], timept_map, "timept"
-    )
-
     yes_no_map = {0: "no", 1: "yes"}
 
     # prior cardiac procedures
