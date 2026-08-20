@@ -47,7 +47,6 @@ VALUE_TRANSLATION_MAP = {
     "perceived_financial_adequacy": {
         "ja": "yes",
         "es geht so": "manageable",
-        "nein, schlect": "no, poor",
         "nein, schlecht": "no, poor",
     },
 }
@@ -60,6 +59,10 @@ def load(
     / "20231120_German_IMPACT_f__r_IPD_MA.sav",
 ) -> pd.DataFrame:
     """
+    Load the German IMPACT dataset and reshape it to longitudinal format.
+
+    The SPSS and Stata files contain the same information. The SPSS file is
+    used because its column names and variable coding are clearer.
     Load the German IMPACT dataset and reshape it to longitudinal format.
 
     The SPSS and Stata files contain the same information. The SPSS file is
@@ -116,9 +119,9 @@ def load(
 
     # These PHQ columns encode the month directly in the column name.
     phq_month_cols = {
-        f"PHQ_{followup_month}_Monate"
-        for followup_month in TIMEPOINT_MAP.values()
-        if f"PHQ_{followup_month}_Monate" in df.columns
+        f"PHQ_{follow_up_months}_Monate"
+        for follow_up_months in TIMEPOINT_MAP.values()
+        if f"PHQ_{follow_up_months}_Monate" in df.columns
     }
 
     # Static columns do not encode an assessment time.
@@ -130,7 +133,7 @@ def load(
 
     longitudinal_dfs = []
 
-    for timepoint, followup_month in TIMEPOINT_MAP.items():
+    for timepoint, follow_up_months in TIMEPOINT_MAP.items():
         prefix = f"GI_{timepoint}_"
 
         timepoint_cols = [col for col in df.columns if col.startswith(prefix)]
@@ -139,7 +142,7 @@ def load(
         timepoint_rename_map = {col: col.replace(prefix, "GI_", 1) for col in timepoint_cols}
 
         # Add PHQ_X_Monate to the corresponding assessment.
-        phq_month_col = f"PHQ_{followup_month}_Monate"
+        phq_month_col = f"PHQ_{follow_up_months}_Monate"
 
         if phq_month_col in df.columns:
             timepoint_cols.append(phq_month_col)
@@ -157,7 +160,7 @@ def load(
             .copy()
         )
 
-        timepoint_df["followup_month"] = followup_month
+        timepoint_df["follow_up_months"] = follow_up_months
 
         longitudinal_dfs.append(timepoint_df)
 
@@ -169,7 +172,7 @@ def load(
     # Put the main identifiers first.
     front_cols = [
         "patient_id",
-        "followup_month",
+        "follow_up_months",
     ]
 
     df = df[front_cols + [col for col in df.columns if col not in front_cols]]
