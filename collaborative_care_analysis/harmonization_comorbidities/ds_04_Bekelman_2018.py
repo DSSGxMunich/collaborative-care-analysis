@@ -1,11 +1,12 @@
 import pandas as pd
 
 
-def harmonize_example(df: pd.DataFrame) -> pd.DataFrame:
+def harmonize(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
     # Columns needed for later merge operations.
     id_columns = ["STUDY_ID", "patient_id", "follow_up_months"]
 
-    df = df.rename(columns={"tics_tot": "tics_total"})
+    df.rename(columns={"ticstot": "tics_total"}, inplace=True, errors="raise")
 
     # Max points per item, per codebook.
     tics_max = {
