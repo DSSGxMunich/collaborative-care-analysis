@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
+def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
 
     # rename the column and change the values to categorical
