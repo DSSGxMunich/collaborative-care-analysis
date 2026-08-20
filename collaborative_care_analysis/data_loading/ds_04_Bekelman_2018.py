@@ -14,7 +14,8 @@ def load(
     )
 
     # Remove all rows and columns with all NA values.
-    df.dropna(how="all", inplace=True)
+    df.dropna(how="all", axis=0, inplace=True)
+    df.dropna(how="all", axis=1, inplace=True)
 
     # Remove leading and trailing whitespaces from column names.
     df.columns = df.columns.str.strip()
@@ -503,10 +504,10 @@ def load(
     # Assemble the harmonized frame
     keep_cols = FINAL_ID_COLS + TIME_INDEPENDENT_COLS + TIME_DEPENDENT_COLS + OUTCOME_COLS
 
-    df_long = df[keep_cols].sort_values(["patient_id", "follow_up_months"]).reset_index(drop=True)
+    df = df[keep_cols].sort_values(["patient_id", "follow_up_months"]).reset_index(drop=True)
 
     if verbose:
-        print(f"\nHarmonized long frame: {df_long.shape}")
+        print(f"\nHarmonized long frame: {df.shape}")
         print(f"  {len(FINAL_ID_COLS)} id/time")
         print(f"  {len(TIME_INDEPENDENT_COLS)} static")
         print(f"  {len(TIME_DEPENDENT_COLS)} time-varying")
@@ -520,6 +521,6 @@ def load(
         "days_until_censoring",
         "days_until_death",
     ]
-    remaining = [c for c in df_long.columns if c not in cols_first]
+    remaining = [c for c in df.columns if c not in cols_first]
     df = df[cols_first + remaining]
     return df
