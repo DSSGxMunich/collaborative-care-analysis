@@ -13,22 +13,17 @@ def load(
         dtype={251: "str", 253: "str", 300: "str"},
     )
 
-    # Remove all rows and columns with all NA values.
     df.dropna(how="all", axis=0, inplace=True)
     df.dropna(how="all", axis=1, inplace=True)
-
-    # Remove leading and trailing whitespaces from column names.
     df.columns = df.columns.str.strip()
 
     # Remove all columns that are not explained in the codebook.
     codebook_dict = pd.read_excel(
         io=RAW_DATASETS_DIR / "04_Bekelman_2018" / "Codebook_Bekelman et al. (2018).xlsx",
-        sheet_name=None,  # loads all worksheets
+        sheet_name=None,
     )
-
     for name in codebook_dict:
         codebook_dict[name].dropna(how="all", inplace=True)
-
     for name, worksheet in list(codebook_dict.items())[1:]:
         worksheet.columns = worksheet.columns.str.strip()
         worksheet["Variable"] = worksheet["Variable"].str.strip()
@@ -37,8 +32,8 @@ def load(
     for col in df.columns:
         column_source_dict[col] = []
         for name, worksheet in list(codebook_dict.items())[1:]:
-            if col in [val for val in worksheet["Variable"].values]:
-                column_source_dict[col].append(f"{name}")
+            if col in worksheet["Variable"].values:
+                column_source_dict[col].append(name)
 
     empty_cols = [col for col in column_source_dict if not column_source_dict[col]]
     df.drop(labels=empty_cols, axis=1, inplace=True)
@@ -52,11 +47,14 @@ def load(
         "ticstotv2",
         "kccqos",
     ]
-
     has_patient_score = df[patient_score_cols].notna().any(axis=1)
     df = df.loc[has_patient_score]
 
-    TIME_INDEPENDENT_COLS = [
+    # Column classification
+    RAW_ID_COLS = ["studyid", "timept"]
+    RAW_OUTCOME_COLS = ["deathday", "outday"]
+
+    RAW_TIME_INDEPENDENT_COLS = [
         # demographics
         "dem_age",
         "dem_smoke",
@@ -168,7 +166,7 @@ def load(
         "arm",
     ]
 
-    TIME_DEPENDENT_COLS = [
+    RAW_TIME_DEPENDENT_COLS = [
         "tics01",
         "tics02",
         "tics03",
@@ -386,8 +384,7 @@ def load(
         "satistot",
     ]
 
-    # Caregiver instruments
-    CAREGIVER_COLS = [
+    RAW_CAREGIVER_COLS = [
         "cg_ptrel",
         "cg_live",
         "cg_yrs",
@@ -405,20 +402,15 @@ def load(
 
     TIMEPT_TO_MONTHS = {1: 0, 2: 3, 3: 6, 4: 12}
 
-    ID_COLS = ["patient_id", "timept"]
-    FINAL_ID_COLS = ["patient_id", "follow_up_months"]
-    OUTCOME_COLS = ["days_until_death", "days_until_censoring"]
+    # These columns should be renamed as per our convention.
+    RENAME_MAP = {
+        "studyid": "patient_id",
+        "deathday": "days_until_death",
+        "outday": "days_until_censoring",
+    }
 
-    df = df.rename(
-        columns={
-            "studyid": "patient_id",
-            "deathday": "days_until_death",
-            "outday": "days_until_censoring",
-        }
-    )
-
-    # All patients should have some outcome (either censoring / end of study OR death) recorded.
-    outcome_consistency = df.groupby("patient_id")[OUTCOME_COLS].nunique()
+    # All patients should have some outcome (censoring or death) recorded.
+    outcome_consistency = df.groupby("studyid")[RAW_OUTCOME_COLS].nunique()
     outcome_violations = outcome_consistency[(outcome_consistency > 1).any(axis=1)]
     if verbose:
         print(f"Patients with conflicting outcome values across visits: {len(outcome_violations)}")
@@ -426,38 +418,33 @@ def load(
             print(outcome_violations)
     assert len(outcome_violations) == 0, "Outcome columns disagree across a patient's rows"
 
-    # Broadcast the single recorded value to every row for that patient, same
-    # logic as the static-covariate collapse: 'max' skips NaN, so it picks up the
-    # real value regardless of which row it's on.
-    for col in OUTCOME_COLS:
-        df[col] = df.groupby("patient_id")[col].transform("max")
+    # Broadcast the single recorded value to every row for that patient.
+    for col in RAW_OUTCOME_COLS:
+        df[col] = df.groupby("studyid")[col].transform("max")
 
-    # Print for which patients no outcome is recorded.
     if verbose:
-        fully_missing = df.groupby("patient_id")[OUTCOME_COLS].apply(
+        fully_missing = df.groupby("studyid")[RAW_OUTCOME_COLS].apply(
             lambda g: g.isna().all().all()
         )
         print(f"Patients with no outcome data at all: {fully_missing.sum()}")
 
     # Verify every column is accounted for.
     all_classified = (
-        set(TIME_INDEPENDENT_COLS)
-        | set(TIME_DEPENDENT_COLS)
-        | set(CAREGIVER_COLS)
-        | set(ID_COLS)
-        | set(OUTCOME_COLS)
+        set(RAW_TIME_INDEPENDENT_COLS)
+        | set(RAW_TIME_DEPENDENT_COLS)
+        | set(RAW_CAREGIVER_COLS)
+        | set(RAW_ID_COLS)
+        | set(RAW_OUTCOME_COLS)
     )
     unaccounted = set(df.columns) - all_classified
     if verbose:
         print(f"Unaccounted columns: {unaccounted or 'none'}")
 
-    # A column in two buckets would be duplicated in the output.
-    buckets = TIME_INDEPENDENT_COLS + TIME_DEPENDENT_COLS + CAREGIVER_COLS
+    buckets = RAW_TIME_INDEPENDENT_COLS + RAW_TIME_DEPENDENT_COLS + RAW_CAREGIVER_COLS
     duplicated = {c for c in buckets if buckets.count(c) > 1}
     if verbose:
         print(f"Duplicated across buckets: {duplicated or 'none'}")
 
-    # A classified column missing from the data means the load step changed.
     missing_from_data = all_classified - set(df.columns)
     if verbose:
         print(f"Classified but absent from data: {missing_from_data or 'none'}")
@@ -465,54 +452,53 @@ def load(
     assert not unaccounted, "Unclassified columns would be dropped"
     assert not duplicated, "Columns appear in multiple buckets"
 
-    # Structural checks on the patient/visit level
-    assert df["patient_id"].notna().all(), "Rows with missing patient_id"
+    # Structural checks on the patient/visit level.
+    assert df["studyid"].notna().all(), "Rows with missing studyid"
     assert df["timept"].notna().all(), "Rows with missing timept"
 
-    # One row per patient-visit is the target granularity.
-    dupes = df.duplicated(subset=["patient_id", "timept"], keep=False)
+    dupes = df.duplicated(subset=["studyid", "timept"], keep=False)
     if verbose:
-        print(f"\nDuplicate patient_id/timept rows: {dupes.sum()}")
+        print(f"\nDuplicate studyid/timept rows: {dupes.sum()}")
         if dupes.any():
-            print(df.loc[dupes, ["patient_id", "timept"]].sort_values(["patient_id", "timept"]))
+            print(df.loc[dupes, ["studyid", "timept"]].sort_values(["studyid", "timept"]))
     assert not dupes.any(), "Duplicate patient-visit rows"
 
     if verbose:
-        print(f"Patients: {df['patient_id'].nunique()}, rows: {len(df)}")
+        print(f"Patients: {df['studyid'].nunique()}, rows: {len(df)}")
         print(f"timept values: {sorted(df['timept'].unique())}")
-        print(
-            f"\nVisits per patient:\n{df.groupby('patient_id').size().value_counts().sort_index()}"
-        )
+        print(f"\nVisits per patient:\n{df.groupby('studyid').size().value_counts().sort_index()}")
 
-    # Verify the static classification empirically.
     # A static column that actually varies would be silently flattened by any
     # downstream collapse-to-baseline.
-    static_variation = df.groupby("patient_id")[TIME_INDEPENDENT_COLS].nunique().max()
+    static_variation = df.groupby("studyid")[RAW_TIME_INDEPENDENT_COLS].nunique().max()
     violations = static_variation[static_variation > 1].sort_values(ascending=False)
     if verbose:
         print(f"Static columns that vary within a patient: {len(violations)}")
     assert len(violations) == 0, "Presumed static column is actually time-varying"
 
-    # Normalize the time axis.
+    # Normalize the time axis. follow_up_months is a NEW column, not a rename,
+    # so it's introduced directly rather than routed through RENAME_MAP.
     df["follow_up_months"] = df["timept"].map(TIMEPT_TO_MONTHS)
-
-    # .map() yields NaN for unknown codes rather than raising.
     unmapped = df.loc[df["follow_up_months"].isna(), "timept"].unique()
     assert len(unmapped) == 0, f"Unmapped timept codes: {unmapped}"
     df.drop(labels="timept", axis=1, inplace=True)
 
-    # Assemble the harmonized frame
-    keep_cols = FINAL_ID_COLS + TIME_INDEPENDENT_COLS + TIME_DEPENDENT_COLS + OUTCOME_COLS
+    keep_cols_raw = (
+        ["studyid", "follow_up_months"]
+        + RAW_TIME_INDEPENDENT_COLS
+        + RAW_TIME_DEPENDENT_COLS
+        + RAW_OUTCOME_COLS
+    )
+    df = df[keep_cols_raw].sort_values(["studyid", "follow_up_months"]).reset_index(drop=True)
 
-    df = df[keep_cols].sort_values(["patient_id", "follow_up_months"]).reset_index(drop=True)
+    df.rename(columns=RENAME_MAP, inplace=True, errors="raise")
 
     if verbose:
         print(f"\nHarmonized long frame: {df.shape}")
-        print(f"  {len(FINAL_ID_COLS)} id/time")
-        print(f"  {len(TIME_INDEPENDENT_COLS)} static")
-        print(f"  {len(TIME_DEPENDENT_COLS)} time-varying")
-        print(f"  {len(OUTCOME_COLS)} outcome")
-        print(f"  {len(CAREGIVER_COLS)} caregiver columns dropped")
+        print(f"  {len(RAW_TIME_INDEPENDENT_COLS)} static")
+        print(f"  {len(RAW_TIME_DEPENDENT_COLS)} time-varying")
+        print(f"  {len(RAW_OUTCOME_COLS)} outcome")
+        print(f"  {len(RAW_CAREGIVER_COLS)} caregiver columns dropped")
 
     cols_first = [
         "patient_id",
