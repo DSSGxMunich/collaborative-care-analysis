@@ -7,7 +7,6 @@ import pandas as pd
 import typer
 
 from collaborative_care_analysis.config import (
-    COLNAME_ROWID,
     COLNAME_STUDYID,
     HARMONIZED_DATASETS_DIR,
     INTERIM_DATASETS_EXPORT_DIR,
@@ -87,16 +86,12 @@ def _get_harmonization_functions(module) -> list:
     return funcs
 
 
-def _add_identifiers(df: pd.DataFrame, script_path: Path) -> pd.DataFrame:
-    """Add study/rowid columns to the dataset."""
+def _add_identifier(df: pd.DataFrame, script_path: Path) -> pd.DataFrame:
+    """Add study identifier to the dataset."""
     df_copy = df.copy()
     study_id = _get_study_id(script_path)
-    row_ids = [f"{study_id}_R{i}" for i in range(len(df_copy))]
     if COLNAME_STUDYID in df_copy.columns:
         logger.warning(f"Dataset {script_path.stem} already has a '{COLNAME_STUDYID}' column.")
-    if COLNAME_ROWID in df_copy.columns:
-        logger.warning(f"Dataset {script_path.stem} already has a '{COLNAME_ROWID}' column.")
-    df_copy.insert(0, COLNAME_ROWID, row_ids)
     df_copy.insert(0, COLNAME_STUDYID, study_id)
     return df_copy
 
@@ -180,7 +175,7 @@ def harmonize(
 
         logger.info(f"Loading dataset with {script_path.name}.")
         raw_df = loader.load()
-        df = _add_identifiers(raw_df, script_path)
+        df = _add_identifier(raw_df, script_path)
 
         applied_count = 0
         for harm_dir in harmonization_dirs:
@@ -225,14 +220,10 @@ def harmonize(
                         raise ValueError(
                             f"Harmonization function {func.__name__} returned None for {script_path.stem}."
                         )
-                    # Check whether study and rowid are still there
+                    # Check whether study identifier is still there
                     if COLNAME_STUDYID not in harmonized_df.columns:
                         raise ValueError(
                             f"Harmonization function {func.__name__} removed '{COLNAME_STUDYID}' column for {script_path.stem}."
-                        )
-                    if COLNAME_ROWID not in harmonized_df.columns:
-                        raise ValueError(
-                            f"Harmonization function {func.__name__} removed '{COLNAME_ROWID}' column for {script_path.stem}."
                         )
                     # Check whether any rows have been dropped
                     if len(harmonized_df) != len(df):
