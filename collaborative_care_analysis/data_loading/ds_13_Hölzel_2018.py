@@ -2,53 +2,10 @@ import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
 
-COLUMN_RENAME_MAP = {
-    "GI_B1_Alter": "age",
-    "GI_B1_Geschlecht": "sex",
-    "GI_B1_Bildung": "education_level",
-    "GI_B1_Anstellung": "employment_status",
-    "GI_B1_Erwerbsumfang": "employment_extent",
-    "GI_B1_Geld_aureichend": "perceived_financial_adequacy",
-    "ID": "patient_id",
-    "v_zentrum": "study_center",
-    "RG": "study_arm",
-    "Cluster": "intervention_cluster",
-    "PIN": "practice_id",
-}
-
 TIMEPOINT_MAP = {
     "B1": 0,
     "B2": 6,
     "B3": 12,
-}
-
-VALUE_TRANSLATION_MAP = {
-    "education_level": {
-        "Volks- oder Hauptschulabschluss": ("primary or lower secondary school certificate"),
-        "Mittlere Reife / Realschulabschluss": ("intermediate secondary school certificate"),
-        "Abgeschlossenes (Fach-) Hochschulstudium": (
-            "completed university or university of applied sciences degree"
-        ),
-        "Other": "other",
-    },
-    "employment_status": {
-        "Berentet/ pensioniert/ Vorruhestand/ erwerbsunfähig": (
-            "retired, in early retirement, or unable to work"
-        ),
-        "Hausfrau/ Hausmann": "homemaker",
-        "Angestellte/-r": "employee",
-        "Other": "other",
-    },
-    "employment_extent": {
-        "Vollzeit": "full-time",
-        "Teilzeit, mindestens halbtags": ("part-time, at least half-time"),
-        "Teilzeit, weniger als halbtags": ("part-time, less than half-time"),
-    },
-    "perceived_financial_adequacy": {
-        "ja": "yes",
-        "es geht so": "manageable",
-        "nein, schlecht": "no, poor",
-    },
 }
 
 
@@ -64,6 +21,7 @@ def load(
     The SPSS and Stata files contain the same information. The SPSS file is
     used because its column names and variable coding are clearer.
     """
+
     df = pd.read_spss(
         path=file_path,
         convert_categoricals=True,
@@ -76,8 +34,14 @@ def load(
     # Remove leading and trailing whitespace from column names.
     df.columns = df.columns.str.strip()
 
-    # Rename known patient-level variables.
-    df.rename(columns=COLUMN_RENAME_MAP, inplace=True)
+    # Rename identifiers used across the harmonization pipeline.
+    df.rename(
+        columns={
+            "ID": "patient_id",
+            "RG": "study_arm",
+        },
+        inplace=True,
+    )
 
     # Store patient identifiers as strings.
     df["patient_id"] = df["patient_id"].astype("string").str.replace(r"\.0$", "", regex=True)
@@ -93,22 +57,6 @@ def load(
             }
         )
     )
-
-    # Translate the sex values.
-    df["sex"] = (
-        df["sex"]
-        .astype("string")
-        .replace(
-            {
-                "weiblich": "female",
-                "männlich": "male",
-            }
-        )
-    )
-
-    # Translate other categorical values.
-    for col, translation_map in VALUE_TRANSLATION_MAP.items():
-        df[col] = df[col].astype("string").replace(translation_map)
 
     # Identify columns that are not specific to B1, B2, or B3.
     timepoint_prefixes = tuple(f"GI_{timepoint}_" for timepoint in TIMEPOINT_MAP)
@@ -168,6 +116,7 @@ def load(
     # Put the main identifiers first.
     front_cols = [
         "patient_id",
+        "study_arm",
         "follow_up_months",
     ]
 
