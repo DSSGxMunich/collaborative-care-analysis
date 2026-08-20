@@ -86,7 +86,7 @@ def _get_harmonization_functions(module) -> list:
     return funcs
 
 
-def _add_identifiers(df: pd.DataFrame, script_path: Path) -> pd.DataFrame:
+def _add_identifier(df: pd.DataFrame, script_path: Path) -> pd.DataFrame:
     """Add study identifier to the dataset."""
     df_copy = df.copy()
     study_id = _get_study_id(script_path)
@@ -175,7 +175,7 @@ def harmonize(
 
         logger.info(f"Loading dataset with {script_path.name}.")
         raw_df = loader.load()
-        df = _add_identifiers(raw_df, script_path)
+        df = _add_identifier(raw_df, script_path)
 
         applied_count = 0
         for harm_dir in harmonization_dirs:
