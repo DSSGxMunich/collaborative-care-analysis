@@ -37,12 +37,13 @@ EQ5D_MAPPING = {
     3: 3,
 }
 
+
 def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     """Harmonize outcome variables for Hölzel 2018."""
 
-    # phq10 being the additional question: If you checked off any problems, 
+    # phq10 being the additional question: If you checked off any problems,
     # how difficult have these problems made it for you to do your
-    # work, take care of things at home, or get along with other people? 
+    # work, take care of things at home, or get along with other people?
     # column removed in data loading due to missing data
     phq9_cols = [f"GI_PHQ9_{i}" for i in range(1, 10)]
     gad_cols = [f"GI_GAD7_{i}" for i in range(1, 8)]
@@ -61,26 +62,19 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
             COLNAME_STUDYID,
             "patient_id",  # patient identifier
             "follow_up_months",  # 0-screening, X-X months
-
             # PHQ-9 related
-            *phq9_cols, #item-level PHQ-9 scores
-            "GI_PHQ9_Schweregrad", # total PHQ09 score, measuring depression severity: remission (<5) and response (50% reduction)
-
+            *phq9_cols,  # item-level PHQ-9 scores
+            "GI_PHQ9_Schweregrad",  # total PHQ09 score, measuring depression severity: remission (<5) and response (50% reduction)
             # GRAD-7, Generalized Anxiety Disorder 7-item scale
-            *gad_cols, # item-level GAD-7 scores
-            #"GI_GAD7_Schweregrad", # total GAD-7 score, measuring anxiety severity
-
+            *gad_cols,  # item-level GAD-7 scores
+            # "GI_GAD7_Schweregrad", # total GAD-7 score, measuring anxiety severity
             # Depression-related behavior, modified from ludman et al., not available in the dataset.
-
             # RS-13, Resilience Scale
             # Not provided in the dataset
-
             # PSS, Problem-solving skills, not available in the dataset.
             # This method is modified from Bleich and Watzke in an unpublished manuscript.
-
             # EQ-5D-3L Index
-            *eq5d_cols, 
-
+            *eq5d_cols,
         ]
     ].copy()
 
@@ -89,7 +83,7 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
         harmonized_df[col] = map_with_check(harmonized_df[col], PHQ_MAPPING, col)
 
     # Calculate PHQ-9 total score, only when all item-level scores are available
-    # This is to compare with "GI_PHQ9_Schweregrad" which records the severity 
+    # This is to compare with "GI_PHQ9_Schweregrad" which records the severity
     # descriptively and not to interpret them wrongly
     harmonized_df["phq_sum"] = harmonized_df[phq9_cols].sum(axis=1, min_count=9)
 
@@ -105,7 +99,7 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
         "GI_EQ5D_Schmerzen": "eq5d_pain_discomfort",
         "GI_EQ5D_Angst_Depression": "eq5d_anxiety_depression",
     }
-    
+
     # Rename PHQ-9 columns
     phq_rename_map = {
         **{f"GI_PHQ9_{i}": f"phq{i:02d}" for i in range(1, 10)},
@@ -116,7 +110,7 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     gad_rename_map = {
         **{f"GI_GAD7_{i}": f"gad{i:02d}" for i in range(1, 8)},
     }
-    
+
     harmonized_df = harmonized_df.rename(
         columns={
             **phq_rename_map,
@@ -144,6 +138,6 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
             "eq5d_pain_discomfort",
             "eq5d_anxiety_depression",
         ]
-    ] 
+    ]
 
     return harmonized_df
