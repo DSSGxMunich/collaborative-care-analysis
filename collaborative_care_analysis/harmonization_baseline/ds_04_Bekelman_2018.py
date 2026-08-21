@@ -3,12 +3,9 @@ import pandas as pd
 
 def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-    # Add study identifier
-    df["STUDY_ID"] = "ds_04_Bekelman_2018"
 
-    # --- Step 1: Keep baseline variables ---
+    # --- Step 1: Keep only baseline variables ---
     original_vars = [
-        "STUDY_ID",
         "patient_id",
         "age",
         "gender",
@@ -25,15 +22,16 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         "crf_sa",
         "crf_sao",
         "schfi04",
-        "ins_priv",  # <-- updated here
+        "ins_priv",
     ]
 
     df = df[[v for v in original_vars if v in df.columns]]
 
-    # --- Step 2: Rename variables ---
+    # --- Step 2: Add STUDY_ID as a new empty column ---
+    df["STUDY_ID"] = pd.NA
+
+    # --- Step 3: Rename variables ---
     rename_dict = {
-        "STUDY_ID": "STUDY_ID",
-        "patient_id": "patient_id",
         "gender": "sex",
         "dem_smoke": "smoking_status",
         "dem_ed": "education_level",
@@ -43,16 +41,16 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         "scr_crgvr": "has_caregiver",
         "scr_snf": "lives_in_facility",
         "scr_tele": "has_telephone_access",
-        "timept": "follow_up_months",
+        "timept": "follow_up_months",  # only applies if "timept" still exists
         "crf_sa": "has_alcohol_abuse_history",
         "crf_sao": "has_substance_abuse_history",
         "schfi04": "physical_activity_frequency",
-        "ins_priv": "has_private_insurance",  # <-- updated here
+        "ins_priv": "has_private_insurance",
     }
 
     df = df.rename(columns=rename_dict)
 
-    # --- Step 3A: Harmonize private insurance (special case) ---
+    # --- Step 4A: Harmonize private insurance (special case) ---
     if "has_private_insurance" in df.columns:
         df["has_private_insurance"] = (
             df["has_private_insurance"]
@@ -60,7 +58,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             .astype("string")
         )
 
-    # --- Step 3B: Harmonize categorical variables safely ---
+    # --- Step 4B: Harmonize categorical variables safely ---
     category_maps = {
         "sex": {1: "Male", 2: "Female"},
         "race": {
@@ -110,7 +108,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         "has_caregiver": {0: "No", 1: "Yes"},
         "lives_in_facility": {0: "No", 1: "Yes"},
         "has_telephone_access": {0: "No", 1: "Yes"},
-        "follow_up_months": {1: "Baseline", 2: "3 months", 3: "6 months", 4: "12 months"},
         "has_alcohol_abuse_history": {0: "No", 1: "Yes"},
         "has_substance_abuse_history": {0: "No", 1: "Yes"},
         "physical_activity_frequency": {
@@ -125,7 +122,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         if var in df.columns:
             df[var] = df[var].map(mapping).astype("string")
 
-    # --- Step 4: Ensure age is numeric ---
+    # --- Step 5: Ensure age is numeric ---
     if "age" in df.columns:
         df["age"] = pd.to_numeric(df["age"], errors="coerce")
 
