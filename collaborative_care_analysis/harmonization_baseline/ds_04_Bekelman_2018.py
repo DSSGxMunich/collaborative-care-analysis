@@ -6,7 +6,8 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
 
     # --- Step 1: Keep baseline variables ---
     original_vars = [
-        "studyid",
+        "STUDY_ID",
+        "patient_id",
         "age",
         "gender",
         "race",
@@ -29,7 +30,8 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
 
     # --- Step 2: Rename variables ---
     rename_dict = {
-        "studyid": "id",
+        "STUDY_ID": "STUDY_ID",
+        "patient_id": "patient_id",
         "gender": "sex",
         "dem_smoke": "smoking_status",
         "dem_ed": "education_level",
@@ -41,7 +43,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         "scr_tele": "has_telephone_access",
         "timept": "follow_up_months",
         "crf_sa": "has_alcohol_abuse_history",
-        "crf_sao": "substance_abuse_history",
+        "crf_sao": "has_substance_abuse_history",
         "schfi04": "physical_activity_frequency",
         "ins_priv": "has_private_insurance",  # <-- updated here
     }
@@ -108,7 +110,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         "has_telephone_access": {0: "No", 1: "Yes"},
         "follow_up_months": {1: "Baseline", 2: "3 months", 3: "6 months", 4: "12 months"},
         "has_alcohol_abuse_history": {0: "No", 1: "Yes"},
-        "substance_abuse_history": {0: "No", 1: "Yes"},
+        "has_substance_abuse_history": {0: "No", 1: "Yes"},
         "physical_activity_frequency": {
             1: "Never or rarely",
             2: "Sometimes",
