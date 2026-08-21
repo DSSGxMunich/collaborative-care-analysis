@@ -3,6 +3,8 @@ import pandas as pd
 
 def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
+    # Add study identifier
+    df["STUDY_ID"] = "ds_04_Bekelman_2018"
 
     # --- Step 1: Keep baseline variables ---
     original_vars = [
