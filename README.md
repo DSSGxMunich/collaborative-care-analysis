@@ -26,6 +26,26 @@ uv run collaborative_care_analysis/dataset.py harmonize 17
 uv run collaborative_care_analysis/dataset.py harmonize Katon_2001
 ```
 
+## Merging Harmonized Datasets
+
+Join each study's harmonized clusters, then stack all studies into one dataset.
+
+```bash
+uv run collaborative_care_analysis/dataset.py merge
+```
+
+Clusters are joined on `STUDY_ID`, `patient_id`, and `follow_up_months` (inner join), then concatenated vertically. Columns missing from a study are filled with `NaN`. The command also returns a mapping of cluster name to the columns it contributed across all studies.
+
+The merge raises on a missing join key, duplicate keys, or a column name claimed by two clusters, and warns loudly if the join drops rows.
+
+## Running the Full Pipeline
+
+```bash
+uv run collaborative_care_analysis/dataset.py run
+```
+
+Runs `export`, `harmonize`, and `merge` in sequence.
+
 ## Project Organization
 
 ```
