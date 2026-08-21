@@ -1,9 +1,22 @@
+"""Harmonization for medical history / comorbidities data.
+
+This module combines two related harmonization steps under one title,
+since they were originally split into separate files but cover data
+that's collected together in the CRF (prior cardiac procedures, implanted
+devices, heart failure etiology) and a related cognitive screening
+instrument (TICS). Kept as two distinct functions to avoid a naming
+collision, with a small helper to merge them into one dataset.
+"""
+
 import pandas as pd
 
 from collaborative_care_analysis.utils import map_with_check
 
+ID_COLUMNS = ["STUDY_ID", "patient_id", "follow_up_months"]
 
-def harmonize(df: pd.DataFrame) -> pd.DataFrame:
+
+def harmonize_cardiac_history(df: pd.DataFrame) -> pd.DataFrame:
+    """Harmonize prior cardiac procedures, implanted devices, and HF etiology."""
     harmonized_df = df.copy()
 
     yes_no_map = {0: "no", 1: "yes"}
@@ -59,12 +72,9 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         columns={"crf_allergies": "allergies_description"}, errors="raise"
     )
 
-    # return the harmonized dataset which has only the values we want
     return harmonized_df[
-        [
-            "STUDY_ID",
-            "patient_id",
-            "follow_up_months",
+        ID_COLUMNS
+        + [
             "has_had_percutaneous_coronary_intervention",
             "has_had_coronary_artery_bypass_graft",
             "has_no_cardiac_device",
@@ -80,3 +90,53 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "allergies_description",
         ]
     ]
+
+
+def harmonize_tics(df: pd.DataFrame) -> pd.DataFrame:
+    """Harmonize TICS (Telephone Interview for Cognitive Status) item scores."""
+    harmonized_df = df.copy()
+
+    harmonized_df.rename(columns={"ticstot": "tics_total"}, inplace=True, errors="raise")
+
+    # Max points per item, per codebook.
+    tics_max = {
+        "tics01": 2,
+        "tics02": 5,
+        "tics03": 5,
+        "tics04": 2,
+        "tics05": 10,
+        "tics06": 5,
+        "tics07": 4,
+        "tics08": 2,
+        "tics09": 2,
+        "tics10": 2,
+        "tics11": 2,
+    }
+    tics_total_max = 41
+    tics_cols = list(tics_max) + ["tics_total"]
+
+    # tics items should be numeric
+    non_numeric = [c for c in tics_cols if not pd.api.types.is_numeric_dtype(harmonized_df[c])]
+    assert not non_numeric, f"Non-numeric tics columns: {non_numeric}"
+
+    # Each item score must fall within [0, max_points]
+    for col, max_points in tics_max.items():
+        out_of_range = harmonized_df[col].dropna()
+        bad = out_of_range[(out_of_range < 0) | (out_of_range > max_points)]
+        assert bad.empty, f"{col} has values outside [0, {max_points}]: {bad.unique()}"
+
+    total_out_of_range = harmonized_df["tics_total"].dropna()
+    bad_total = total_out_of_range[
+        (total_out_of_range < 0) | (total_out_of_range > tics_total_max)
+    ]
+    assert bad_total.empty, (
+        f"tics_total has values outside [0, {tics_total_max}]: {bad_total.unique()}"
+    )
+
+    return harmonized_df[ID_COLUMNS + tics_cols]
+
+
+def harmonize(df: pd.DataFrame) -> pd.DataFrame:
+    cardiac = harmonize_cardiac_history(df)
+    tics = harmonize_tics(df)
+    return cardiac.merge(tics, on=ID_COLUMNS, how="outer")
