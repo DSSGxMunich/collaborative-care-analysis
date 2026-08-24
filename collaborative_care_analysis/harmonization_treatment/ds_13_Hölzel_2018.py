@@ -82,9 +82,9 @@ def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
             "is_care_manager_involved",
             "is_psychoeducation_provided",
             "is_relapse_prevention_provided",
-            "is_activity_structuring_provided"
-            "is_problem_solving_training_provided"
-            "initial_contact_mode"
+            "is_activity_structuring_provided",
+            "is_problem_solving_training_provided",
+            "initial_contact_mode",
             "follow_up_contact_mode",
         ]
     ]
