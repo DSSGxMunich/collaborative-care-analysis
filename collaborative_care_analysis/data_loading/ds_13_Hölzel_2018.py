@@ -17,7 +17,7 @@ import re
 from loguru import logger
 import pandas as pd
 
-from collaborative_care_analysis.config import RAW_DATASETS_DIR  # <- adjust to wherever this lives
+from collaborative_care_analysis.config import RAW_DATASETS_DIR
 
 TIMEPOINT_TO_MONTHS = {"B1": 0, "B2": 6, "B3": 12}
 
