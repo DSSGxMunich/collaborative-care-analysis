@@ -16,7 +16,12 @@ from collaborative_care_analysis.config import (
 # -------------------------------------------------------------------
 
 
-def find_dataset_directory(dataset_id: int) -> Path:
+def find_dataset_directory(
+    dataset_id: int,
+) -> Path:
+    """
+    Find the directory corresponding to a dataset ID.
+    """
     if not RAW_DATASETS_DIR.exists():
         raise FileNotFoundError(f"Raw-dataset directory does not exist: {RAW_DATASETS_DIR}")
 
@@ -44,18 +49,38 @@ def find_statistical_files(
     dataset_directory: Path,
 ) -> list[Path]:
     """
-    Find all SPSS and Stata files inside a dataset directory.
+    Find SPSS and Stata files, preferring SPSS when the same
+    file is available in both formats.
     """
-    files = sorted(
+    candidates = sorted(
         file
         for file in dataset_directory.rglob("*")
         if file.is_file() and file.suffix.lower() in {".sav", ".dta"}
     )
 
-    if not files:
+    if not candidates:
         raise FileNotFoundError(f"No .sav or .dta files were found under {dataset_directory}.")
 
-    return files
+    format_priority = {
+        ".sav": 0,
+        ".dta": 1,
+    }
+
+    selected_files: dict[Path, Path] = {}
+
+    for file in candidates:
+        relative_stem = file.relative_to(dataset_directory).with_suffix("")
+
+        current_file = selected_files.get(relative_stem)
+
+        if current_file is None:
+            selected_files[relative_stem] = file
+            continue
+
+        if format_priority[file.suffix.lower()] < format_priority[current_file.suffix.lower()]:
+            selected_files[relative_stem] = file
+
+    return sorted(selected_files.values())
 
 
 def get_output_directory(
