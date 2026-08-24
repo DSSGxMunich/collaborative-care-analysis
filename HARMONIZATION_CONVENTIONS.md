@@ -112,3 +112,5 @@ it should be harmonized to `follow_up_months`.
 ## 6. Item-level PHQ9 scores 
 
 Use the same naming conventions as the ones used in the dataset:  "ds_04_Bekelman_2018"
+
+Examples of how some of the column names should look like:  phq01, ..., phq09, and phqtotal.
