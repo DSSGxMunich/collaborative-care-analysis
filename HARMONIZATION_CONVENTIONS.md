@@ -74,7 +74,7 @@ instead of leaving the values as:
 `0`
 `1`
 
-Similarly, for study-arm variables:
+Similarly, for study_arm variables:
 
 `1 -> "control"`
 `2 -> "intervention"`
@@ -107,3 +107,8 @@ Baseline should be represented as:
 
 If the original dataset uses another variable to represent measurement timing,
 it should be harmonized to `follow_up_months`.
+
+
+## 6. Item-level PHQ9 scores 
+
+Use the same naming conventions as the ones used in the dataset:  "ds_04_Bekelman_2018"
