@@ -20,6 +20,7 @@ RAW_DATASETS_DIR = RAW_DATA_DIR / "Individual Datasets"
 INTERIM_DATASETS_EXPORT_DIR = INTERIM_DATA_DIR / "exported_datasets"
 HARMONIZED_DATASETS_DIR = INTERIM_DATA_DIR / "harmonized_datasets"
 MERGED_DATASET_DIR = INTERIM_DATA_DIR / "merged_dataset"
+GENERATED_CODEBOOKS_DIR = INTERIM_DATA_DIR / "generated_codebooks"
 
 MODELS_DIR = PROJ_ROOT / "models"
 REPORTS_DIR = PROJ_ROOT / "reports"
