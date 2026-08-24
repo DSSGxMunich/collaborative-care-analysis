@@ -26,6 +26,16 @@ uv run collaborative_care_analysis/dataset.py harmonize 17
 uv run collaborative_care_analysis/dataset.py harmonize Katon_2001
 ```
 
+## Generating Codebooks
+
+If a dataset does not include a codebook, generate one from the metadata embedded in its SPSS or Stata files by specifying the numeric dataset ID: 
+
+```bash
+uv run python -m collaborative_care_analysis.codebook 13
+```
+
+Generated codebooks are saved under `data/interim/generated_codebooks/`. Each Excel workbook contains three sheets: `Dataset Metadata`, `Variable Labels`, and `Value Labels`.
+
 ## Project Organization
 
 ```
@@ -63,6 +73,8 @@ uv run collaborative_care_analysis/dataset.py harmonize Katon_2001
     ├── config.py               <- Store useful variables and configuration
     │
     ├── dataset.py              <- Scripts to download or generate data
+    │
+    ├── codebook.py             <- Generate codebooks from embedded SPSS and Stata metadata
     │
     ├── features.py             <- Code to create features for modeling
     │
