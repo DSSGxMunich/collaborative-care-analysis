@@ -20,6 +20,10 @@ def load(
 
     The SPSS and Stata files contain the same information. The SPSS file is
     used because its column names and variable coding are clearer.
+    Load the German IMPACT dataset and reshape it to longitudinal format.
+
+    The SPSS and Stata files contain the same information. The SPSS file is
+    used because its column names and variable coding are clearer.
     """
 
     df = pd.read_spss(
