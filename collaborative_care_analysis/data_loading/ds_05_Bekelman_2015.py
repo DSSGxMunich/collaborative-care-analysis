@@ -13,12 +13,21 @@ def load(
     # Load wide dataset containing demographic and patient-level data
     df_wide = pd.read_csv(wide_file_path)
 
+    # Drop empty and redundant columns.
+    df_long.drop(labels="Unnamed: 0", axis=1, errors="raise", inplace=True)
+    df_wide.drop(labels="Unnamed: 0", axis=1, errors="raise", inplace=True)
+
     # Merge both datasets using patient ID
     df = df_long.merge(
         df_wide,
         on="pt_id",
-        how="left",
-        validate="many_to_one",
+        how="inner",
+        validate="one_to_one",
     )
+
+    # Merge tables on the unique patient ids.
+    df.dropna(how="all", axis=0, inplace=True)
+    df.dropna(how="all", axis=1, inplace=True)
+    df.columns = df.columns.str.strip()
 
     return df
