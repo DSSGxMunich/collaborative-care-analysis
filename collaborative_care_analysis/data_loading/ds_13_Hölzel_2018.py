@@ -1,12 +1,71 @@
+import re
+
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
 
-TIMEPOINT_MAP = {
-    "B1": 0,
-    "B2": 6,
-    "B3": 12,
+TIMEPOINT_TO_MONTHS = {"B1": 0, "B2": 6, "B3": 12}
+
+VISIT_PREFIX = re.compile(rf"^GI_(?:{'|'.join(TIMEPOINT_TO_MONTHS)})_")
+
+TIME_INDEPENDENT_COLS = [
+    "ID",
+    "v_zentrum",
+    "Cluster",
+    "RG",
+    "PIN",
+    "GI_B1_Alter",
+    "GI_B1_Geschlecht",
+    "GI_B1_Bildung",
+    "GI_B1_Anstellung",
+    "GI_B1_Erwerbsumfang",
+    "GI_B1_Geld_aureichend",
+]
+
+COLUMN_NAME_FIXES = {
+    # Med8_Groesse is misspelled at every timepoint.
+    **{f"GI_{tp}_FIMA_med8_Groesse": f"GI_{tp}_FIMA_Med8_Groesse" for tp in TIMEPOINT_TO_MONTHS},
+    # The stored PHQ-9 totals arrive without a visit prefix.
+    **{f"PHQ_{months}_Monate": f"GI_{tp}_PHQ_Summe" for tp, months in TIMEPOINT_TO_MONTHS.items()},
 }
+
+
+def to_long(df: pd.DataFrame) -> pd.DataFrame:
+    """Stack the three visits, stripping the ``GI_B{t}_`` prefix from each stub."""
+    time_varying = [c for c in df.columns if c not in TIME_INDEPENDENT_COLS]
+
+    # a column with no visit prefix matches no frame below and would vanish
+    if orphans := [c for c in time_varying if not VISIT_PREFIX.match(c)]:
+        raise ValueError(f"columns belong to neither the patient nor a visit: {sorted(orphans)}")
+
+    frames = []
+    for timepoint, months in TIMEPOINT_TO_MONTHS.items():
+        prefix = f"GI_{timepoint}_"
+        visit_cols = [c for c in time_varying if c.startswith(prefix)]
+
+        visit = df[TIME_INDEPENDENT_COLS + visit_cols].copy()
+        stubs = [c.removeprefix("GI_B1_") for c in TIME_INDEPENDENT_COLS] + [
+            c.removeprefix(prefix) for c in visit_cols
+        ]
+        # e.g. GI_B1_Alter (time-independent) and GI_B2_Alter both stack to Alter
+        if len(set(stubs)) != len(stubs):
+            raise ValueError(f"{prefix}: stub names collide after stripping the prefix")
+        visit.columns = stubs
+        visit.insert(len(TIME_INDEPENDENT_COLS), "follow_up_months", months)
+        frames.append(visit)
+
+    long = (
+        pd.concat(frames, ignore_index=True)
+        .rename(columns={"ID": "patient_id"}, errors="raise")
+        .sort_values(["patient_id", "follow_up_months"], kind="stable")
+        .reset_index(drop=True)
+    )
+
+    if long.duplicated(["patient_id", "follow_up_months"]).any():
+        raise ValueError("duplicate ('patient_id', 'follow_up_months') rows")
+
+    first_columns = ["patient_id", "follow_up_months", "RG"]
+    return long[first_columns + [c for c in long.columns if c not in first_columns]]
 
 
 def load(
@@ -15,115 +74,15 @@ def load(
     / "Daten"
     / "20231120_German_IMPACT_f__r_IPD_MA.sav",
 ) -> pd.DataFrame:
-    """
-    Load the German IMPACT dataset and reshape it to longitudinal format.
+    """Read the export and return it in long format."""
+    df = pd.read_spss(path=file_path, convert_categoricals=False)
 
-    The SPSS and Stata files contain the same information. The SPSS file is
-    used because its column names and variable coding are clearer.
-    Load the German IMPACT dataset and reshape it to longitudinal format.
+    # blank-out before dtype inference, so whitespaces are not inferred as a value
+    df = df.replace(to_replace=r"^\s*$", value=pd.NA, regex=True).convert_dtypes()
 
-    The SPSS and Stata files contain the same information. The SPSS file is
-    used because its column names and variable coding are clearer.
-    """
-
-    df = pd.read_spss(
-        path=file_path,
-        convert_categoricals=True,
-    )
-
-    # Remove rows and columns containing only missing values.
-    df.dropna(how="all", axis="index", inplace=True)
-    df.dropna(how="all", axis="columns", inplace=True)
-
-    # Remove leading and trailing whitespace from column names.
     df.columns = df.columns.str.strip()
+    df = df.rename(columns=COLUMN_NAME_FIXES, errors="raise")
+    df = df.dropna(how="all", axis="index")
+    df = df.dropna(how="all", axis="columns")
 
-    # Rename identifiers used across the harmonization pipeline.
-    df.rename(
-        columns={
-            "ID": "patient_id",
-            "RG": "study_arm",
-        },
-        inplace=True,
-    )
-
-    # Store patient identifiers as strings.
-    df["patient_id"] = df["patient_id"].astype("string").str.replace(r"\.0$", "", regex=True)
-
-    # Translate the treatment-group values.
-    df["study_arm"] = (
-        df["study_arm"]
-        .astype("string")
-        .replace(
-            {
-                "IG": "intervention",
-                "KG": "control",
-            }
-        )
-    )
-
-    # Identify columns that are not specific to B1, B2, or B3.
-    timepoint_prefixes = tuple(f"GI_{timepoint}_" for timepoint in TIMEPOINT_MAP)
-
-    # These PHQ columns encode the month directly in the column name.
-    phq_month_cols = {
-        f"PHQ_{follow_up_months}_Monate"
-        for follow_up_months in TIMEPOINT_MAP.values()
-        if f"PHQ_{follow_up_months}_Monate" in df.columns
-    }
-
-    # Static columns do not encode an assessment time.
-    static_cols = [
-        col
-        for col in df.columns
-        if (not col.startswith(timepoint_prefixes) and col not in phq_month_cols)
-    ]
-
-    longitudinal_dfs = []
-
-    for timepoint, follow_up_months in TIMEPOINT_MAP.items():
-        prefix = f"GI_{timepoint}_"
-
-        timepoint_cols = [col for col in df.columns if col.startswith(prefix)]
-
-        # Define the mapping before using it.
-        timepoint_rename_map = {col: col.replace(prefix, "GI_", 1) for col in timepoint_cols}
-
-        # Add PHQ_X_Monate to the corresponding assessment.
-        phq_month_col = f"PHQ_{follow_up_months}_Monate"
-
-        if phq_month_col in df.columns:
-            timepoint_cols.append(phq_month_col)
-            timepoint_rename_map[phq_month_col] = "PHQ_Monate"
-
-        # Check whether each patient has any data at this time point.
-        has_timepoint_data = df[timepoint_cols].notna().any(axis=1)
-
-        timepoint_df = (
-            df.loc[
-                has_timepoint_data,
-                static_cols + timepoint_cols,
-            ]
-            .rename(columns=timepoint_rename_map)
-            .copy()
-        )
-
-        timepoint_df["follow_up_months"] = follow_up_months
-
-        longitudinal_dfs.append(timepoint_df)
-
-    df = pd.concat(
-        longitudinal_dfs,
-        ignore_index=True,
-    )
-
-    # Put the main identifiers first.
-    front_cols = [
-        "patient_id",
-        "study_arm",
-        "follow_up_months",
-    ]
-
-    df = df[front_cols + [col for col in df.columns if col not in front_cols]]
-
-    return df
+    return to_long(df)
