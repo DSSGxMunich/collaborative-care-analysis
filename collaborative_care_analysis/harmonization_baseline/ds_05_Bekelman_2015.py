@@ -57,10 +57,8 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     # ----------------------------------------------------
     # Race (single column)
     # ----------------------------------------------------
-    # Clean all race indicator columns
     race_cols = ["CRF_RAWH", "CRF_RABL", "CRF_RARAAS", "CRF_RAAI", "CRF_RAOT"]
 
-    # Clean race indicator columns
     for col in race_cols:
         harmonized_df[col] = pd.to_numeric(harmonized_df[col], errors="coerce")
         harmonized_df.loc[~harmonized_df[col].isin([0, 1]), col] = pd.NA
@@ -78,8 +76,8 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             return "Other"
         return "Missing"
 
-    # Use .fillna(0) to avoid NA comparison issues
     harmonized_df["race"] = harmonized_df[race_cols].fillna(0).apply(compute_race, axis=1)
+
     # ----------------------------------------------------
     # Ethnicity
     # ----------------------------------------------------

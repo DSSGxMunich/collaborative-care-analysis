@@ -2,7 +2,6 @@ import pandas as pd
 
 from collaborative_care_analysis.utils import map_with_check
 
-
 COLUMN_RENAME_MAP = {
     "Alter": "age",
     "Geschlecht": "sex",
@@ -16,15 +15,25 @@ COLUMN_RENAME_MAP = {
     "PIN": "practice_id",
 }
 
+
 def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
 
-    # Rename variables (ID already renamed upstream)
+    # ----------------------------------------------------
+    # Rename variables
+    # ----------------------------------------------------
     harmonized_df = harmonized_df.rename(columns=COLUMN_RENAME_MAP, errors="raise")
 
-    # -------------------------
+    # ----------------------------------------------------
     # Education level
-    # -------------------------
+    # ----------------------------------------------------
+    harmonized_df["education_level"] = pd.to_numeric(
+        harmonized_df["education_level"], errors="coerce"
+    )
+    harmonized_df.loc[
+        ~harmonized_df["education_level"].isin([0, 1, 2, 3, 4, 5]), "education_level"
+    ] = pd.NA
+
     numeric_education_map = {
         0: "Kein Schulabschluss",
         1: "Volks- oder Hauptschulabschluss",
@@ -39,10 +48,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["education_level"] = map_with_check(
         series=harmonized_df["education_level"],
         mapping={
-    # Harmonize education
-    harmonized_df["education_level"] = map_with_check(
-        series=harmonized_df["education_level"],
-        mapping={
             "Kein Schulabschluss": "No school degree",
             "Volks- oder Hauptschulabschluss": "Basic secondary school",
             "Mittlere Reife / Realschulabschluss": "Intermediate secondary school",
@@ -54,9 +59,16 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         label="education_level",
     )
 
-    # -------------------------
+    # ----------------------------------------------------
     # Employment status
-    # -------------------------
+    # ----------------------------------------------------
+    harmonized_df["employment_status"] = pd.to_numeric(
+        harmonized_df["employment_status"], errors="coerce"
+    )
+    harmonized_df.loc[
+        ~harmonized_df["employment_status"].isin(range(1, 13)), "employment_status"
+    ] = pd.NA
+
     numeric_employment_status_map = {
         1: "Arbeiter/-in",
         2: "Angestellte/-r",
@@ -91,9 +103,16 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         label="employment_status",
     )
 
-    # -------------------------
+    # ----------------------------------------------------
     # Employment extent
-    # -------------------------
+    # ----------------------------------------------------
+    harmonized_df["employment_extent"] = pd.to_numeric(
+        harmonized_df["employment_extent"], errors="coerce"
+    )
+    harmonized_df.loc[~harmonized_df["employment_extent"].isin([1, 2, 3]), "employment_extent"] = (
+        pd.NA
+    )
+
     numeric_employment_extent_map = {
         1: "Vollzeit",
         2: "Teilzeit, mindestens halbtags",
@@ -114,9 +133,17 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         label="employment_extent",
     )
 
-    # -------------------------
+    # ----------------------------------------------------
     # Financial adequacy
-    # -------------------------
+    # ----------------------------------------------------
+    harmonized_df["perceived_financial_adequacy"] = pd.to_numeric(
+        harmonized_df["perceived_financial_adequacy"], errors="coerce"
+    )
+    harmonized_df.loc[
+        ~harmonized_df["perceived_financial_adequacy"].isin([1, 2, 3]),
+        "perceived_financial_adequacy",
+    ] = pd.NA
+
     numeric_financial_map = {
         1: "ja",
         2: "es geht so",
@@ -137,27 +164,34 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         label="perceived_financial_adequacy",
     )
 
-    # -------------------------
+    # ----------------------------------------------------
     # Study center
-    # -------------------------
+    # ----------------------------------------------------
+    harmonized_df["study_center"] = pd.to_numeric(harmonized_df["study_center"], errors="coerce")
+    harmonized_df.loc[~harmonized_df["study_center"].isin([1, 2]), "study_center"] = pd.NA
+
     harmonized_df["study_center"] = map_with_check(
         series=harmonized_df["study_center"],
         mapping={
             1: "Freiburg",
             2: "Hamburg",
+            pd.NA: "Unknown",
         },
         label="study_center",
     )
 
-    # -------------------------
+    # ----------------------------------------------------
     # Sex
-    # -------------------------
+    # ----------------------------------------------------
+    harmonized_df["sex"] = pd.to_numeric(harmonized_df["sex"], errors="coerce")
+    harmonized_df.loc[~harmonized_df["sex"].isin([1, 2]), "sex"] = pd.NA
+
     numeric_sex_map = {
         1: "männlich",
         2: "weiblich",
     }
 
-    harmonized_df["sex"] = harmonized_df["sex"].astype("Int64").map(numeric_sex_map)
+    harmonized_df["sex"] = harmonized_df["sex"].map(numeric_sex_map)
 
     harmonized_df["sex"] = map_with_check(
         series=harmonized_df["sex"],
@@ -168,9 +202,9 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         label="sex",
     )
 
-    # -------------------------
+    # ----------------------------------------------------
     # Final selection
-    # -------------------------
+    # ----------------------------------------------------
     return harmonized_df[
         [
             "STUDY_ID",

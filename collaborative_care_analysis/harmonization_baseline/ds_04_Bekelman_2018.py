@@ -19,7 +19,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         "scr_crgvr": "has_caregiver",
         "scr_snf": "lives_in_facility",
         "scr_tele": "has_telephone_access",
-        "timept": "follow_up_months",  # ← hérité du loader, NE PAS MAPPER
+        "timept": "follow_up_months",  # inherited from loader — DO NOT MAP
         "crf_sa": "has_alcohol_abuse_history",
         "crf_sao": "has_substance_abuse_history",
         "schfi04": "physical_activity_frequency",

@@ -4,7 +4,6 @@ from collaborative_care_analysis.utils import map_with_check
 
 
 def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
-
     harmonized_df = df.copy()
 
     # ---------------------------------------------------------------------
