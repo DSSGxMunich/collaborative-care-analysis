@@ -57,58 +57,64 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
         "GI_EQ5D_Angst_Depression",
     ]
 
-    harmonized_df = df[
-        [
-            COLNAME_STUDYID,
-            "patient_id",  # patient identifier
-            "follow_up_months",  # 0-screening, X-X months
-            # PHQ-9 related
-            *phq9_cols,  # item-level PHQ-9 scores
-            "GI_PHQ9_Schweregrad",  # total PHQ09 score, measuring depression severity: remission (<5) and response (50% reduction)
-            # GRAD-7, Generalized Anxiety Disorder 7-item scale
-            *gad_cols,  # item-level GAD-7 scores
-            # "GI_GAD7_Schweregrad", # total GAD-7 score, measuring anxiety severity
-            # Depression-related behavior, modified from ludman et al., not available in the dataset.
-            # RS-13, Resilience Scale
-            # Not provided in the dataset
-            # PSS, Problem-solving skills, not available in the dataset.
-            # This method is modified from Bleich and Watzke in an unpublished manuscript.
-            # EQ-5D-3L Index
-            *eq5d_cols,
-        ]
-    ].copy()
+    selected_columns = [
+        COLNAME_STUDYID,
+        "patient_id",
+        "follow_up_months",
+        *phq9_cols,
+        "PHQ_Summe",
+        "PHQ9_Schweregrad",
+        *gad_cols,
+        *eq5d_cols,
+    ]
 
-    # Map PHQ-9 item-level scores to numeric values 0-3
-    for col in phq9_cols:
-        harmonized_df[col] = map_with_check(harmonized_df[col], PHQ_MAPPING, col)
+    harmonized_df = df[selected_columns].copy()
 
-    # Calculate PHQ-9 total score, only when all item-level scores are available
-    # This is to compare with "GI_PHQ9_Schweregrad" which records the severity
-    # descriptively and not to interpret them wrongly
-    harmonized_df["phq_sum"] = harmonized_df[phq9_cols].sum(axis=1, min_count=9)
+    # Map PHQ-9 item responses to scores from 0 to 3
+    for column in phq9_cols:
+     harmonized_df[column] = map_with_check(
+            harmonized_df[column],
+            PHQ_MAPPING,
+            column,
+        )
 
-    # Map EQ-5D-3L item-level scores to numeric values 1-3
-    for col in eq5d_cols:
-        harmonized_df[col] = map_with_check(harmonized_df[col], EQ5D_MAPPING, col)
+    # Calculate the total independently from the item-level responses.
+    # This allows comparison with the total supplied in the dataset.
+    harmonized_df["phq_sum_calculated"] = harmonized_df[
+        phq9_cols
+    ].sum(
+        axis=1,
+        min_count=9,
+    )
 
-    # Rename EQ-5D columns
-    eq5d_rename_map = {
-        "GI_EQ5D_Beweglichkeit": "eq5d_mobility",
-        "GI_EQ5D_Selbstversorgung": "eq5d_self_care",
-        "GI_EQ5D_AllgTaetigkeiten": "eq5d_usual_activities",
-        "GI_EQ5D_Schmerzen": "eq5d_pain_discomfort",
-        "GI_EQ5D_Angst_Depression": "eq5d_anxiety_depression",
-    }
+    # Map EQ-5D-3L responses to scores from 1 to 3.
+    for column in eq5d_cols:
+        harmonized_df[column] = map_with_check(
+            harmonized_df[column],
+            EQ5D_MAPPING,
+            column,
+        )
 
-    # Rename PHQ-9 columns
     phq_rename_map = {
-        **{f"GI_PHQ9_{i}": f"phq{i:02d}" for i in range(1, 10)},
-        "GI_PHQ9_Schweregrad": "phq_functional_difficulty",
-    }
+        **{
+            f"PHQ9_{i}": f"phq{i:02d}"
+            for i in range(1, 10)
+        },
+            "PHQ_Summe": "phq_sum",
+            "PHQ9_Schweregrad": "phq_severity_category",
+        }
 
-    # Rename GAD-7 columns
     gad_rename_map = {
-        **{f"GI_GAD7_{i}": f"gad{i:02d}" for i in range(1, 8)},
+            f"GAD7_{i}": f"gad{i:02d}"
+            for i in range(1, 8)
+        }
+
+    eq5d_rename_map = {
+        "EQ5D_Beweglichkeit": "eq5d_mobility",
+        "EQ5D_Selbstversorgung": "eq5d_self_care",
+        "EQ5D_AllgTaetigkeiten": "eq5d_usual_activities",
+        "EQ5D_Schmerzen": "eq5d_pain_discomfort",
+        "EQ5D_Angst_Depression": "eq5d_anxiety_depression",
     }
 
     harmonized_df = harmonized_df.rename(
@@ -116,28 +122,35 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
             **phq_rename_map,
             **gad_rename_map,
             **eq5d_rename_map,
-        }
+        },
+        errors="raise",
     )
 
-    # Put columns in the order you want
-    phq_cols_harmonized = [f"phq{i:02d}" for i in range(1, 10)]
-    gad_cols_harmonized = [f"gad{i:02d}" for i in range(1, 8)]
-
-    harmonized_df = harmonized_df[
-        [
-            COLNAME_STUDYID,
-            "patient_id",
-            "follow_up_months",
-            *phq_cols_harmonized,
-            "phq_sum",
-            "phq_functional_difficulty",
-            *gad_cols_harmonized,
-            "eq5d_mobility",
-            "eq5d_self_care",
-            "eq5d_usual_activities",
-            "eq5d_pain_discomfort",
-            "eq5d_anxiety_depression",
-        ]
+    phq_cols_harmonized = [
+        f"phq{i:02d}"
+        for i in range(1, 10)
     ]
 
-    return harmonized_df
+    gad_cols_harmonized = [
+        f"gad{i:02d}"
+        for i in range(1, 8)
+    ]
+
+    output_columns = [
+        COLNAME_STUDYID,
+        "patient_id",
+        "follow_up_months",
+        *phq_cols_harmonized,
+        "phq_sum",
+        "phq_sum_calculated",
+        "phq_severity_category",
+        *gad_cols_harmonized,
+        "eq5d_mobility",
+        "eq5d_self_care",
+        "eq5d_usual_activities",
+        "eq5d_pain_discomfort",
+        "eq5d_anxiety_depression",
+    ] 
+
+    return harmonized_df[output_columns]
+
