@@ -47,7 +47,9 @@ def _get_study_id(script_path: Path) -> str:
 def _get_harmonization_dirs(package_dir: Path | None = None) -> list[Path]:
     """Find all directories named 'harmonization_*' in the package."""
     base_dir = package_dir if package_dir is not None else PACKAGE_DIR
-    return sorted([d for d in base_dir.glob("harmonization_*") if d.is_dir()])
+    return sorted(
+        d for d in base_dir.glob("harmonization_*") if d.is_dir() and d.name.isidentifier()
+    )
 
 
 def _get_harmonization_type(harm_dir: Path) -> str:
