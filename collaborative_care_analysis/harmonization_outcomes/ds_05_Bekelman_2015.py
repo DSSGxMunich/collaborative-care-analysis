@@ -43,7 +43,6 @@ GAD7_COLS = [
     "GAD05",
     "GAD06",
     "GAD07",
-    "GAD08",
     "GADLEVEL",
 ]
 
@@ -79,7 +78,7 @@ RENAME_MAP = {
     "KCCQSS": "kccq_ss",
     "KCCQTS": "kccq_ts",
     # GAD-7
-    **{f"GAD{i:02d}": f"gad{i:02d}" for i in range(1, 9)},
+    **{f"GAD{i:02d}": f"gad{i:02d}" for i in range(1, 8)},
     "GADLEVEL": "gad7_total",
     # Signs and symptoms
     **{f"SS{i:02d}": f"ss{i:02d}" for i in range(1, 11)},
