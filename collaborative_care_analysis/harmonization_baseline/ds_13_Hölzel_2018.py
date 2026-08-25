@@ -2,7 +2,6 @@ import pandas as pd
 
 from collaborative_care_analysis.utils import map_with_check
 
-from collaborative_care_analysis.utils import map_with_check
 
 COLUMN_RENAME_MAP = {
     "Alter": "age",
