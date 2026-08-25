@@ -167,6 +167,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     # return the harmonized dataset which has only the values we want
     return harmonized_df[
         [
+            "STUDY_ID",
             "patient_id",
             "study_arm",
             "follow_up_months",
