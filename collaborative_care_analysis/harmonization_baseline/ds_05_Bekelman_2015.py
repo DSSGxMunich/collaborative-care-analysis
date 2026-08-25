@@ -1,39 +1,70 @@
 import pandas as pd
 
+from collaborative_care_analysis.utils import map_with_check
+
 
 def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
 
     # ----------------------------------------------------
-    # Alcohol & substance abuse
+    # Alcohol abuse
     # ----------------------------------------------------
-    harmonized_df["has_alcohol_abuse_history"] = harmonized_df["CRF_SA"].map(
+    harmonized_df["CRF_SA"] = pd.to_numeric(harmonized_df["CRF_SA"], errors="coerce")
+    harmonized_df.loc[~harmonized_df["CRF_SA"].isin([0, 1]), "CRF_SA"] = pd.NA
+
+    harmonized_df["has_alcohol_abuse_history"] = map_with_check(
+        harmonized_df["CRF_SA"],
         {
             0: "No",
             1: "Yes",
-        }
+            pd.NA: "Unknown",
+        },
+        label="has_alcohol_abuse_history",
     )
 
-    harmonized_df["has_other_substance_abuse_history"] = harmonized_df["CRF_SAO"].map(
+    # ----------------------------------------------------
+    # Other substance abuse
+    # ----------------------------------------------------
+    harmonized_df["CRF_SAO"] = pd.to_numeric(harmonized_df["CRF_SAO"], errors="coerce")
+    harmonized_df.loc[~harmonized_df["CRF_SAO"].isin([0, 1]), "CRF_SAO"] = pd.NA
+
+    harmonized_df["has_other_substance_abuse_history"] = map_with_check(
+        harmonized_df["CRF_SAO"],
         {
             0: "No",
             1: "Yes",
-        }
+            pd.NA: "Unknown",
+        },
+        label="has_other_substance_abuse_history",
     )
 
     # ----------------------------------------------------
     # Gender
     # ----------------------------------------------------
-    harmonized_df["sex"] = harmonized_df["CRF_GENDER"].map(
+    harmonized_df["CRF_GENDER"] = pd.to_numeric(harmonized_df["CRF_GENDER"], errors="coerce")
+    harmonized_df.loc[~harmonized_df["CRF_GENDER"].isin([1, 2]), "CRF_GENDER"] = pd.NA
+
+    harmonized_df["sex"] = map_with_check(
+        harmonized_df["CRF_GENDER"],
         {
             1: "Male",
             2: "Female",
-        }
+            pd.NA: "Unknown",
+        },
+        label="sex",
     )
 
     # ----------------------------------------------------
     # Race (single column)
     # ----------------------------------------------------
+    # Clean all race indicator columns
+    race_cols = ["CRF_RAWH", "CRF_RABL", "CRF_RARAAS", "CRF_RAAI", "CRF_RAOT"]
+
+    # Clean race indicator columns
+    for col in race_cols:
+        harmonized_df[col] = pd.to_numeric(harmonized_df[col], errors="coerce")
+        harmonized_df.loc[~harmonized_df[col].isin([0, 1]), col] = pd.NA
+
     def compute_race(row):
         if row["CRF_RAWH"] == 1:
             return "White"
@@ -47,38 +78,50 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             return "Other"
         return "Missing"
 
-    harmonized_df["race"] = harmonized_df.apply(compute_race, axis=1)
-
+    # Use .fillna(0) to avoid NA comparison issues
+    harmonized_df["race"] = harmonized_df[race_cols].fillna(0).apply(compute_race, axis=1)
     # ----------------------------------------------------
     # Ethnicity
     # ----------------------------------------------------
-    harmonized_df["ethnicity"] = harmonized_df["CRF_ETH"].map(
+    harmonized_df["CRF_ETH"] = pd.to_numeric(harmonized_df["CRF_ETH"], errors="coerce")
+    harmonized_df.loc[~harmonized_df["CRF_ETH"].isin([1, 2]), "CRF_ETH"] = pd.NA
+
+    harmonized_df["ethnicity"] = map_with_check(
+        harmonized_df["CRF_ETH"],
         {
             1: "Hispanic",
             2: "Non-Hispanic",
-        }
+            pd.NA: "Unknown",
+        },
+        label="ethnicity",
     )
 
     # ----------------------------------------------------
     # Smoking status
     # ----------------------------------------------------
-    harmonized_df["smoking_status"] = harmonized_df["CRF_SMOKE"].map(
+    harmonized_df["CRF_SMOKE"] = pd.to_numeric(harmonized_df["CRF_SMOKE"], errors="coerce")
+    harmonized_df.loc[~harmonized_df["CRF_SMOKE"].isin([1, 2, 3, 4]), "CRF_SMOKE"] = pd.NA
+
+    harmonized_df["smoking_status"] = map_with_check(
+        harmonized_df["CRF_SMOKE"],
         {
             1: "Current smoker",
             2: "Former smoker (<1 year)",
             3: "Former smoker (≥1 year)",
             4: "Never smoked",
-        }
+            pd.NA: "Unknown",
+        },
+        label="smoking_status",
     )
 
     # ----------------------------------------------------
-    # follow_up_months comes from the loader
+    # follow_up_months comes from the loader (do NOT map)
     # ----------------------------------------------------
     if "follow_up_months" not in harmonized_df.columns:
         raise ValueError("follow_up_months is missing from the loaded dataset.")
 
     # ----------------------------------------------------
-    # Return harmonized dataset (STUDY_ID must already exist)
+    # Final output
     # ----------------------------------------------------
     return harmonized_df[
         [

@@ -1,31 +1,14 @@
 import pandas as pd
 
+from collaborative_care_analysis.utils import map_with_check
+
 
 def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
 
-    # Raw baseline variables (for reference only)
-    baseline_vars = [
-        "patient_id",
-        "age",
-        "gender",
-        "race",
-        "dem_smoke",
-        "dem_ed",
-        "dem_wrk",
-        "dem_rel",
-        "dem_inc",
-        "scr_crgvr",
-        "scr_snf",
-        "scr_tele",
-        "timept",
-        "crf_sa",
-        "crf_sao",
-        "schfi04",
-        "ins_priv",
-    ]
-
-    # Rename raw variables to harmonized names
+    # -------------------------
+    # Rename raw variables
+    # -------------------------
     rename_dict = {
         "gender": "sex",
         "dem_smoke": "smoking_status",
@@ -36,7 +19,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         "scr_crgvr": "has_caregiver",
         "scr_snf": "lives_in_facility",
         "scr_tele": "has_telephone_access",
-        "timept": "follow_up_months",
+        "timept": "follow_up_months",  # ← hérité du loader, NE PAS MAPPER
         "crf_sa": "has_alcohol_abuse_history",
         "crf_sao": "has_substance_abuse_history",
         "schfi04": "physical_activity_frequency",
@@ -44,7 +27,9 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     }
     harmonized_df = harmonized_df.rename(columns=rename_dict)
 
+    # -------------------------
     # Harmonize private insurance (blank → No)
+    # -------------------------
     if "has_private_insurance" in harmonized_df.columns:
         harmonized_df["has_private_insurance"] = (
             harmonized_df["has_private_insurance"]
@@ -52,7 +37,9 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             .astype("string")
         )
 
-    # Map coded variables to readable categories
+    # -------------------------
+    # Category mappings (strict)
+    # -------------------------
     category_maps = {
         "sex": {1: "Male", 2: "Female"},
         "race": {
@@ -64,7 +51,12 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             6: "Other",
             99: "Unknown",
         },
-        "smoking_status": {0: "Never", 1: "Current", 2: "Quit <1 year", 3: "Quit ≥1 year"},
+        "smoking_status": {
+            0: "Never",
+            1: "Current",
+            2: "Quit <1 year",
+            3: "Quit ≥1 year",
+        },
         "education_level": {
             1: "< High school",
             2: "High school graduate",
@@ -102,7 +94,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         "has_caregiver": {0: "No", 1: "Yes"},
         "lives_in_facility": {0: "No", 1: "Yes"},
         "has_telephone_access": {0: "No", 1: "Yes"},
-        "follow_up_months": {1: "Baseline", 2: "3 months", 3: "6 months", 4: "12 months"},
         "has_alcohol_abuse_history": {0: "No", 1: "Yes"},
         "has_substance_abuse_history": {0: "No", 1: "Yes"},
         "physical_activity_frequency": {
@@ -113,15 +104,26 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         },
     }
 
+    # -------------------------
+    # Apply map_with_check to all coded variables (except follow_up_months)
+    # -------------------------
     for var, mapping in category_maps.items():
         if var in harmonized_df.columns:
-            harmonized_df[var] = harmonized_df[var].map(mapping).astype("string")
+            harmonized_df[var] = map_with_check(
+                series=harmonized_df[var],
+                mapping=mapping,
+                label=var,
+            ).astype("string")
 
+    # -------------------------
     # Ensure age is numeric
+    # -------------------------
     if "age" in harmonized_df.columns:
         harmonized_df["age"] = pd.to_numeric(harmonized_df["age"], errors="coerce")
 
-    # Final harmonized baseline output (STUDY_ID added upstream)
+    # -------------------------
+    # Final output
+    # -------------------------
     return harmonized_df[
         [
             "STUDY_ID",

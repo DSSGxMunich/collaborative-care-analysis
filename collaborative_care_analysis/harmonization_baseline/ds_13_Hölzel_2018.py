@@ -16,7 +16,6 @@ COLUMN_RENAME_MAP = {
     "PIN": "practice_id",
 }
 
-
 def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
 

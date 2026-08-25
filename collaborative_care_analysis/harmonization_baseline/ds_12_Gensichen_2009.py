@@ -1,30 +1,42 @@
 import pandas as pd
 
+from collaborative_care_analysis.utils import map_with_check
+
 
 def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
+
     harmonized_df = df.copy()
 
-    # Praxis ID
+    # ---------------------------------------------------------------------
+    # Identifiers
+    # ---------------------------------------------------------------------
     harmonized_df["practice_id"] = harmonized_df["PR_ID"]
 
+    # ---------------------------------------------------------------------
     # Patient status
-    harmonized_df["patient_status"] = harmonized_df["PAT_STAT"].map(
+    # ---------------------------------------------------------------------
+    harmonized_df["PAT_STAT"] = pd.to_numeric(harmonized_df["PAT_STAT"], errors="coerce")
+    harmonized_df.loc[~harmonized_df["PAT_STAT"].isin([1.0, 2.0, 3.0, 4.0]), "PAT_STAT"] = pd.NA
+
+    harmonized_df["patient_status"] = map_with_check(
+        harmonized_df["PAT_STAT"],
         {
             1.0: "Known",
             2.0: "New + PHQ",
             3.0: "New + PHQ missing",
             4.0: "None",
-        }
+            pd.NA: "Unknown",
+        },
+        label="patient_status",
     )
 
+    # ---------------------------------------------------------------------
     # Dates
+    # ---------------------------------------------------------------------
     harmonized_df["birth_date"] = pd.to_datetime(harmonized_df["Gebdatum"], errors="coerce")
     harmonized_df["survey_date"] = pd.to_datetime(harmonized_df["Befragun"], errors="coerce")
-
-    # Birth year
     harmonized_df["birth_year"] = pd.to_numeric(harmonized_df["GebJahr"], errors="coerce")
 
-    # Age estimation (prefer birth date, fallback to birth year)
     if harmonized_df["birth_date"].notna().any():
         harmonized_df["age"] = (
             (harmonized_df["survey_date"] - harmonized_df["birth_date"]).dt.days / 365.25
@@ -32,43 +44,73 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     else:
         harmonized_df["age"] = harmonized_df["survey_date"].dt.year - harmonized_df["birth_year"]
 
+    # ---------------------------------------------------------------------
     # Sex
-    harmonized_df["sex"] = (
-        harmonized_df["Sex"]
-        .map(
-            {
-                1.0: "Female",
-                2.0: "Male",
-            }
-        )
-        .astype("string")
-    )
+    # ---------------------------------------------------------------------
+    harmonized_df["Sex"] = pd.to_numeric(harmonized_df["Sex"], errors="coerce")
+    harmonized_df.loc[~harmonized_df["Sex"].isin([1.0, 2.0]), "Sex"] = pd.NA
 
+    harmonized_df["sex"] = map_with_check(
+        harmonized_df["Sex"],
+        {
+            1.0: "Female",
+            2.0: "Male",
+            pd.NA: "Unknown",
+        },
+        label="sex",
+    ).astype("string")
+
+    # ---------------------------------------------------------------------
     # Anthropometrics
+    # ---------------------------------------------------------------------
     harmonized_df["height_cm"] = pd.to_numeric(harmonized_df["Groesse"], errors="coerce")
     harmonized_df["weight_kg"] = pd.to_numeric(harmonized_df["Gewicht"], errors="coerce")
 
+    # ---------------------------------------------------------------------
     # Smoking
-    harmonized_df["smoking_status"] = harmonized_df["Raucher_"].map(
+    # ---------------------------------------------------------------------
+    harmonized_df["Raucher_"] = pd.to_numeric(harmonized_df["Raucher_"], errors="coerce")
+    harmonized_df.loc[~harmonized_df["Raucher_"].isin([0.0, 1.0, 2.0, 3.0]), "Raucher_"] = pd.NA
+
+    harmonized_df["smoking_status"] = map_with_check(
+        harmonized_df["Raucher_"],
         {
-            1.0: "Smoker",
-            2.0: "Non-smoker",
-        }
+            0.0: "Never",
+            1.0: "Current",
+            2.0: "Quit <1 year",
+            3.0: "Quit ≥1 year",
+            pd.NA: "Unknown",
+        },
+        label="smoking_status",
     )
 
+    # ---------------------------------------------------------------------
     # Marital status
-    harmonized_df["marital_status"] = harmonized_df["FamStand"].map(
+    # ---------------------------------------------------------------------
+    harmonized_df["FamStand"] = pd.to_numeric(harmonized_df["FamStand"], errors="coerce")
+    harmonized_df.loc[~harmonized_df["FamStand"].isin([1, 2, 3, 4, 5]), "FamStand"] = pd.NA
+
+    harmonized_df["marital_status"] = map_with_check(
+        harmonized_df["FamStand"],
         {
             1.0: "Single",
             2.0: "Married, living together",
-            3.0: "Married, Separated",
+            3.0: "Married, separated",
             4.0: "Divorced",
             5.0: "Widowed",
-        }
+            pd.NA: "Unknown",
+        },
+        label="marital_status",
     )
 
+    # ---------------------------------------------------------------------
     # Education
-    harmonized_df["education_level"] = harmonized_df["Schulab"].map(
+    # ---------------------------------------------------------------------
+    harmonized_df["Schulab"] = pd.to_numeric(harmonized_df["Schulab"], errors="coerce")
+    harmonized_df.loc[~harmonized_df["Schulab"].isin([1, 2, 3, 4, 5, 6]), "Schulab"] = pd.NA
+
+    harmonized_df["education_level"] = map_with_check(
+        harmonized_df["Schulab"],
         {
             1.0: "No degree",
             2.0: "Basic secondary school",
@@ -76,10 +118,14 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             4.0: "Higher education entrance qualification",
             5.0: "General higher education entrance qualification",
             6.0: "Other",
-        }
+            pd.NA: "Unknown",
+        },
+        label="education_level",
     )
 
+    # ---------------------------------------------------------------------
     # Living relatives
+    # ---------------------------------------------------------------------
     harmonized_df["number_of_living_parents"] = pd.to_numeric(
         harmonized_df["Eltern"], errors="coerce"
     )
@@ -90,8 +136,14 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         harmonized_df["Kinder"], errors="coerce"
     )
 
+    # ---------------------------------------------------------------------
     # Ethnicity
-    harmonized_df["ethnicity"] = harmonized_df["Ethnie"].map(
+    # ---------------------------------------------------------------------
+    harmonized_df["Ethnie"] = pd.to_numeric(harmonized_df["Ethnie"], errors="coerce")
+    harmonized_df.loc[~harmonized_df["Ethnie"].isin([1, 2, 3, 4, 5, 6]), "Ethnie"] = pd.NA
+
+    harmonized_df["ethnicity"] = map_with_check(
+        harmonized_df["Ethnie"],
         {
             1.0: "Caucasian",
             2.0: "Asian",
@@ -99,20 +151,37 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             4.0: "African-American",
             5.0: "Latino-American",
             6.0: "Other",
-        }
+            pd.NA: "Unknown",
+        },
+        label="ethnicity",
     )
 
+    # ---------------------------------------------------------------------
     # Insurance
-    harmonized_df["insurance_type"] = harmonized_df["Vers_Sta"].map(
+    # ---------------------------------------------------------------------
+    harmonized_df["Vers_Sta"] = pd.to_numeric(harmonized_df["Vers_Sta"], errors="coerce")
+    harmonized_df.loc[~harmonized_df["Vers_Sta"].isin([1, 2]), "Vers_Sta"] = pd.NA
+
+    harmonized_df["insurance_type"] = map_with_check(
+        harmonized_df["Vers_Sta"],
         {
             1.0: "GKV (public)",
             2.0: "PKV (private)",
-        }
+            pd.NA: "Unknown",
+        },
+        label="insurance_type",
     )
+
     harmonized_df["insurance_provider"] = harmonized_df["Name_KV"].astype("string")
 
+    # ---------------------------------------------------------------------
     # Employment
-    harmonized_df["employment_status"] = harmonized_df["Erwerb"].map(
+    # ---------------------------------------------------------------------
+    harmonized_df["Erwerb"] = pd.to_numeric(harmonized_df["Erwerb"], errors="coerce")
+    harmonized_df.loc[~harmonized_df["Erwerb"].isin(range(1, 13)), "Erwerb"] = pd.NA
+
+    harmonized_df["employment_status"] = map_with_check(
+        harmonized_df["Erwerb"],
         {
             1.0: "Fully employed",
             2.0: "Part-time",
@@ -126,10 +195,11 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             10.0: "Early retirement",
             11.0: "Regular old-age retirement",
             12.0: "Survivor's/Widow's pension",
-        }
+            pd.NA: "Unknown",
+        },
+        label="employment_status",
     )
 
-    # Employment-related dates
     harmonized_df["unemployed_since"] = pd.to_datetime(harmonized_df["Arblos"], errors="coerce")
     harmonized_df["temporary_disability_pension_since"] = pd.to_datetime(
         harmonized_df["EMaZ"], errors="coerce"
@@ -138,7 +208,9 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         harmonized_df["EMaD"], errors="coerce"
     )
 
-    # Final output (STUDY_ID added upstream)
+    # ---------------------------------------------------------------------
+    # Final output
+    # ---------------------------------------------------------------------
     return harmonized_df[
         [
             "STUDY_ID",
