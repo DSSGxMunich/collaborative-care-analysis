@@ -5,8 +5,7 @@ from collaborative_care_analysis.utils import map_with_check
 
 def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
-    # this dataset is care management
-    # Note to myself: Chronic Disease Index (CDI) items, per the German IMPACT / Hölzel et al.
+    # Chronic Disease Index (CDI) items, per the German IMPACT / Hölzel et al.
     # 2018 codebook. Collected once, at baseline only (GI_B1_CDI_*) - these
     # columns are NaN at follow_up_months != 0 in the long-format frame.
     # Raw coding: 0 = Nein (no), 1 = Ja (yes), 9 = missing value sentinel.
@@ -15,7 +14,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     # (e.g. "CDI Knochenbruch"), not the actual question wording from the
     # patient-facing form. CDI-style comorbidity checklists are typically
     # "have you ever been diagnosed with / do you have this condition"
-    # (i.e. presence/history, not "is it currently active right now") - NON ETIOLOGY (NON-REASON)
+    # (i.e. presence/history, not "is it currently active right now"). - These variables are non-etiological because they indicate whether a condition is present or has a history, rather than why it occurred.
     cdi_cols = [f"CDI_{i}" for i in range(1, 19)]
 
     missing_cols = [c for c in cdi_cols if c not in harmonized_df.columns]
@@ -35,14 +34,14 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         yes_no_map,
         "CDI_1",
     )
-    harmonized_df["has_heart_failure"] = map_with_check(  # CDI_2: Herzschwäche
+    harmonized_df["has_heart_failure_diagnosis"] = map_with_check(  # CDI_2: Herzschwäche
         # Heart can't pump blood effectively enough for the body's needs
         # (a chronic condition, not a one-time event).
         harmonized_df["CDI_2"],
         yes_no_map,
         "CDI_2",
     )
-    harmonized_df["has_heart_attack"] = map_with_check(  # CDI_3: Herzinfarkt
+    harmonized_df["has_history_of_heart_attack"] = map_with_check(  # CDI_3: Herzinfarkt
         # History of myocardial infarction - a past acute event, asking
         # "did this ever happen", not "is one happening now".
         harmonized_df["CDI_3"],
@@ -75,7 +74,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         "CDI_6",
     )
     harmonized_df["has_bone_fracture"] = map_with_check(  # CDI_7: Knochenbruch
-        # History of (at least one) broken bone -- like has_heart_attack,
+        # History of (at least one) broken bone -- like has_history_of_heart_attack,
         # this is "did this ever happen", not an active/current fracture.
         harmonized_df["CDI_7"],
         yes_no_map,
@@ -172,8 +171,8 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "study_arm",
             "follow_up_months",
             "has_angina",
-            "has_heart_failure",  # IMPORTANT NOTE: The columns are not covering the reason, just currently situation/# NOTE: Indicates condition presence, not etiology. (NON-ETIOLOGY)
-            "has_heart_attack",
+            "has_heart_failure_diagnosis",
+            "has_history_of_heart_attack",
             "has_asthma_or_copd",
             "has_arthritis",
             "has_osteoporosis",
