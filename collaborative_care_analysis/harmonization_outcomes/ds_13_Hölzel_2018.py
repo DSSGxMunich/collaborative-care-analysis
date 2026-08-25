@@ -37,15 +37,9 @@ EQ5D_MAPPING = {
     3: 3,
 }
 
-PHQ9_COLS = [
-    f"PHQ9_{item}"
-    for item in range(1, 10)
-]
+PHQ9_COLS = [f"PHQ9_{item}" for item in range(1, 10)]
 
-GAD7_COLS = [
-    f"GAD7_{item}"
-    for item in range(1, 8)
-]
+GAD7_COLS = [f"GAD7_{item}" for item in range(1, 8)]
 
 EQ5D_COLS = [
     "EQ5D_Beweglichkeit",
@@ -56,14 +50,8 @@ EQ5D_COLS = [
 ]
 
 COLUMN_RENAME_MAP = {
-    **{
-        f"PHQ9_{item}": f"phq{item:02d}"
-        for item in range(1, 10)
-    },
-    **{
-        f"GAD7_{item}": f"gad{item:02d}"
-        for item in range(1, 8)
-    },
+    **{f"PHQ9_{item}": f"phq{item:02d}" for item in range(1, 10)},
+    **{f"GAD7_{item}": f"gad{item:02d}" for item in range(1, 8)},
     "PHQ_Summe": "phq_sum",
     "PHQ9_Schweregrad": "phq_severity_category",
     "EQ5D_Beweglichkeit": "eq5d_mobility",
@@ -114,11 +102,9 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
         )
         .astype("Int64")
     )
-    
+
     # Place the calculated total after the stored total.
-    calculated_position = (
-        harmonized_df.columns.get_loc("PHQ_Summe") + 1
-    )
+    calculated_position = harmonized_df.columns.get_loc("PHQ_Summe") + 1
 
     harmonized_df.insert(
         calculated_position,
@@ -127,10 +113,7 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     # Compare stored and calculated totals only when both are available.
-    comparable = (
-        harmonized_df["PHQ_Summe"].notna()
-        & harmonized_df["phq_sum_calculated"].notna()
-    )
+    comparable = harmonized_df["PHQ_Summe"].notna() & harmonized_df["phq_sum_calculated"].notna()
 
     phq_sum_inconsistent = pd.Series(
         pd.NA,
@@ -151,7 +134,7 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
         "phq_sum_inconsistent",
         phq_sum_inconsistent,
     )
-    
+
     # Map EQ-5D-3L responses to scores from 1 to 3.
     for column in EQ5D_COLS:
         harmonized_df[column] = map_with_check(
