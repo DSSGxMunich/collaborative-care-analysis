@@ -50,6 +50,20 @@ uv run collaborative_care_analysis/dataset.py run Katon_2001
 
 Runs `export`, `harmonize`, and `merge` in sequence.
 
+## Reporting Pipeline Issues
+
+Run the full pipeline for one or all datasets while tolerating failures, so a broken loader or harmonization script doesn't stop the rest from being checked.
+
+```bash
+uv run collaborative_care_analysis/dataset.py report
+
+uv run collaborative_care_analysis/dataset.py report 04
+
+uv run collaborative_care_analysis/dataset.py report Bekelman_2018
+```
+
+Every pipeline step is attempted and its outcome recorded rather than raised. At the end, a table summarizes each dataset's OK/warned/failed stage counts, followed by a table of failures with their error types and messages, and a warnings table for softer heuristic findings (e.g. columns that look time-invariant but are only populated at each patient's baseline visit, suggesting they may need to be forward-filled).
+
 ## Generating Codebooks
 
 If a dataset does not include a codebook, generate one from the metadata embedded in its SPSS or Stata files by specifying the numeric dataset ID: 
