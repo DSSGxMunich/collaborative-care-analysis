@@ -9,7 +9,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     # -------------------------
     # Cluster assignment
     # -------------------------
-    harmonized_df["Cluster"] = pd.to_numeric(harmonized_df["Cluster"], errors="coerce")
+    harmonized_df["Cluster"] = pd.to_numeric(harmonized_df["Cluster"], errors="raise")
     harmonized_df.loc[~harmonized_df["Cluster"].isin([0, 1]), "Cluster"] = pd.NA
 
     harmonized_df["cluster"] = map_with_check(
@@ -25,7 +25,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     # -------------------------
     # Sex
     # -------------------------
-    harmonized_df["Sex"] = pd.to_numeric(harmonized_df["Sex"], errors="coerce")
+    harmonized_df["Sex"] = pd.to_numeric(harmonized_df["Sex"], errors="raise")
     harmonized_df.loc[~harmonized_df["Sex"].isin([0, 1]), "Sex"] = pd.NA
 
     harmonized_df["sex"] = map_with_check(
@@ -41,7 +41,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     # -------------------------
     # Country
     # -------------------------
-    harmonized_df["country"] = pd.to_numeric(harmonized_df["country"], errors="coerce")
+    harmonized_df["country"] = pd.to_numeric(harmonized_df["country"], errors="raise")
     harmonized_df.loc[~harmonized_df["country"].isin([0, 1]), "country"] = pd.NA
 
     harmonized_df["country"] = map_with_check(
@@ -58,7 +58,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     # Recruitment method
     # -------------------------
     harmonized_df["recruitmentmethod"] = pd.to_numeric(
-        harmonized_df["recruitmentmethod"], errors="coerce"
+        harmonized_df["recruitmentmethod"], errors="raise"
     )
     harmonized_df.loc[~harmonized_df["recruitmentmethod"].isin([0, 1, 2]), "recruitmentmethod"] = (
         pd.NA
@@ -78,7 +78,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     # -------------------------
     # Patient sample
     # -------------------------
-    harmonized_df["patientsample"] = pd.to_numeric(harmonized_df["patientsample"], errors="coerce")
+    harmonized_df["patientsample"] = pd.to_numeric(harmonized_df["patientsample"], errors="raise")
     harmonized_df.loc[~harmonized_df["patientsample"].isin([0, 1]), "patientsample"] = pd.NA
 
     harmonized_df["patient_sample"] = map_with_check(
@@ -95,7 +95,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     # Allocation concealment
     # -------------------------
     harmonized_df["allocationconcealment"] = pd.to_numeric(
-        harmonized_df["allocationconcealment"], errors="coerce"
+        harmonized_df["allocationconcealment"], errors="raise"
     )
     harmonized_df.loc[
         ~harmonized_df["allocationconcealment"].isin([0, 1]), "allocationconcealment"

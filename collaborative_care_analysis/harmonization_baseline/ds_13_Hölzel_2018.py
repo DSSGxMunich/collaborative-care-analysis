@@ -63,7 +63,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     # Employment status
     # ----------------------------------------------------
     harmonized_df["employment_status"] = pd.to_numeric(
-        harmonized_df["employment_status"], errors="coerce"
+        harmonized_df["employment_status"], errors="raise"
     )
     harmonized_df.loc[
         ~harmonized_df["employment_status"].isin(range(1, 13)), "employment_status"
@@ -107,7 +107,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     # Employment extent
     # ----------------------------------------------------
     harmonized_df["employment_extent"] = pd.to_numeric(
-        harmonized_df["employment_extent"], errors="coerce"
+        harmonized_df["employment_extent"], errors="raise"
     )
     harmonized_df.loc[~harmonized_df["employment_extent"].isin([1, 2, 3]), "employment_extent"] = (
         pd.NA
@@ -137,7 +137,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     # Financial adequacy
     # ----------------------------------------------------
     harmonized_df["perceived_financial_adequacy"] = pd.to_numeric(
-        harmonized_df["perceived_financial_adequacy"], errors="coerce"
+        harmonized_df["perceived_financial_adequacy"], errors="raise"
     )
     harmonized_df.loc[
         ~harmonized_df["perceived_financial_adequacy"].isin([1, 2, 3]),
@@ -167,7 +167,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     # ----------------------------------------------------
     # Study center
     # ----------------------------------------------------
-    harmonized_df["study_center"] = pd.to_numeric(harmonized_df["study_center"], errors="coerce")
+    harmonized_df["study_center"] = pd.to_numeric(harmonized_df["study_center"], errors="raise")
     harmonized_df.loc[~harmonized_df["study_center"].isin([1, 2]), "study_center"] = pd.NA
 
     harmonized_df["study_center"] = map_with_check(
@@ -183,7 +183,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     # ----------------------------------------------------
     # Sex
     # ----------------------------------------------------
-    harmonized_df["sex"] = pd.to_numeric(harmonized_df["sex"], errors="coerce")
+    harmonized_df["sex"] = pd.to_numeric(harmonized_df["sex"], errors="raise")
     harmonized_df.loc[~harmonized_df["sex"].isin([1, 2]), "sex"] = pd.NA
 
     numeric_sex_map = {

@@ -119,7 +119,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     # Ensure age is numeric
     # -------------------------
     if "age" in harmonized_df.columns:
-        harmonized_df["age"] = pd.to_numeric(harmonized_df["age"], errors="coerce")
+        harmonized_df["age"] = pd.to_numeric(harmonized_df["age"], errors="raise")
 
     # -------------------------
     # Final output
