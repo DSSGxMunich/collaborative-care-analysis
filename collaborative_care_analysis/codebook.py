@@ -11,10 +11,6 @@ from collaborative_care_analysis.config import (
     RAW_DATASETS_DIR,
 )
 
-# -------------------------------------------------------------------
-# Helper functions
-# -------------------------------------------------------------------
-
 
 def find_dataset_directory(
     dataset_id: int,
@@ -170,60 +166,9 @@ def get_variable_value_labels(meta: Any) -> dict:
     return reconstructed
 
 
-def outputs_are_up_to_date(
-    raw_file: Path,
-    output_files: list[Path],
-) -> bool:
-    """
-    Return True when every expected output exists and is at least as
-    recent as the raw file.
-    """
-    if not all(output.exists() for output in output_files):
-        return False
-
-    raw_modified = raw_file.stat().st_mtime
-
-    return all(output.stat().st_mtime >= raw_modified for output in output_files)
-
-
 # -------------------------------------------------------------------
 # Metadata output builders
 # -------------------------------------------------------------------
-
-
-def create_dataset_metadata(
-    file: Path,
-    meta: Any,
-) -> pd.DataFrame:
-    column_names = safe_meta_attribute(
-        meta,
-        "column_names",
-        [],
-    )
-
-    metadata_items = {
-        "source_file": file.name,
-        "source_format": file.suffix.lower(),
-        "file_label": safe_meta_attribute(meta, "file_label", ""),
-        "table_name": safe_meta_attribute(meta, "table_name", ""),
-        "file_encoding": safe_meta_attribute(meta, "file_encoding", ""),
-        "number_rows": safe_meta_attribute(meta, "number_rows", ""),
-        "number_columns": safe_meta_attribute(
-            meta,
-            "number_columns",
-            len(column_names),
-        ),
-        "notes": convert_to_text(safe_meta_attribute(meta, "notes", "")),
-        "creation_time": convert_to_text(safe_meta_attribute(meta, "creation_time", "")),
-        "modification_time": convert_to_text(safe_meta_attribute(meta, "modification_time", "")),
-    }
-
-    return pd.DataFrame(
-        {
-            "metadata_field": metadata_items.keys(),
-            "metadata_value": metadata_items.values(),
-        }
-    )
 
 
 def create_variable_labels(
@@ -295,9 +240,21 @@ def create_value_labels(
     return pd.DataFrame(rows)
 
 
-# -------------------------------------------------------------------
-# Metadata extraction
-# -------------------------------------------------------------------
+def create_codebook(meta: Any) -> pd.DataFrame:
+    """
+    Combine variable labels and value labels into one codebook table.
+
+    Variables with value labels have one row per coded value. Variables
+    without value labels are retained with empty coded-value fields.
+    """
+    variable_labels = create_variable_labels(meta)
+    value_labels = create_value_labels(meta)
+
+    return variable_labels.merge(
+        value_labels,
+        on="variable",
+        how="left",
+    )
 
 
 def extract_file_metadata(
@@ -308,13 +265,6 @@ def extract_file_metadata(
     Extract metadata from one SPSS or Stata file.
     """
     workbook_output = output_directory / f"{file.stem}_metadata.xlsx"
-
-    if outputs_are_up_to_date(
-        raw_file=file,
-        output_files=[workbook_output],
-    ):
-        logger.info(f"Skipping {file.name}: metadata workbook is up to date.")
-        return
 
     logger.info(f"Processing {file.name}.")
 
@@ -334,35 +284,31 @@ def extract_file_metadata(
     else:
         raise ValueError(f"Unsupported file format: {suffix}")
 
-    dataset_metadata = create_dataset_metadata(
-        file=file,
-        meta=meta,
-    )
-
-    variable_labels = create_variable_labels(meta)
-    value_labels = create_value_labels(meta)
+    codebook = create_codebook(meta)
 
     with pd.ExcelWriter(
         workbook_output,
         engine="openpyxl",
     ) as writer:
-        dataset_metadata.to_excel(
+        codebook.to_excel(
             writer,
-            sheet_name="Dataset Metadata",
+            sheet_name="Codebook",
             index=False,
         )
 
-        variable_labels.to_excel(
-            writer,
-            sheet_name="Variable Labels",
-            index=False,
-        )
+        worksheet = writer.sheets["Codebook"]
+        worksheet.freeze_panes = "A2"
+        worksheet.auto_filter.ref = worksheet.dimensions
 
-        value_labels.to_excel(
-            writer,
-            sheet_name="Value Labels",
-            index=False,
-        )
+        for column_cells in worksheet.columns:
+            max_length = max(
+                len(str(cell.value)) if cell.value is not None else 0
+                for cell in column_cells
+            )
+            worksheet.column_dimensions[column_cells[0].column_letter].width = min(
+                max_length + 2,
+                60,
+            )
 
     logger.info(f"Saved metadata workbook to {workbook_output}.")
 
