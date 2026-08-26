@@ -34,6 +34,7 @@ TIMEPOINT_COLS = {
     },
 }
 
+
 def to_long(df: pd.DataFrame) -> pd.DataFrame:
     """Reshape repeated HSCL measurements from wide to long format."""
     frames = []
@@ -71,10 +72,7 @@ def to_long(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def load(
-    file_path=RAW_DATASETS_DIR 
-    / "02_03_Aragones_2012_2019" 
-    / "Aragones" 
-    / "DROP_Christos.csv",
+    file_path=RAW_DATASETS_DIR / "02_03_Aragones_2012_2019" / "Aragones" / "DROP_Christos.csv",
 ) -> pd.DataFrame:
     """Load dataset Aragones 2019 and return it in long format."""
     df = pd.read_csv(file_path)
