@@ -476,6 +476,16 @@ def load(
         print(f"Static columns that vary within a patient: {len(violations)}")
     assert len(violations) == 0, "Presumed static column is actually time-varying"
 
+    # These are only recorded on one row per patient (usually baseline), so
+    # broadcast that single value to every visit row for the patient.
+    before_notna = df[RAW_TIME_INDEPENDENT_COLS].notna().sum().sum()
+    df[RAW_TIME_INDEPENDENT_COLS] = df.groupby("studyid")[RAW_TIME_INDEPENDENT_COLS].transform(
+        "first"
+    )
+    if verbose:
+        after_notna = df[RAW_TIME_INDEPENDENT_COLS].notna().sum().sum()
+        print(f"Time-independent values forward-filled: {after_notna - before_notna}")
+
     # Normalize the time axis. follow_up_months is a NEW column, not a rename,
     # so it's introduced directly rather than routed through RENAME_MAP.
     df["follow_up_months"] = df["timept"].map(TIMEPT_TO_MONTHS)

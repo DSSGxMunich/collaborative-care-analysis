@@ -1,77 +1,114 @@
 import pandas as pd
 
+from collaborative_care_analysis.utils import map_with_check
+
 
 def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
 
-    # all rows that were in the intervention group had a care manager involved
-    # an individual with extensive experience in healthcare
-    harmonized_df["is_care_manager_involved"] = harmonized_df["study_arm"].map(
+    # RG coding in the original dataset:
+    # 0 = control
+    # 1 = intervention
+    harmonized_df["study_arm"] = map_with_check(
+        harmonized_df["RG"],
+        {
+            0: "control",
+            1: "intervention",
+        },
+        "study_arm",
+    )
+
+    # All rows that were in the intervention group had a care manager involved.
+    # The care manager was an individual with extensive experience in healthcare.
+    harmonized_df["is_care_manager_involved"] = map_with_check(
+        harmonized_df["study_arm"],
         {
             "control": "no",
             "intervention": "yes",
-        }
+        },
+        "study_arm",
     )
 
-    # all rows that were in the intervention group had a physician with board certification in psychotherapy or psychology, or a psychotherapist/psychologist involved
-    harmonized_df["is_psychotherapist_or_psychologist_involved_(supervisor)"] = harmonized_df[
-        "study_arm"
-    ].map(
+    # All rows that were in the intervention group had a physician with
+    # board certification in psychotherapy or psychology, or a
+    # psychotherapist/psychologist involved as a supervisor.
+    harmonized_df["is_psychotherapist_or_psychologist_involved_(supervisor)"] = map_with_check(
+        harmonized_df["study_arm"],
         {
             "control": "no",
             "intervention": "yes",
-        }
+        },
+        "study_arm",
     )
 
-    # all rows that were in the intervention group had psycheducation (about the symptoms and course of the disease, drugs, side effects, etc.)
-
-    harmonized_df["is_psychoeducation_provided"] = harmonized_df["study_arm"].map(
+    # All rows that were in the intervention group received psychoeducation.
+    # This included education about symptoms, the course of the disease,
+    # medications, side effects, etc.
+    harmonized_df["is_psychoeducation_provided"] = map_with_check(
+        harmonized_df["study_arm"],
         {
             "control": "no",
             "intervention": "yes",
-        }
+        },
+        "study_arm",
     )
 
-    # all rows that were in the intervention group had relapse prevention provided
-    harmonized_df["is_relapse_prevention_provided"] = harmonized_df["study_arm"].map(
+    # All rows that were in the intervention group received relapse prophylaxis.
+    harmonized_df["is_relapse_prophylaxis_provided"] = map_with_check(
+        harmonized_df["study_arm"],
         {
             "control": "no",
             "intervention": "yes",
-        }
+        },
+        "study_arm",
     )
 
-    # all rows that were in the intervention group got activity structuring
-    harmonized_df["is_activity_structuring_provided"] = harmonized_df["study_arm"].map(
+    # All rows that were in the intervention group received
+    # activity structuring.
+    harmonized_df["is_activity_structuring_provided"] = map_with_check(
+        harmonized_df["study_arm"],
         {
             "control": "no",
             "intervention": "yes",
-        }
-    )
-    # all rows that were in the intervention group got problem-solving training
-    harmonized_df["is_problem_solving_training_provided"] = harmonized_df["arm"].map(
-        {
-            "control": "no",
-            "intervention": "yes",
-        }
+        },
+        "study_arm",
     )
 
-    # all rows that were in the intervention group had initial contact in person
-    harmonized_df["initial_contact_mode"] = harmonized_df["study_arm"].map(
+    # Problem-solving training was provided only where indicated.
+    # Therefore, we should not say that every intervention patient
+    # definitely received it.
+    harmonized_df["problem_solving_training"] = map_with_check(
+        harmonized_df["study_arm"],
+        {
+            "control": pd.NA,
+            "intervention": "as_indicated",
+        },
+        "study_arm",
+    )
+
+    # The initial contact for intervention patients took place in person
+    # at the doctor's practice.
+    harmonized_df["initial_contact_mode"] = map_with_check(
+        harmonized_df["study_arm"],
         {
             "control": pd.NA,
             "intervention": "in_person",
-        }
+        },
+        "study_arm",
     )
 
-    # all rows that were in the intervention group had follow-up contact by telephone
-    harmonized_df["follow_up_contact_mode"] = harmonized_df["study_arm"].map(
+    # Subsequent contacts for intervention patients were conducted
+    # by telephone.
+    harmonized_df["follow_up_contact_mode"] = map_with_check(
+        harmonized_df["study_arm"],
         {
             "control": pd.NA,
             "intervention": "by_telephone",
-        }
+        },
+        "study_arm",
     )
 
-    # return the harmonized dataset which has only the values we want
+    # Return the harmonized dataset with only the variables we want.
     return harmonized_df[
         [
             "STUDY_ID",
@@ -81,9 +118,9 @@ def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
             "is_psychotherapist_or_psychologist_involved_(supervisor)",
             "is_care_manager_involved",
             "is_psychoeducation_provided",
-            "is_relapse_prevention_provided",
+            "is_relapse_prophylaxis_provided",
             "is_activity_structuring_provided",
-            "is_problem_solving_training_provided",
+            "problem_solving_training",
             "initial_contact_mode",
             "follow_up_contact_mode",
         ]
