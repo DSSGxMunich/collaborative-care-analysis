@@ -6,6 +6,18 @@ from collaborative_care_analysis.utils import map_with_check
 def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
 
+    # RG coding in the original dataset:
+    # 0 = control
+    # 1 = intervention
+    harmonized_df["study_arm"] = map_with_check(
+        harmonized_df["RG"],
+        {
+            0: "control",
+            1: "intervention",
+        },
+        "study_arm",
+    )
+
     # All rows that were in the intervention group had a care manager involved.
     # The care manager was an individual with extensive experience in healthcare.
     harmonized_df["is_care_manager_involved"] = map_with_check(
