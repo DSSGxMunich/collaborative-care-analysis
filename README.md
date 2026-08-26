@@ -42,6 +42,10 @@ The merge raises on a missing join key, duplicate keys, or a column name claimed
 
 ```bash
 uv run collaborative_care_analysis/dataset.py run
+
+uv run collaborative_care_analysis/dataset.py run 4
+
+uv run collaborative_care_analysis/dataset.py run Katon_2001
 ```
 
 Runs `export`, `harmonize`, and `merge` in sequence.
