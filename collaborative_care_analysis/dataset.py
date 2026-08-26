@@ -1,9 +1,15 @@
+from collections import Counter
+from collections.abc import Callable
+from dataclasses import dataclass
 import importlib
 import inspect
 from pathlib import Path
+from typing import TypeVar
 
 from loguru import logger
 import pandas as pd
+from rich.console import Console
+from rich.table import Table
 import typer
 
 from collaborative_care_analysis.config import (
@@ -94,6 +100,21 @@ def _get_harmonization_functions(module) -> list:
     return funcs
 
 
+def _load_dataset(loader, script_path: Path) -> pd.DataFrame:
+    """Call a loader's load() and validate that it produced a follow-up column.
+
+    Loaders are expected to normalize their time axis into COLNAME_FOLLOW_UP;
+    without it, a dataset would only fail much later and confusingly, when
+    merge() joins on CLUSTER_JOIN_KEYS.
+    """
+    df = loader.load()
+    if COLNAME_FOLLOW_UP not in df.columns:
+        raise ValueError(
+            f"Loader {script_path.stem} did not produce a '{COLNAME_FOLLOW_UP}' column."
+        )
+    return df
+
+
 def _add_identifier(df: pd.DataFrame, script_path: Path) -> pd.DataFrame:
     """Add study identifier to the dataset."""
     df_copy = df.copy()
@@ -161,7 +182,7 @@ def export(
         output_path = INTERIM_DATASETS_EXPORT_DIR / f"{script_path.stem}.csv"
 
         logger.info(f"Loading dataset with {script_path.name}.")
-        loader.load().to_csv(output_path, index=False)
+        _load_dataset(loader, script_path).to_csv(output_path, index=False)
         logger.success(f"Saved processed dataset to {output_path}.")
 
 
@@ -207,7 +228,7 @@ def harmonize(
         loader = importlib.import_module(module_path)
 
         logger.info(f"Loading dataset with {script_path.name}.")
-        raw_df = loader.load()
+        raw_df = _load_dataset(loader, script_path)
         df = _add_identifier(raw_df, script_path)
 
         applied_count = 0
@@ -421,6 +442,215 @@ def merge():
     )
 
     return merged_df, cluster_columns
+
+
+@dataclass
+class _StageResult:
+    """Outcome of one attempted pipeline stage, for the 'report' command."""
+
+    dataset: str
+    stage: str
+    status: str  # "ok" or "error"
+    detail: str = ""
+
+
+_T = TypeVar("_T")
+
+
+def _run_stage(
+    results: list[_StageResult], dataset: str, stage: str, func: Callable[[], _T]
+) -> _T | None:
+    """Run func, recording its outcome in results instead of letting it abort the report.
+
+    Returns func's return value, or None if it raised.
+    """
+    try:
+        value = func()
+    except Exception as exc:  # noqa: BLE001 -- must survive any loader/harmonization bug
+        detail = f"{type(exc).__name__}: {exc}"
+        results.append(_StageResult(dataset, stage, "error", detail))
+        logger.error(f"[{dataset}] {stage} failed: {detail}")
+        return None
+    results.append(_StageResult(dataset, stage, "ok"))
+    return value
+
+
+def _print_report(results: list[_StageResult]) -> None:
+    """Print a per-dataset overview table, then a table of failures and their error types."""
+    console = Console()
+
+    overview = Table(title="Pipeline report: dataset overview")
+    overview.add_column("Dataset")
+    overview.add_column("OK", justify="right")
+    overview.add_column("Failed", justify="right")
+    overview.add_column("Status")
+
+    for dataset in sorted({r.dataset for r in results}):
+        dataset_results = [r for r in results if r.dataset == dataset]
+        n_ok = sum(1 for r in dataset_results if r.status == "ok")
+        n_error = sum(1 for r in dataset_results if r.status == "error")
+        status = "[green]OK[/green]" if n_error == 0 else "[bold red]FAILED[/bold red]"
+        overview.add_row(dataset, str(n_ok), str(n_error), status)
+
+    console.print(overview)
+
+    failures = [r for r in results if r.status == "error"]
+    if not failures:
+        logger.success("No errors across the pipeline.")
+        return
+
+    detail_table = Table(title="Failures")
+    detail_table.add_column("Dataset")
+    detail_table.add_column("Stage")
+    detail_table.add_column("Error type")
+    detail_table.add_column("Message")
+    for r in failures:
+        error_type, _, message = r.detail.partition(": ")
+        detail_table.add_row(r.dataset, r.stage, error_type, message)
+    console.print(detail_table)
+
+    issue_counts = Counter(r.detail.partition(": ")[0] for r in failures)
+    issue_table = Table(title="Issue types")
+    issue_table.add_column("Error type")
+    issue_table.add_column("Count", justify="right")
+    for error_type, count in issue_counts.most_common():
+        issue_table.add_row(error_type, str(count))
+    console.print(issue_table)
+
+    n_failed_datasets = len({r.dataset for r in failures})
+    logger.error(f"{len(failures)} stage(s) failed across {n_failed_datasets} dataset(s).")
+
+
+@app.command()
+def report(
+    dataset_id: str | None = typer.Argument(
+        None,
+        help="Dataset ID to check, such as '04' or 'Bekelman_2018'. Omit to check every dataset.",
+    ),
+):
+    """Run the full pipeline for one or all datasets, but never let one failure stop the rest.
+
+    Every export/harmonize/merge step is attempted and its outcome recorded,
+    then a summary table of what succeeded and what errored -- and why -- is
+    printed at the end. Use this to triage broken loaders or harmonization
+    scripts across the whole dataset collection in one run.
+    """
+    INTERIM_DATASETS_EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+    HARMONIZED_DATASETS_DIR.mkdir(parents=True, exist_ok=True)
+
+    if dataset_id is None:
+        _clear_directory(INTERIM_DATASETS_EXPORT_DIR, "exported dataset")
+        _clear_directory(HARMONIZED_DATASETS_DIR, "harmonized cluster")
+
+    loader_scripts = [
+        script_path
+        for script_path in sorted(DATA_LOADING_DIR.rglob("*.py"))
+        if script_path.name != "__init__.py"
+        and (dataset_id is None or _matches_dataset_id(script_path, dataset_id))
+    ]
+    if dataset_id is not None and not loader_scripts:
+        raise typer.BadParameter(
+            f"No data-loading script matches '{dataset_id}'.",
+            param_hint="dataset_id",
+        )
+
+    harmonization_dirs = _get_harmonization_dirs()
+    results: list[_StageResult] = []
+
+    for script_path in loader_scripts:
+        dataset = script_path.stem
+        logger.info(f"=== Checking {dataset} ===")
+
+        def _do_export(script_path=script_path, dataset=dataset):
+            module_path = ".".join(
+                (
+                    "collaborative_care_analysis",
+                    *script_path.relative_to(PACKAGE_DIR).with_suffix("").parts,
+                )
+            )
+            loader = importlib.import_module(module_path)
+            raw_df = _load_dataset(loader, script_path)
+            raw_df.to_csv(INTERIM_DATASETS_EXPORT_DIR / f"{dataset}.csv", index=False)
+            return raw_df
+
+        raw_df = _run_stage(results, dataset, "export", _do_export)
+        if raw_df is None:
+            continue
+
+        def _do_add_identifier(raw_df=raw_df, script_path=script_path):
+            return _add_identifier(raw_df, script_path)
+
+        df = _run_stage(results, dataset, "add_identifier", _do_add_identifier)
+        if df is None:
+            continue
+
+        for harm_dir in harmonization_dirs:
+            harm_type = _get_harmonization_type(harm_dir)
+            matching_scripts = _find_matching_harmonization_scripts(harm_dir, dataset)
+
+            for harm_script in matching_scripts:
+
+                def _import_harm_module(harm_script=harm_script):
+                    harm_module_path = ".".join(
+                        (
+                            "collaborative_care_analysis",
+                            *harm_script.relative_to(PACKAGE_DIR).with_suffix("").parts,
+                        )
+                    )
+                    return importlib.import_module(harm_module_path)
+
+                import_stage = f"harmonize:{harm_dir.name}/{harm_script.name}:import"
+                harm_module = _run_stage(results, dataset, import_stage, _import_harm_module)
+                if harm_module is None:
+                    continue
+
+                harm_funcs = _get_harmonization_functions(harm_module)
+                for func in harm_funcs:
+
+                    def _do_apply(
+                        func=func,
+                        harm_funcs=harm_funcs,
+                        harm_type=harm_type,
+                        dataset=dataset,
+                        df=df,
+                    ):
+                        if len(harm_funcs) == 1:
+                            postfix = harm_type
+                        else:
+                            func_suffix = (
+                                func.__name__.removeprefix("harmonize_")
+                                .removeprefix("harmonize")
+                                .strip("_")
+                            )
+                            postfix = (
+                                f"{harm_type}-{func_suffix}"
+                                if func_suffix and func_suffix != harm_type
+                                else (func_suffix or harm_type)
+                            )
+                        output_path = HARMONIZED_DATASETS_DIR / f"{dataset}_{postfix}.csv"
+
+                        harmonized_df = func(df.copy())
+                        if harmonized_df is None:
+                            raise ValueError(f"{func.__name__} returned None.")
+                        if COLNAME_STUDYID not in harmonized_df.columns:
+                            raise ValueError(
+                                f"{func.__name__} removed '{COLNAME_STUDYID}' column."
+                            )
+                        if len(harmonized_df) != len(df):
+                            logger.warning(f"{func.__name__} dropped rows for {dataset}.")
+
+                        harmonized_df.to_csv(output_path, index=False)
+                        return output_path
+
+                    func_stage = f"harmonize:{harm_dir.name}/{harm_script.name}:{func.__name__}"
+                    _run_stage(results, dataset, func_stage, _do_apply)
+
+    if not loader_scripts:
+        _print_report(results)
+        return
+
+    _run_stage(results, "ALL", "merge", merge)
+    _print_report(results)
 
 
 @app.command()
