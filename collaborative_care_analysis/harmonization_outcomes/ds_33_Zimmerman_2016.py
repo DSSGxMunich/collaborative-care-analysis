@@ -8,22 +8,10 @@ ID_COLS = [
     "follow_up_months",
 ]
 
-PHQ_COLS = [
-    "Depression_severity",
-    "ZDepression_severity",
-]
-
-SUICIDALITY_COLS = [
-    "Suicidality",
-    "ZSuicidality",
-]
-
 MEDICATION_COLS = [
     "medication_adherence",
     # TODO: confirm with Hannah about the followup month and what the value A,B entails
 ]
-
-OUTCOME_COLS = ID_COLS + PHQ_COLS + SUICIDALITY_COLS + MEDICATION_COLS
 
 RENAME_MAP = {
     # PHQ-9
@@ -35,6 +23,7 @@ RENAME_MAP = {
     "ZSuicidality": "suicidality_z",
 }
 
+OUTCOME_COLS = ID_COLS + list(RENAME_MAP) + MEDICATION_COLS
 
 def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     """Harmonize outcome variables for Zimmerman 2016."""
