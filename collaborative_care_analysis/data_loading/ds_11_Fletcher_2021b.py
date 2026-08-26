@@ -4,15 +4,13 @@ import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
 
-# TODO: Replace 1, 2, and 3 with the actual follow-up months once known.
 TIMEPOINT_TO_MONTHS = {
-    0: 0,
-    1: 1,
-    2: 2,
-    3: 3,
+    1: 0,
+    2: 3,
+    3: 12,
 }
 
-TIMEPOINT_PATTERN = re.compile(r"^(?P<stub>.+)_(?P<timepoint>[0-3])$")
+TIMEPOINT_PATTERN = re.compile(r"^(?P<stub>.+)_(?P<timepoint>[1-3])$")
 
 TIME_INDEPENDENT_COLS = [
     "risk",
@@ -29,6 +27,8 @@ def to_long(df: pd.DataFrame) -> pd.DataFrame:
     """Reshape numbered timepoint variables from wide to long format."""
     timepoint_cols = [col for col in df.columns if TIMEPOINT_PATTERN.match(col)]
 
+    screening_cols = [col for col in df.columns if col.endswith("_0")]
+
     # "_t" columns are toolkit variables rather than numbered follow-up measures.
     # Keep them separate and attach them to the baseline row only.
     toolkit_cols = [col for col in df.columns if col.endswith("_t")]
@@ -38,6 +38,7 @@ def to_long(df: pd.DataFrame) -> pd.DataFrame:
         "study_id",
         *TIME_INDEPENDENT_COLS,
         *timepoint_cols,
+        *screening_cols,
         *toolkit_cols,
     }
 
@@ -55,7 +56,8 @@ def to_long(df: pd.DataFrame) -> pd.DataFrame:
             if stub not in stubs:
                 stubs.append(stub)
 
-    reserved_cols = set(TIME_INDEPENDENT_COLS) | set(toolkit_cols)
+    reserved_cols = set(TIME_INDEPENDENT_COLS) | set(screening_cols) | set(toolkit_cols)
+
     collisions = set(stubs) & reserved_cols
     if collisions:
         raise ValueError(
@@ -103,24 +105,30 @@ def to_long(df: pd.DataFrame) -> pd.DataFrame:
 
         # TODO: Confirm whether toolkit variables should be assigned to baseline
         # or handled separately in downstream harmonization.
-        if timepoint == 0:
-            toolkit_df = df[toolkit_cols].astype("object")
+
+        # Screening ("_0") and toolkit ("_t") variables belong to the
+        # pre-randomization/baseline data collection and are kept separate from
+        # the numbered longitudinal assessments.
+        baseline_cols = screening_cols + toolkit_cols
+
+        if months == 0:
+            baseline_df = df[baseline_cols].astype("object")
         else:
-            toolkit_df = pd.DataFrame(
+            baseline_df = pd.DataFrame(
                 {
                     col: pd.Series(
                         pd.NA,
                         index=df.index,
                         dtype="object",
                     )
-                    for col in toolkit_cols
+                    for col in baseline_cols
                 }
             )
 
         visit = pd.concat(
             [
                 visit.reset_index(drop=True),
-                toolkit_df.reset_index(drop=True),
+                baseline_df.reset_index(drop=True),
                 time_varying_df.reset_index(drop=True),
             ],
             axis=1,
@@ -139,7 +147,7 @@ def to_long(df: pd.DataFrame) -> pd.DataFrame:
 
     # Drop visit rows with no time-varying data recorded.
     long.dropna(
-        subset=stubs + toolkit_cols,
+        subset=stubs + screening_cols + toolkit_cols,
         how="all",
         inplace=True,
     )
