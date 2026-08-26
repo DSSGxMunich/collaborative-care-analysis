@@ -115,6 +115,37 @@ def _load_dataset(loader, script_path: Path) -> pd.DataFrame:
     return df
 
 
+def _find_baseline_only_columns(df: pd.DataFrame) -> list[str]:
+    """Return columns set only at each multi-visit patient's baseline row.
+
+    A loader is expected to broadcast a time-invariant value (e.g. sex, a
+    treatment arm) to every one of a patient's follow-up rows, the way
+    ds_03_Aragones_2019.load() does. If a column is only ever populated on
+    the row with that patient's minimum follow_up_months, and left null on
+    every other row for the same patient, later stages that expect it to be
+    present at every visit will silently see it as missing.
+    """
+    if COLNAME_PATIENT_ID not in df.columns or COLNAME_FOLLOW_UP not in df.columns:
+        return []
+
+    baseline_month = df.groupby(COLNAME_PATIENT_ID)[COLNAME_FOLLOW_UP].transform("min")
+    is_baseline_row = df[COLNAME_FOLLOW_UP] == baseline_month
+    has_multiple_visits = (
+        df.groupby(COLNAME_PATIENT_ID)[COLNAME_FOLLOW_UP].transform("nunique") > 1
+    )
+
+    flagged = []
+    for col in df.columns:
+        if col in (COLNAME_PATIENT_ID, COLNAME_FOLLOW_UP):
+            continue
+        notna = df[col].notna()
+        set_at_baseline = (notna & has_multiple_visits & is_baseline_row).any()
+        set_at_follow_up = (notna & has_multiple_visits & ~is_baseline_row).any()
+        if set_at_baseline and not set_at_follow_up:
+            flagged.append(col)
+    return flagged
+
+
 def _add_identifier(df: pd.DataFrame, script_path: Path) -> pd.DataFrame:
     """Add study identifier to the dataset."""
     df_copy = df.copy()
@@ -450,7 +481,7 @@ class _StageResult:
 
     dataset: str
     stage: str
-    status: str  # "ok" or "error"
+    status: str  # "ok", "warning", or "error"
     detail: str = ""
 
 
@@ -475,28 +506,69 @@ def _run_stage(
     return value
 
 
+def _run_check(
+    results: list[_StageResult], dataset: str, stage: str, func: Callable[[], str | None]
+) -> None:
+    """Run a non-raising heuristic check. func returns a warning message, or None if clean.
+
+    Unlike _run_stage, an exception here means the check itself is broken, not
+    that the dataset has a problem -- it's still recorded as an error so it's
+    visible, but the check's own finding is a "warning", never blocks the rest
+    of the pipeline, and isn't counted alongside real stage failures.
+    """
+    try:
+        warning = func()
+    except Exception as exc:  # noqa: BLE001 -- must survive a broken check
+        detail = f"{type(exc).__name__}: {exc}"
+        results.append(_StageResult(dataset, stage, "error", detail))
+        logger.error(f"[{dataset}] {stage} failed: {detail}")
+        return
+    if warning:
+        results.append(_StageResult(dataset, stage, "warning", warning))
+        logger.warning(f"[{dataset}] {stage}: {warning}")
+        return
+    results.append(_StageResult(dataset, stage, "ok"))
+
+
 def _print_report(results: list[_StageResult]) -> None:
-    """Print a per-dataset overview table, then a table of failures and their error types."""
+    """Print a per-dataset overview table, then tables of warnings and failures."""
     console = Console()
 
     overview = Table(title="Pipeline report: dataset overview")
     overview.add_column("Dataset")
     overview.add_column("OK", justify="right")
+    overview.add_column("Warned", justify="right")
     overview.add_column("Failed", justify="right")
     overview.add_column("Status")
 
     for dataset in sorted({r.dataset for r in results}):
         dataset_results = [r for r in results if r.dataset == dataset]
         n_ok = sum(1 for r in dataset_results if r.status == "ok")
+        n_warn = sum(1 for r in dataset_results if r.status == "warning")
         n_error = sum(1 for r in dataset_results if r.status == "error")
-        status = "[green]OK[/green]" if n_error == 0 else "[bold red]FAILED[/bold red]"
-        overview.add_row(dataset, str(n_ok), str(n_error), status)
+        if n_error:
+            status = "[bold red]FAILED[/bold red]"
+        elif n_warn:
+            status = "[yellow]WARNED[/yellow]"
+        else:
+            status = "[green]OK[/green]"
+        overview.add_row(dataset, str(n_ok), str(n_warn), str(n_error), status)
 
     console.print(overview)
 
+    warnings = [r for r in results if r.status == "warning"]
+    if warnings:
+        warning_table = Table(title="Warnings")
+        warning_table.add_column("Dataset")
+        warning_table.add_column("Stage")
+        warning_table.add_column("Message")
+        for r in warnings:
+            warning_table.add_row(r.dataset, r.stage, r.detail)
+        console.print(warning_table)
+
     failures = [r for r in results if r.status == "error"]
     if not failures:
-        logger.success("No errors across the pipeline.")
+        logger.success("No pipeline failures.")
         return
 
     detail_table = Table(title="Failures")
@@ -576,6 +648,21 @@ def report(
         raw_df = _run_stage(results, dataset, "export", _do_export)
         if raw_df is None:
             continue
+
+        def _do_check_baseline_only(raw_df=raw_df) -> str | None:
+            flagged = _find_baseline_only_columns(raw_df)
+            if not flagged:
+                return None
+            total = sum(
+                1 for c in raw_df.columns if c not in (COLNAME_PATIENT_ID, COLNAME_FOLLOW_UP)
+            )
+            return (
+                f"{len(flagged)} of {total} column(s) look time-invariant but are only "
+                "populated at each patient's baseline visit -- they may need to be "
+                "forward-filled to every follow-up row."
+            )
+
+        _run_check(results, dataset, "check:baseline_only_columns", _do_check_baseline_only)
 
         def _do_add_identifier(raw_df=raw_df, script_path=script_path):
             return _add_identifier(raw_df, script_path)
