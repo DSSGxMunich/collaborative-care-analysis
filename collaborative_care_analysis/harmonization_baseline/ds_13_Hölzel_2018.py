@@ -10,7 +10,6 @@ COLUMN_RENAME_MAP = {
     "Erwerbsumfang": "employment_extent",
     "Geld_aureichend": "perceived_financial_adequacy",
     "v_zentrum": "study_center",
-    "RG": "study_arm",
     "Cluster": "intervention_cluster",
     "PIN": "practice_id",
 }
@@ -217,7 +216,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "employment_extent",
             "perceived_financial_adequacy",
             "study_center",
-            "study_arm",
             "intervention_cluster",
             "practice_id",
         ]
