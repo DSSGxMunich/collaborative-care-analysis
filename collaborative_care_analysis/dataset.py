@@ -33,7 +33,11 @@ def _matches_dataset_id(script_path: Path, dataset_id: str) -> bool:
 
     numeric_id = name_parts[1]
     descriptive_id = "_".join(name_parts[2:])
-    return dataset_id in (numeric_id, descriptive_id, script_path.stem)
+    if dataset_id in (numeric_id, descriptive_id, script_path.stem):
+        return True
+
+    # Allow an unpadded numeric ID (e.g. "4") to match a zero-padded loader ID (e.g. "04").
+    return dataset_id.isdigit() and numeric_id.isdigit() and int(dataset_id) == int(numeric_id)
 
 
 def _get_study_id(script_path: Path) -> str:
@@ -424,17 +428,24 @@ def merge():
 
 
 @app.command()
-def run():
+def run(
+    dataset_id: str | None = typer.Argument(
+        None,
+        help="Dataset ID to run, such as '04' or 'Bekelman_2018'. Omit to run every dataset.",
+    ),
+):
     """Run the full pipeline: export, then harmonize, then merge.
 
     Each stage clears its own output directory first, so this is a clean
-    regeneration from the raw data.
+    regeneration from the raw data. Passing dataset_id skips that clearing
+    for the export/harmonize stages, so only the matching dataset is
+    regenerated while other datasets' output is left in place.
     """
     logger.info("=== Stage 1/3: export ===")
-    export(dataset_id=None)
+    export(dataset_id=dataset_id)
 
     logger.info("=== Stage 2/3: harmonize ===")
-    harmonize(dataset_id=None)
+    harmonize(dataset_id=dataset_id)
 
     logger.info("=== Stage 3/3: merge ===")
     merged_df, cluster_columns = merge()
