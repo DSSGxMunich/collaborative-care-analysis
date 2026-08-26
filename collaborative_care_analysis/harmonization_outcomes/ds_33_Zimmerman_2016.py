@@ -25,6 +25,7 @@ RENAME_MAP = {
 
 OUTCOME_COLS = ID_COLS + list(RENAME_MAP) + MEDICATION_COLS
 
+
 def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     """Harmonize outcome variables for Zimmerman 2016."""
 
