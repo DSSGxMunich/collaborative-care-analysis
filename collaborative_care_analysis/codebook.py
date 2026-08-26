@@ -166,11 +166,6 @@ def get_variable_value_labels(meta: Any) -> dict:
     return reconstructed
 
 
-# -------------------------------------------------------------------
-# Metadata output builders
-# -------------------------------------------------------------------
-
-
 def create_variable_labels(
     meta: Any,
 ) -> pd.DataFrame:
@@ -302,8 +297,7 @@ def extract_file_metadata(
 
         for column_cells in worksheet.columns:
             max_length = max(
-                len(str(cell.value)) if cell.value is not None else 0
-                for cell in column_cells
+                len(str(cell.value)) if cell.value is not None else 0 for cell in column_cells
             )
             worksheet.column_dimensions[column_cells[0].column_letter].width = min(
                 max_length + 2,
