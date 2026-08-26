@@ -17,6 +17,7 @@ TIMEPOINT_COLS = {
         "ZDepres_0": "ZDepression_severity",
         "Suic_0": "Suicidality",
         "ZSuic_0": "ZSuicidality",
+        "Medadh_0": "medication_adherence",
     },
     12: {
         "Depres_f3": "Depression_severity",
@@ -25,6 +26,28 @@ TIMEPOINT_COLS = {
         "ZSuic_f3": "ZSuicidality",
     },
 }
+
+
+# TODO: Add this to TIMEPOINT_COLS once its follow-up month is confirmed.
+UNRESOLVED_TIME_COLS = ["Medadh_f"]
+
+
+# These source columns contain no observed values in this dataset. Listing
+# them explicitly to document why they do not appear in the harmonized output.
+KNOWN_EMPTY_COLS = [
+    "LTC_Mes",
+    "LTC_inclType",
+    "LTC_emp",
+    "Medadh_Mes",
+    "LTC_0",
+    "LTCn_0",
+    "LTCsev_0",
+    "Diabetes",
+    "Hypertension",
+    "Cardiac",
+    "Respiratory",
+    "Cancer",
+]
 
 
 # Listing the source columns explicitly makes the loader fail if a future file
@@ -80,15 +103,19 @@ EXPECTED_SOURCE_COLS = {
 def to_long(df: pd.DataFrame) -> pd.DataFrame:
     """Reshape confirmed baseline and 12-month measures to long format.
 
-    ``Medadh_0`` and ``Medadh_f`` remain separate columns and are repeated on
-    both visit rows. The timing represented by ``Medadh_f`` is not known, so
-    it must not be assigned to the 12-month visit.
+    ``Medadh_0`` supplies medication adherence at baseline. The timing
+    represented by ``Medadh_f`` is not known, so that source column is omitted
+    until its follow-up month can be confirmed.
     """
     id_col = "Origpat_id"
     time_varying_cols = {
         source_col for column_mapping in TIMEPOINT_COLS.values() for source_col in column_mapping
     }
-    static_cols = [col for col in df.columns if col != id_col and col not in time_varying_cols]
+    static_cols = [
+        col
+        for col in df.columns
+        if col != id_col and col not in time_varying_cols and col not in UNRESOLVED_TIME_COLS
+    ]
 
     frames = []
     for months, column_mapping in TIMEPOINT_COLS.items():
@@ -118,6 +145,7 @@ def to_long(df: pd.DataFrame) -> pd.DataFrame:
         "ZDepression_severity",
         "Suicidality",
         "ZSuicidality",
+        "medication_adherence",
         "TriaI_id",
         "DepresSev_Mes",
         "LTC_incl",
@@ -125,8 +153,6 @@ def to_long(df: pd.DataFrame) -> pd.DataFrame:
         "Cluster",
         "Sex",
         "Age",
-        "Medadh_0",
-        "Medadh_f",
         "year",
         "country",
         "recruitmentmethod",
@@ -185,11 +211,16 @@ def load(
     if df["Origpat_id"].duplicated().any():
         raise ValueError("Duplicate patient IDs in wide dataset")
 
-    # ``Time`` is deliberately excluded: its meaning conflicts with the
-    # confirmed _0/baseline and _f3/12-month suffixes.
-    df.drop(columns="Time", inplace=True, errors="raise")
+    unexpectedly_nonempty = [col for col in KNOWN_EMPTY_COLS if df[col].notna().any()]
+    if unexpectedly_nonempty:
+        raise ValueError(
+            "Columns expected to be empty now contain observations: "
+            f"{sorted(unexpectedly_nonempty)}"
+        )
 
-    # Columns containing no observations provide no patient information.
-    df.dropna(how="all", axis="columns", inplace=True)
+    # ``Time`` is deliberately excluded: its meaning conflicts with the
+    # confirmed _0/baseline and _f3/12-month suffixes. The known-empty columns
+    # are removed only after verifying that they contain no observations.
+    df.drop(columns=["Time", *KNOWN_EMPTY_COLS], inplace=True, errors="raise")
 
     return to_long(df).convert_dtypes()
