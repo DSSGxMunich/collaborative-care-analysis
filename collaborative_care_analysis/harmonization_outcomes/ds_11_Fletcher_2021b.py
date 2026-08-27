@@ -16,15 +16,15 @@ KEEP_COLS = [
 
 RENAME_MAP = {
     # PHQ-9 items
-    "phq2wk_noint": "phq01",
-    "phq2wk_down": "phq02",
-    "phq2wk_sleep": "phq03",
-    "phq2wk_energy": "phq04",
-    "phq2wk_eat": "phq05",
-    "phq2wk_bad": "phq06",
-    "phq2wk_conc": "phq07",
-    "phq2wk_speed": "phq08",
-    "phq2wk_dead": "phq09",
+    "phq2wk_noint": "phq9_1",
+    "phq2wk_down": "phq9_2",
+    "phq2wk_sleep": "phq9_3",
+    "phq2wk_energy": "phq9_4",
+    "phq2wk_eat": "phq9_5",
+    "phq2wk_bad": "phq9_6",
+    "phq2wk_conc": "phq9_7",
+    "phq2wk_speed": "phq9_8",
+    "phq2wk_dead": "phq9_9",
     # PHQ-9 derived measures
     "phqdep_total": "phq9_total",
     "phqdep_total1": "phq9_symptom_count",
@@ -33,7 +33,7 @@ RENAME_MAP = {
     "phqdep_miss": "phq9_missing_items",
     "phqdep_severity": "phq9_severity",
     # GAD-7 items
-    **{f"gad{i}": f"gad{i:02d}" for i in range(1, 8)},
+    **{f"gad{i}": f"gad7_{i}" for i in range(1, 8)},
     # GAD-7 derived measures
     "gad_2grp": "gad7_2grp",
     "gad_total": "gad7_total",
@@ -42,7 +42,7 @@ RENAME_MAP = {
     "gad_severity_imp": "gad7_severity_imputed",
     "gad_total_impute": "gad7_total_imputed",
     # AQoL-8D items
-    **{f"aqol{i}": f"aqol{i:02d}" for i in range(1, 36)},
+    **{f"aqol{i}": f"aqol8d_{i}" for i in range(1, 36)},
     # AQoL-8D dimensions
     "vIL": "aqol8d_independent_living",
     "vHap": "aqol8d_happiness",
@@ -54,7 +54,7 @@ RENAME_MAP = {
     "vS": "aqol8d_senses",
     "AQoL8DUtility": "aqol8d_utility",
     # Mental Health Self-Efficacy Scale
-    **{f"mhses{i}": f"mhses{i:02d}" for i in range(1, 7)},
+    **{f"mhses{i}": f"mhses_{i}" for i in range(1, 7)},
     "mhses_total_miss": "mhses_missing_items",
     "mhses_total_impute": "mhses_total_imputed",
 }
