@@ -66,6 +66,7 @@ RENAME_MAP = {
     "EQ5D_AllgTaetigkeiten": "eq5d_usual_activities",
     "EQ5D_Schmerzen": "eq5d_pain_discomfort",
     "EQ5D_Angst_Depression": "eq5d_anxiety_depression",
+    "EQ5D_Gesundheitszustand": "eq5d_health_improvement",
 }
 
 OUTCOME_COLS = ID_COLS + list(RENAME_MAP)
