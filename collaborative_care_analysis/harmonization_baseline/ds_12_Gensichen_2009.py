@@ -1,0 +1,134 @@
+import pandas as pd
+
+from collaborative_care_analysis.utils import map_with_check
+
+
+def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
+    harmonized_df = df.copy()
+
+    harmonized_df["practice_id"] = harmonized_df["PR_ID"]
+
+    harmonized_df["PAT_STAT"] = pd.to_numeric(harmonized_df["PAT_STAT"], errors="raise")
+    harmonized_df.loc[~harmonized_df["PAT_STAT"].isin([1.0, 2.0, 3.0, 4.0]), "PAT_STAT"] = pd.NA
+
+    harmonized_df["patient_status"] = map_with_check(
+        harmonized_df["PAT_STAT"],
+        {
+            1.0: "Known",
+            2.0: "New + PHQ",
+            3.0: "New + PHQ missing",
+            4.0: "None",
+            pd.NA: "Unknown",
+        },
+        label="patient_status",
+    )
+
+    harmonized_df["survey_date"] = pd.to_datetime(harmonized_df["Befragun"], errors="raise")
+    harmonized_df["age"] = pd.to_numeric(harmonized_df["GebJahr"], errors="raise")
+
+    harmonized_df["birth_year"] = harmonized_df["survey_date"].dt.year - harmonized_df["age"]
+
+    harmonized_df["Sex"] = pd.to_numeric(harmonized_df["Sex"], errors="raise")
+    harmonized_df.loc[~harmonized_df["Sex"].isin([1.0, 2.0]), "Sex"] = pd.NA
+
+    harmonized_df["sex"] = map_with_check(
+        harmonized_df["Sex"],
+        {
+            1.0: "Female",
+            2.0: "Male",
+            pd.NA: "Unknown",
+        },
+        label="sex",
+    ).astype("string")
+
+    harmonized_df["Raucher_"] = pd.to_numeric(harmonized_df["Raucher_"], errors="raise")
+    harmonized_df.loc[~harmonized_df["Raucher_"].isin([0.0, 1.0, 2.0, 3.0]), "Raucher_"] = pd.NA
+
+    harmonized_df["smoking_status"] = map_with_check(
+        harmonized_df["Raucher_"],
+        {
+            0.0: "Never",
+            1.0: "Current",
+            2.0: "Quit <1 year",
+            3.0: "Quit ≥1 year",
+            pd.NA: "Unknown",
+        },
+        label="smoking_status",
+    )
+
+    harmonized_df["Schulab"] = pd.to_numeric(harmonized_df["Schulab"], errors="raise")
+    harmonized_df.loc[~harmonized_df["Schulab"].isin([1, 2, 3, 4, 5, 6]), "Schulab"] = pd.NA
+
+    harmonized_df["education_level"] = map_with_check(
+        harmonized_df["Schulab"],
+        {
+            1.0: "No degree",
+            2.0: "Basic secondary school",
+            3.0: "Intermediate secondary school",
+            4.0: "Higher education entrance qualification",
+            5.0: "General higher education entrance qualification",
+            6.0: "Other",
+            pd.NA: "Unknown",
+        },
+        label="education_level",
+    )
+
+    harmonized_df["number_of_living_parents"] = pd.to_numeric(
+        harmonized_df["Eltern"], errors="raise"
+    )
+    harmonized_df["number_of_living_siblings"] = pd.to_numeric(
+        harmonized_df["Geschw"], errors="raise"
+    )
+    harmonized_df["number_of_living_children"] = pd.to_numeric(
+        harmonized_df["Kinder"], errors="raise"
+    )
+
+    harmonized_df["Ethnie"] = pd.to_numeric(harmonized_df["Ethnie"], errors="raise")
+    harmonized_df.loc[~harmonized_df["Ethnie"].isin([1, 2, 3, 4, 5, 6]), "Ethnie"] = pd.NA
+
+    harmonized_df["ethnicity"] = map_with_check(
+        harmonized_df["Ethnie"],
+        {
+            1.0: "Caucasian",
+            2.0: "Asian",
+            3.0: "African",
+            4.0: "African-American",
+            5.0: "Latino-American",
+            6.0: "Other",
+        },
+        label="ethnicity",
+    )
+
+    harmonized_df["Vers_Sta"] = pd.to_numeric(harmonized_df["Vers_Sta"], errors="raise")
+    harmonized_df.loc[~harmonized_df["Vers_Sta"].isin([1, 2]), "Vers_Sta"] = pd.NA
+
+    harmonized_df["insurance_type"] = map_with_check(
+        harmonized_df["Vers_Sta"],
+        {
+            1.0: "GKV (public)",
+            2.0: "PKV (private)",
+        },
+        label="insurance_type",
+    )
+
+    harmonized_df["insurance_provider"] = harmonized_df["Name_KV"].astype("string")
+
+    return harmonized_df[
+        [
+            "STUDY_ID",
+            "patient_id",
+            "practice_id",
+            "patient_status",
+            "age",
+            "sex",
+            "smoking_status",
+            "education_level",
+            "number_of_living_parents",
+            "number_of_living_siblings",
+            "number_of_living_children",
+            "ethnicity",
+            "insurance_type",
+            "insurance_provider",
+            "follow_up_months",
+        ]
+    ]
