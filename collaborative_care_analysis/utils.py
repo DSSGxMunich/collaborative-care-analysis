@@ -1,4 +1,21 @@
+from pathlib import Path
+import zipfile
+
+from loguru import logger
 import pandas as pd
+
+
+def ensure_unzipped(zip_path: Path, extract_dir: Path, marker_path: Path) -> None:
+    """Extract zip_path into extract_dir if marker_path doesn't already exist.
+
+    Lets data loaders ship raw files as a .zip in the repo while reading them
+    as if already extracted, without re-extracting on every load.
+    """
+    if marker_path.exists():
+        return
+    logger.info(f"Extracting {zip_path} to {extract_dir} ...")
+    with zipfile.ZipFile(zip_path) as zf:
+        zf.extractall(extract_dir)
 
 
 def map_with_check(series: pd.Series, mapping: dict, label: str) -> pd.Series:
