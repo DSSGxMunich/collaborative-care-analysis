@@ -276,7 +276,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         [
             "STUDY_ID",
             "patient_id",
-            "study_arm",
             "follow_up_months",
             "has_history_of_heart_attack",
             "has_had_percutaneous_coronary_intervention",

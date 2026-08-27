@@ -14,7 +14,9 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     # (e.g. "CDI Knochenbruch"), not the actual question wording from the
     # patient-facing form. CDI-style comorbidity checklists are typically
     # "have you ever been diagnosed with / do you have this condition"
-    # (i.e. presence/history, not "is it currently active right now"). - These variables are non-etiological because they indicate whether a condition is present or has a history, rather than why it occurred.
+    # (i.e. presence/history, not "is it currently active right now").
+    # - These variables are non-etiological because they indicate whether a condition is present
+    # or has a history, rather than why it occurred.
     cdi_cols = [f"CDI_{i}" for i in range(1, 19)]
 
     missing_cols = [c for c in cdi_cols if c not in harmonized_df.columns]
@@ -168,7 +170,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         [
             "STUDY_ID",
             "patient_id",
-            "study_arm",
             "follow_up_months",
             "has_angina",
             "has_heart_failure_diagnosis",
