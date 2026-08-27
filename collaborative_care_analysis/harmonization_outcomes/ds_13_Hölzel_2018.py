@@ -3,6 +3,12 @@ import pandas as pd
 from collaborative_care_analysis.config import COLNAME_STUDYID
 from collaborative_care_analysis.utils import map_with_check
 
+ID_COLS = [
+    COLNAME_STUDYID,
+    "patient_id",
+    "follow_up_months",
+]
+
 PHQ_MAPPING = {
     "Überhaupt nicht": 0,
     "an einzelnen Tagen": 1,
@@ -39,8 +45,6 @@ EQ5D_MAPPING = {
 
 PHQ9_COLS = [f"PHQ9_{item}" for item in range(1, 10)]
 
-GAD7_COLS = [f"GAD7_{item}" for item in range(1, 8)]
-
 EQ5D_COLS = [
     "EQ5D_Beweglichkeit",
     "EQ5D_Selbstversorgung",
@@ -49,11 +53,14 @@ EQ5D_COLS = [
     "EQ5D_Angst_Depression",
 ]
 
-COLUMN_RENAME_MAP = {
-    **{f"PHQ9_{item}": f"phq{item:02d}" for item in range(1, 10)},
-    **{f"GAD7_{item}": f"gad{item:02d}" for item in range(1, 8)},
-    "PHQ_Summe": "phq_sum",
-    "PHQ9_Schweregrad": "phq_severity_category",
+RENAME_MAP = {
+    # PHQ-9
+    **{f"PHQ9_{i}": f"phq9_{i}" for i in range(1, 10)},
+    "PHQ_Summe": "phq9_total",
+    "PHQ9_Schweregrad": "phq9_severity",
+    # GAD-7
+    **{f"GAD7_{i}": f"gad7_{i}" for i in range(1, 8)},
+    # EQ-5D-3L
     "EQ5D_Beweglichkeit": "eq5d_mobility",
     "EQ5D_Selbstversorgung": "eq5d_self_care",
     "EQ5D_AllgTaetigkeiten": "eq5d_usual_activities",
@@ -61,25 +68,15 @@ COLUMN_RENAME_MAP = {
     "EQ5D_Angst_Depression": "eq5d_anxiety_depression",
 }
 
+OUTCOME_COLS = ID_COLS + list(RENAME_MAP)
+
 
 def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     """Harmonize outcome variables for Hölzel 2018."""
 
-    selected_columns = [
-        COLNAME_STUDYID,
-        "patient_id",
-        "follow_up_months",
-        *PHQ9_COLS,
-        "PHQ_Summe",
-        "PHQ9_Schweregrad",
-        *GAD7_COLS,
-        *EQ5D_COLS,
-    ]
+    harmonized_df = df[OUTCOME_COLS].copy()
 
-    harmonized_df = df[selected_columns].copy()
-
-    # Map PHQ-9 item responses to scores from 0 to 3
-    # The nullable Int64 dtype preserves missing values as pd.NA.
+    # Map PHQ-9 item responses to scores from 0 to 3.
     for column in PHQ9_COLS:
         harmonized_df[column] = map_with_check(
             harmonized_df[column],
@@ -94,7 +91,7 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     ).astype("Int64")
 
     # Calculate the PHQ-9 total only when all nine items are available.
-    phq_sum_calculated = (
+    phq9_total_calculated = (
         harmonized_df[PHQ9_COLS]
         .sum(
             axis=1,
@@ -103,36 +100,34 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
         .astype("Int64")
     )
 
-    # Place the calculated total after the stored total.
     calculated_position = harmonized_df.columns.get_loc("PHQ_Summe") + 1
 
     harmonized_df.insert(
         calculated_position,
-        "phq_sum_calculated",
-        phq_sum_calculated,
+        "phq9_total_calculated",
+        phq9_total_calculated,
     )
 
-    # Compare stored and calculated totals only when both are available.
-    comparable = harmonized_df["PHQ_Summe"].notna() & harmonized_df["phq_sum_calculated"].notna()
+    # Compare supplied and calculated totals only when both are available.
+    comparable = (
+        harmonized_df["PHQ_Summe"].notna() & harmonized_df["phq9_total_calculated"].notna()
+    )
 
-    phq_sum_inconsistent = pd.Series(
+    phq9_total_inconsistent = pd.Series(
         pd.NA,
         index=harmonized_df.index,
         dtype="boolean",
     )
 
-    phq_sum_inconsistent.loc[comparable] = (
+    phq9_total_inconsistent.loc[comparable] = (
         harmonized_df.loc[comparable, "PHQ_Summe"]
-        != harmonized_df.loc[
-            comparable,
-            "phq_sum_calculated",
-        ]
+        != harmonized_df.loc[comparable, "phq9_total_calculated"]
     )
 
     harmonized_df.insert(
         calculated_position + 1,
-        "phq_sum_inconsistent",
-        phq_sum_inconsistent,
+        "phq9_total_inconsistent",
+        phq9_total_inconsistent,
     )
 
     # Map EQ-5D-3L responses to scores from 1 to 3.
@@ -144,6 +139,6 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
         ).astype("Int64")
 
     return harmonized_df.rename(
-        columns=COLUMN_RENAME_MAP,
+        columns=RENAME_MAP,
         errors="raise",
     )
