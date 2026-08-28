@@ -47,7 +47,7 @@ def load(file_path=RAW_DATASETS_DIR / "16_Katon_1999" / "katon1999.CLEANED.sav")
     )
 
     long_df["follow_up_months"] = map_with_check(long_df["_wave"], DEPRES_MONTH_MAP, "_wave")
-    long_df = long_df.drop(columns="_wave", errors="raise")
+    long_df = long_df.drop(columns=["_wave", "Time"], errors="raise")
 
     long_df = long_df.rename(columns={"Origpat_id": "patient_id"}, errors="raise")
 
