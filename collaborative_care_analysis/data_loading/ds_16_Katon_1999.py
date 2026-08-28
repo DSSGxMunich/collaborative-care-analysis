@@ -51,8 +51,13 @@ def load(file_path=RAW_DATASETS_DIR / "16_Katon_1999" / "katon1999.CLEANED.sav")
 
     long_df = long_df.rename(columns={"Origpat_id": "patient_id"}, errors="raise")
 
-    long_df = long_df.sort_values(["patient_id", "follow_up_months"]).reset_index(drop=True)
+    long_df = long_df.sort_values(
+        ["patient_id", "follow_up_months"],
+        kind="stable",
+    ).reset_index(drop=True)
 
+    if long_df.duplicated(["patient_id", "follow_up_months"]).any():
+        raise ValueError("Duplicate patient/time-point combinations")
     front = ["patient_id", "follow_up_months"]
     rest = [c for c in long_df.columns if c not in front]
     long_df = long_df[front + rest]
