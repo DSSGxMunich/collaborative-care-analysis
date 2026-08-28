@@ -8,7 +8,6 @@ def harmonize_baseline(df: pd.DataFrame):
 
     # rename variables
     rename_dict = {
-        "CLUSTER": "cluster",
         "AGE": "age",
         "SEX": "sex",
     }
@@ -31,7 +30,6 @@ def harmonize_baseline(df: pd.DataFrame):
         [
             "STUDY_ID",
             "patient_id",
-            "cluster",
             "age",
             "sex",
             "follow_up_months",
