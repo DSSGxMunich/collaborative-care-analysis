@@ -4,7 +4,7 @@ from collaborative_care_analysis.config import RAW_DATASETS_DIR
 from collaborative_care_analysis.utils import map_with_check
 
 """
-katon1995.CLEANED.sav has 599 rows, but only 91 contain real data..
+katon1995.CLEANED.sav has 599 rows, but only 91 contain real data.
 
 Time-varying columns:
     Depres_0   -> follow_up_months = 0
