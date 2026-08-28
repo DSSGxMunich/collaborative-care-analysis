@@ -10,14 +10,11 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     # Alcohol abuse
     # ----------------------------------------------------
     harmonized_df["CRF_SA"] = pd.to_numeric(harmonized_df["CRF_SA"], errors="raise")
-    harmonized_df.loc[~harmonized_df["CRF_SA"].isin([0, 1]), "CRF_SA"] = pd.NA
-
     harmonized_df["has_alcohol_abuse_history"] = map_with_check(
         harmonized_df["CRF_SA"],
         {
             0: "No",
             1: "Yes",
-            pd.NA: "Unknown",
         },
         label="has_alcohol_abuse_history",
     )
@@ -26,14 +23,12 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     # Other substance abuse
     # ----------------------------------------------------
     harmonized_df["CRF_SAO"] = pd.to_numeric(harmonized_df["CRF_SAO"], errors="raise")
-    harmonized_df.loc[~harmonized_df["CRF_SAO"].isin([0, 1]), "CRF_SAO"] = pd.NA
 
     harmonized_df["has_other_substance_abuse_history"] = map_with_check(
         harmonized_df["CRF_SAO"],
         {
             0: "No",
             1: "Yes",
-            pd.NA: "Unknown",
         },
         label="has_other_substance_abuse_history",
     )
@@ -42,14 +37,12 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     # Gender
     # ----------------------------------------------------
     harmonized_df["CRF_GENDER"] = pd.to_numeric(harmonized_df["CRF_GENDER"], errors="raise")
-    harmonized_df.loc[~harmonized_df["CRF_GENDER"].isin([1, 2]), "CRF_GENDER"] = pd.NA
 
     harmonized_df["sex"] = map_with_check(
         harmonized_df["CRF_GENDER"],
         {
             1: "Male",
             2: "Female",
-            pd.NA: "Unknown",
         },
         label="sex",
     )
@@ -61,7 +54,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
 
     for col in race_cols:
         harmonized_df[col] = pd.to_numeric(harmonized_df[col], errors="raise")
-        harmonized_df.loc[~harmonized_df[col].isin([0, 1]), col] = pd.NA
 
     def compute_race(row):
         if row["CRF_RAWH"] == 1:
@@ -74,7 +66,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             return "American Indian or Alaskan Native"
         if row["CRF_RAOT"] == 1:
             return "Other"
-        return "Missing"
+        return pd.NA
 
     harmonized_df["race"] = harmonized_df[race_cols].fillna(0).apply(compute_race, axis=1)
 
@@ -82,14 +74,12 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     # Ethnicity
     # ----------------------------------------------------
     harmonized_df["CRF_ETH"] = pd.to_numeric(harmonized_df["CRF_ETH"], errors="raise")
-    harmonized_df.loc[~harmonized_df["CRF_ETH"].isin([1, 2]), "CRF_ETH"] = pd.NA
 
     harmonized_df["ethnicity"] = map_with_check(
         harmonized_df["CRF_ETH"],
         {
             1: "Hispanic",
             2: "Non-Hispanic",
-            pd.NA: "Unknown",
         },
         label="ethnicity",
     )
@@ -98,7 +88,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     # Smoking status
     # ----------------------------------------------------
     harmonized_df["CRF_SMOKE"] = pd.to_numeric(harmonized_df["CRF_SMOKE"], errors="raise")
-    harmonized_df.loc[~harmonized_df["CRF_SMOKE"].isin([1, 2, 3, 4]), "CRF_SMOKE"] = pd.NA
 
     harmonized_df["smoking_status"] = map_with_check(
         harmonized_df["CRF_SMOKE"],
@@ -107,7 +96,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             2: "Former smoker (<1 year)",
             3: "Former smoker (≥1 year)",
             4: "Never smoked",
-            pd.NA: "Unknown",
         },
         label="smoking_status",
     )
