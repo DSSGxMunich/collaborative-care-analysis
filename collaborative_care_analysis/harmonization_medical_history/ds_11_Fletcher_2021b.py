@@ -275,7 +275,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         22: "Sodium valproate / Epilim",
         23: "Clonazepam / Paxam / Rivotril",
         24: "Pain relief",
-        25: "St John's Wort",
+        25: "St John's Wart",
         26: "Valerian",
         27: "Vitamins / Minerals",
         28: "Other",
