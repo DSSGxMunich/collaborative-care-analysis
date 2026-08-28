@@ -1,10 +1,64 @@
-import pyreadstat
+import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
+from collaborative_care_analysis.utils import map_with_check
+
+"""
+simon2000.CLEANED.sav has 614 rows, all populated.
+
+Time-varying columns:
+    Depres_0   -> follow_up_months = 0
+    Depres_f2  -> follow_up_months = 3
+    Depres_f3  -> follow_up_months = 6
+  all collapsed into a single 'depression_severity' column.
+
+All other columns are broadcast across each patient's follow-up.
+"""
+
+DEPRES_MONTH_MAP = {
+    "Depres_0": 0,
+    "Depres_f2": 3,
+    "Depres_f3": 6,
+}
 
 
 def load(file_path=RAW_DATASETS_DIR / "27_Simon_2000" / "simon2000.CLEANED.sav"):
-    # Read the SPSS .sav file and return its data as a pandas DataFrame.
-    # Metadata returned by pyreadstat is not used.
-    df, _ = pyreadstat.read_sav(file_path)
-    return df
+    df = pd.read_spss(file_path)
+
+    # Drop rows with Origpat_id empty or NaN
+    df = df[df["Origpat_id"].notna() & (df["Origpat_id"].astype(str).str.strip() != "")]
+
+    missing = [c for c in DEPRES_MONTH_MAP if c not in df.columns]
+    if missing:
+        raise ValueError(f"Expected columns missing from source file: {missing}")
+
+    value_vars = list(DEPRES_MONTH_MAP.keys())
+    id_vars = [c for c in df.columns if c not in value_vars]
+
+    long_df = df.melt(
+        id_vars=id_vars,
+        value_vars=value_vars,
+        var_name="_wave",
+        value_name="depression_severity",
+    )
+
+    long_df["follow_up_months"] = map_with_check(long_df["_wave"], DEPRES_MONTH_MAP, "_wave")
+    long_df = long_df.drop(columns=["_wave", "Time"], errors="raise")
+
+    long_df = long_df.rename(columns={"Origpat_id": "patient_id"}, errors="raise")
+
+    long_df = long_df.sort_values(
+        ["patient_id", "follow_up_months"],
+        kind="stable",
+    ).reset_index(drop=True)
+
+    if long_df.duplicated(["patient_id", "follow_up_months"]).any():
+        raise ValueError("Duplicate patient/time-point combinations")
+
+    front = ["patient_id", "follow_up_months"]
+    rest = [c for c in long_df.columns if c not in front]
+    long_df = long_df[front + rest]
+
+    long_df = long_df.convert_dtypes()
+
+    return long_df
