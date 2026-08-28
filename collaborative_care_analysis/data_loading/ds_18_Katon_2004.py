@@ -24,7 +24,7 @@ DEPRES_MONTH_MAP = {
 }
 
 
-def load(file_path=RAW_DATASETS_DIR / "18_Katon_2004" / "katon2004.sav"):
+def load(file_path=RAW_DATASETS_DIR / "18_Katon_2004" / "katon2004.CLEANED.sav"):
     df = pd.read_spss(file_path)
 
     missing = [c for c in DEPRES_MONTH_MAP if c not in df.columns]
@@ -42,7 +42,7 @@ def load(file_path=RAW_DATASETS_DIR / "18_Katon_2004" / "katon2004.sav"):
     )
 
     long_df["follow_up_months"] = map_with_check(long_df["_wave"], DEPRES_MONTH_MAP, "_wave")
-    long_df = long_df.drop(columns="_wave", errors="raise")
+    long_df = long_df.drop(columns=["_wave", "Time"], errors="raise")
 
     long_df = long_df.rename(columns={"Origpat_id": "patient_id"}, errors="raise")
 
