@@ -19,10 +19,10 @@ All other columns are broadcast across each patient's follow-up.
 """
 
 DEPRES_MONTH_MAP = {
-    "Depres_0": 0.0,
-    "Depres_f1": 1.0,
-    "Depres_f2": 3.0,
-    "Depres_f3": 6.0,
+    "Depres_0": 0,
+    "Depres_f1": 1,
+    "Depres_f2": 3,
+    "Depres_f3": 6,
 }
 
 
