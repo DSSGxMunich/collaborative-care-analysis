@@ -18,7 +18,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             2.0: "New + PHQ",
             3.0: "New + PHQ missing",
             4.0: "None",
-            pd.NA: "Unknown",
         },
         label="patient_status",
     )
@@ -32,15 +31,15 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df.loc[~harmonized_df["Sex"].isin([1.0, 2.0]), "Sex"] = pd.NA
 
     harmonized_df["sex"] = map_with_check(
-        harmonized_df["Sex"],
+        pd.to_numeric(harmonized_df["Sex"], errors="coerce"),
         {
             1.0: "Female",
             2.0: "Male",
-            pd.NA: "Unknown",
         },
         label="sex",
     ).astype("string")
 
+    harmonized_df["height"] = pd.to_numeric(harmonized_df["Groesse"], errors="raise")
     harmonized_df["Raucher_"] = pd.to_numeric(harmonized_df["Raucher_"], errors="raise")
     harmonized_df.loc[~harmonized_df["Raucher_"].isin([0.0, 1.0, 2.0, 3.0]), "Raucher_"] = pd.NA
 
@@ -51,7 +50,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             1.0: "Current",
             2.0: "Quit <1 year",
             3.0: "Quit ≥1 year",
-            pd.NA: "Unknown",
         },
         label="smoking_status",
     )
@@ -68,7 +66,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             4.0: "Higher education entrance qualification",
             5.0: "General higher education entrance qualification",
             6.0: "Other",
-            pd.NA: "Unknown",
         },
         label="education_level",
     )
@@ -94,7 +91,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             3.0: "African",
             4.0: "African-American",
             5.0: "Latino-American",
-            6.0: "Other",
         },
         label="ethnicity",
     )
@@ -121,6 +117,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "patient_status",
             "age",
             "sex",
+            "height",
             "smoking_status",
             "education_level",
             "number_of_living_parents",
