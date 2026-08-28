@@ -40,7 +40,7 @@ OUTCOME_COLS = ID_COLS + list(RENAME_MAP)
 
 
 def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
-    """Harmonize outcome variables for Genischen 2009."""
+    """Harmonize outcome variables for Gensichen 2009."""
 
     harmonized_df = df[OUTCOME_COLS].copy()
 
