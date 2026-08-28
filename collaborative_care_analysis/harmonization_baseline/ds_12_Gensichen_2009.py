@@ -6,11 +6,6 @@ from collaborative_care_analysis.utils import map_with_check
 def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
 
-    harmonized_df["practice_id"] = harmonized_df["PR_ID"]
-
-    harmonized_df["PAT_STAT"] = pd.to_numeric(harmonized_df["PAT_STAT"], errors="raise")
-    harmonized_df.loc[~harmonized_df["PAT_STAT"].isin([1.0, 2.0, 3.0, 4.0]), "PAT_STAT"] = pd.NA
-
     harmonized_df["patient_status"] = map_with_check(
         harmonized_df["PAT_STAT"],
         {
@@ -27,9 +22,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
 
     harmonized_df["birth_year"] = harmonized_df["survey_date"].dt.year - harmonized_df["age"]
 
-    harmonized_df["Sex"] = pd.to_numeric(harmonized_df["Sex"], errors="raise")
-    harmonized_df.loc[~harmonized_df["Sex"].isin([1.0, 2.0]), "Sex"] = pd.NA
-
     harmonized_df["sex"] = map_with_check(
         pd.to_numeric(harmonized_df["Sex"], errors="coerce"),
         {
@@ -40,8 +32,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     ).astype("string")
 
     harmonized_df["height"] = pd.to_numeric(harmonized_df["Groesse"], errors="raise")
-    harmonized_df["Raucher_"] = pd.to_numeric(harmonized_df["Raucher_"], errors="raise")
-    harmonized_df.loc[~harmonized_df["Raucher_"].isin([0.0, 1.0, 2.0, 3.0]), "Raucher_"] = pd.NA
 
     harmonized_df["smoking_status"] = map_with_check(
         harmonized_df["Raucher_"],
@@ -53,9 +43,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         },
         label="smoking_status",
     )
-
-    harmonized_df["Schulab"] = pd.to_numeric(harmonized_df["Schulab"], errors="raise")
-    harmonized_df.loc[~harmonized_df["Schulab"].isin([1, 2, 3, 4, 5, 6]), "Schulab"] = pd.NA
 
     harmonized_df["education_level"] = map_with_check(
         harmonized_df["Schulab"],
@@ -80,9 +67,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         harmonized_df["Kinder"], errors="raise"
     )
 
-    harmonized_df["Ethnie"] = pd.to_numeric(harmonized_df["Ethnie"], errors="raise")
-    harmonized_df.loc[~harmonized_df["Ethnie"].isin([1, 2, 3, 4, 5, 6]), "Ethnie"] = pd.NA
-
     harmonized_df["ethnicity"] = map_with_check(
         harmonized_df["Ethnie"],
         {
@@ -94,9 +78,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         },
         label="ethnicity",
     )
-
-    harmonized_df["Vers_Sta"] = pd.to_numeric(harmonized_df["Vers_Sta"], errors="raise")
-    harmonized_df.loc[~harmonized_df["Vers_Sta"].isin([1, 2]), "Vers_Sta"] = pd.NA
 
     harmonized_df["insurance_type"] = map_with_check(
         harmonized_df["Vers_Sta"],
@@ -113,7 +94,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         [
             "STUDY_ID",
             "patient_id",
-            "practice_id",
             "patient_status",
             "age",
             "sex",
