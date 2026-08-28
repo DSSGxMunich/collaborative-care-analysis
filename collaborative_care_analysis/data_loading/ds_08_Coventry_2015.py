@@ -73,11 +73,17 @@ def load(
     # did auto-match via the f-prefix pairing above are always kept
     # regardless of label)
     labeled_vars = labeled_variables(file_path)
+    undocumented = [c for c in unpaired_cols if c not in labeled_vars]
     unpaired_cols = [c for c in unpaired_cols if c in labeled_vars]
+    logger.info(
+        f"Dropped {len(undocumented)} unpaired columns with no variable_label "
+        "in the source file's metadata."
+    )
+    logger.trace(undocumented)
 
     static_cols = [c for c in unpaired_cols if not c.startswith("f")]
     followup_only_cols = [c for c in unpaired_cols if c.startswith("f")]
-    print(
+    logger.trace(
         f"{len(static_cols)} time-invariant columns broadcast to all rows; "
         f"{len(followup_only_cols)} follow-up-only columns (NaN at baseline)."
     )
@@ -108,8 +114,9 @@ def load(
     long_df = long_df.rename(columns={id_col: "patient_id"})
 
     dupes = long_df.duplicated(subset=["patient_id", "follow_up_months"]).sum()
+
     if dupes:
-        print(f"WARNING: {dupes} duplicate (patient_id, follow_up_months) rows found.")
+        raise ValueError(f"{dupes} duplicate (patient_id, follow_up_months) rows found.")
 
     long_df = long_df.sort_values(["patient_id", "follow_up_months"]).reset_index(drop=True)
 
