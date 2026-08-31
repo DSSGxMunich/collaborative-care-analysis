@@ -28,7 +28,7 @@ RENAME_MAP = {
     **{f"GAD{i:02d}": f"gad7_{i}" for i in range(1, 8)},
     "GADLEVEL": "gad7_total",
     # Signs and symptoms
-    #**{f"SS{i:02d}": f"ss_{i}" for i in range(1, 11)},
+    # **{f"SS{i:02d}": f"ss_{i}" for i in range(1, 11)},
     "SSSCORE": "ss_total",
 }
 
