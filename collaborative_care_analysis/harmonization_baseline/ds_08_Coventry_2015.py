@@ -20,8 +20,48 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         label="sex",
     ).astype("string")
 
-    # ethnic
-    harmonized_df["ethnicity"] = harmonized_df["ethnic"].astype("string")
+    harmonized_df["ethnic"] = harmonized_df["ethnic"].astype("string")
+
+    race_mapping_full = {
+        # White group
+        "White": "White",
+        "British": "White",
+        "Irish": "White",
+        "Other white": "White",
+        "Caucasian": "White",
+        "Arab": "Middle Eastern/North African",
+        # Black/African group
+        "Black/African American": "Black/African",
+        "Other black": "Black/African",
+        "W&B African": "Black/African",
+        "Caribbean": "Black/African",
+        # Asian group
+        "Asian": "Asian",
+        "Indian": "Asian",
+        "Pakistani": "Asian",
+        "Bangladesh": "Asian",
+        # Mixed / Multiple
+        "White Asian": "Mixed/Multiple",
+        "White & Asian": "Mixed/Multiple",
+        "Other Mixed": "Mixed/Multiple",
+        "Other mixed race": "Mixed/Multiple",
+        # Hispanic
+        "Hispanic": "Hispanic/Latino",
+        "Hispanic/Latino": "Hispanic/Latino",
+        # Other / Unknown
+        "Other": "Other/Unknown",
+        "Non-Caucasian": "Other/Unknown",
+    }
+
+    present_raw_values = set(harmonized_df["ethnic"].unique())
+    race_mapping = {k: v for k, v in race_mapping_full.items() if k in present_raw_values}
+
+    # harmonize ethnicity
+    harmonized_df["race"] = map_with_check(
+        harmonized_df["ethnic"],
+        race_mapping,
+        label="ethnicity",
+    ).astype("string")
 
     # accommodation
     harmonized_df["accommodation"] = harmonized_df["accomodation"].astype("string")
@@ -36,7 +76,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "follow_up_months",
             "age",
             "sex",
-            "ethnicity",
+            "race",
             "accommodation",
             "employment",
         ]

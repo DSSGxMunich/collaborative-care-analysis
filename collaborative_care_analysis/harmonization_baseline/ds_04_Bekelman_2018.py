@@ -6,9 +6,7 @@ from collaborative_care_analysis.utils import map_with_check
 def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
 
-    # -------------------------
     # Rename raw variables
-    # -------------------------
     rename_dict = {
         "gender": "sex",
         "dem_smoke": "smoking_status",
@@ -19,17 +17,17 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         "scr_crgvr": "has_caregiver",
         "scr_snf": "lives_in_facility",
         "scr_tele": "has_telephone_access",
-        "timept": "follow_up_months",  # inherited from loader — DO NOT MAP
+        "timept": "follow_up_months",
         "crf_sa": "has_alcohol_abuse_history",
         "crf_sao": "has_substance_abuse_history",
         "schfi04": "physical_activity_frequency",
         "ins_priv": "has_private_insurance",
+        "race": "race",
     }
     harmonized_df = harmonized_df.rename(columns=rename_dict)
 
-    # -------------------------
     # Harmonize private insurance (blank → No)
-    # -------------------------
+
     if "has_private_insurance" in harmonized_df.columns:
         harmonized_df["has_private_insurance"] = (
             harmonized_df["has_private_insurance"]
@@ -37,19 +35,16 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             .astype("string")
         )
 
-    # -------------------------
-    # Category mappings (strict)
-    # -------------------------
+    # Category mappings
     category_maps = {
         "sex": {1: "Male", 2: "Female"},
         "race": {
             1: "American Indian/Alaska Native",
             2: "Asian",
-            3: "Black/African American",
+            3: "Black/African",
             4: "Native Hawaiian/Pacific Islander",
             5: "White",
             6: "Other",
-            99: "Unknown",
         },
         "smoking_status": {
             0: "Never",
@@ -104,9 +99,8 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         },
     }
 
-    # -------------------------
-    # Apply map_with_check to all coded variables (except follow_up_months)
-    # -------------------------
+    # Apply map_with_check to all coded variables
+
     for var, mapping in category_maps.items():
         if var in harmonized_df.columns:
             harmonized_df[var] = map_with_check(
@@ -115,15 +109,11 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
                 label=var,
             ).astype("string")
 
-    # -------------------------
-    # Ensure age is numeric
-    # -------------------------
     if "age" in harmonized_df.columns:
         harmonized_df["age"] = pd.to_numeric(harmonized_df["age"], errors="raise")
 
-    # -------------------------
     # Final output
-    # -------------------------
+
     return harmonized_df[
         [
             "STUDY_ID",
