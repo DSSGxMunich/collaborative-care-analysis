@@ -9,15 +9,15 @@ ID_COLS = [
 ]
 
 RENAME_MAP = {
-    # SCL-90
-    "depression_severity": "scl90_total",
+    # SCL-20
+    "depression_severity": "scl20_total",
 }
 
 OUTCOME_COLS = ID_COLS + list(RENAME_MAP)
 
 
 def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
-    """Harmonize outcome variables for Simon 2004."""
+    """Harmonize outcome variables for Simon 2000."""
 
     harmonized_df = df[OUTCOME_COLS].copy()
 

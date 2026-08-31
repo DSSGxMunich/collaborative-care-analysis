@@ -14,7 +14,7 @@ ID_COLS = [
 
 PHQ9_COLS = [f"phq{i}" for i in range(1, 10)]
 
-ESSI_COLS = [f"enrichd{i}" for i in range(1, 6)]
+ESSI_COLS = [f"enrichd{i}" for i in range(1, 8)]
 
 GAD7_COLS = [f"gad{i}" for i in range(1, 8)]
 
