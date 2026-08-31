@@ -67,14 +67,14 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         harmonized_df["Kinder"], errors="raise"
     )
 
-    harmonized_df["ethnicity"] = map_with_check(
+    harmonized_df["race"] = map_with_check(
         harmonized_df["Ethnie"],
         {
-            1.0: "Caucasian",
+            1.0: "White",
             2.0: "Asian",
-            3.0: "African",
-            4.0: "African-American",
-            5.0: "Latino-American",
+            3.0: "Black/African",
+            4.0: "Black/African",
+            5.0: "Hispanic/Latino",
         },
         label="ethnicity",
     )
@@ -97,13 +97,13 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "patient_status",
             "age",
             "sex",
+            "race",
             "height",
             "smoking_status",
             "education_level",
             "number_of_living_parents",
             "number_of_living_siblings",
             "number_of_living_children",
-            "ethnicity",
             "insurance_type",
             "insurance_provider",
             "follow_up_months",
