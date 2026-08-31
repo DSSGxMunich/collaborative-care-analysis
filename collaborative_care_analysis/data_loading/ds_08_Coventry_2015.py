@@ -103,6 +103,13 @@ def load(
         fu_df[followup_date_col] - fu_df[baseline_date_col]
     ).dt.days / 30.4368
 
+    # drop rows where the follow-up date is before the baseline date
+    before_drop = len(fu_df)
+    fu_df = fu_df[fu_df["follow_up_months"] >= 0]
+    logger.trace(
+        f"{before_drop - len(fu_df)} rows are dropped because follow-up date is before baseline date."
+    )
+
     # give follow-up columns the same names as their baseline counterparts
     fu_df = fu_df.rename(columns={v: k for k, v in pairs.items()})
     fu_df = fu_df.drop(columns=[baseline_date_col, followup_date_col])
