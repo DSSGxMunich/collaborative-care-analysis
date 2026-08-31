@@ -31,13 +31,13 @@ RENAME_MAP = {
     "kccqsf08c": "kccq_sf_8c",
     # Pain
     "pegmean": "peg_mean",
-    **{f"peg{i:02d}": f"peg_{i}" for i in range(1, 4)},
+    #**{f"peg{i:02d}": f"peg_{i}" for i in range(1, 4)},
     # Fatigue
     "ftgtot": "fatigue_total",
-    **{f"ftg{i:02d}": f"fatigue_{i}" for i in range(1, 9)},
+    #**{f"ftg{i:02d}": f"fatigue_{i}" for i in range(1, 9)},
     # Dyspnea
     "dysptot": "dyspnea_total",
-    **{f"dysp{i:02d}": f"dyspnea_{i}" for i in range(1, 4)},
+    #**{f"dysp{i:02d}": f"dyspnea_{i}" for i in range(1, 4)},
     "dyspmean": "dyspnea_mean",
 }
 
