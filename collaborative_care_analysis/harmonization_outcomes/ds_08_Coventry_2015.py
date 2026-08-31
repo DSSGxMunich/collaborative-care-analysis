@@ -86,7 +86,7 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
             min_count=len(PHQ9_COLS),
         )
         .astype("Int64")
-)
+    )
 
     # Calculate GAD-7 total only when all seven items are available.
     harmonized_df["gad7_total"] = (
