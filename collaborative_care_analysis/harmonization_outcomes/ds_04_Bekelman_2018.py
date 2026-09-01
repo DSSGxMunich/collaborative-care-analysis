@@ -14,7 +14,7 @@ GAD7_COLS = [f"gad{i:02d}" for i in range(1, 8)]
 
 RENAME_MAP = {
     # PHQ-9
-    #"phqtotalv2": "phq9_total_v2", # TODO: Decide whether to include based on Hannah's feedback
+    # "phqtotalv2": "phq9_total_v2", # TODO: Decide whether to include based on Hannah's feedback
     **{f"phq{i:02d}": f"phq9_{i}" for i in range(1, 10)},
     # Additional PHQ functional difficulty question
     "phq10": "phq9_difficulty",
@@ -72,7 +72,7 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
         )
         .astype("Int64")
     )
-    
+
     return harmonized_df.rename(
         columns=RENAME_MAP,
         errors="raise",
