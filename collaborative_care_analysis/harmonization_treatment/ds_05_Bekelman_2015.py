@@ -26,7 +26,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "Usual Care": "control",
             "Intervention": "intervention",
         },
-        "ARM",
     )
 
     # -------------------------------------------------------------------------
@@ -42,7 +41,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "Usual Care": "no",
             "Intervention": "yes",
         },
-        "ARM",
     )
 
     # -------------------------------------------------------------------------
@@ -59,7 +57,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "Usual Care": "no",
             "Intervention": "yes",
         },
-        "ARM",
     )
 
     # -------------------------------------------------------------------------
@@ -78,7 +75,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             1: "yes",
             0: "no",
         },
-        "depressed",
     )
 
     # -------------------------------------------------------------------------
@@ -91,7 +87,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "Usual Care": "no",
             "Intervention": "yes",
         },
-        "ARM",
     )
 
     # -------------------------------------------------------------------------
@@ -105,7 +100,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "Usual Care": "no",
             "Intervention": "yes",
         },
-        "ARM",
     )
 
     # -------------------------------------------------------------------------
@@ -250,7 +244,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "Usual Care": "no",
             "Intervention": "yes",
         },
-        "ARM",
     )
 
     # -------------------------------------------------------------------------
@@ -267,7 +260,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "Usual Care": pd.NA,
             "Intervention": "daily",
         },
-        "ARM",
     )
 
     # -------------------------------------------------------------------------

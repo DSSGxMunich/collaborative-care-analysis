@@ -13,7 +13,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             1: "control",
             2: "intervention",
         },
-        "arm",
     )
 
     # all rows that were in the intervention group had nurses involved
@@ -23,7 +22,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             1: "no",
             2: "yes",
         },
-        "arm",
     )
 
     # all rows that were in the intervention group had social worker involved
@@ -33,7 +31,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             1: "no",
             2: "yes",
         },
-        "arm",
     )
 
     # all rows that were in the intervention group had
@@ -44,7 +41,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             1: "no",
             2: "yes",
         },
-        "arm",
     )
 
     # all rows that were in the intervention group had cardiologists involved
@@ -54,7 +50,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             1: "no",
             2: "yes",
         },
-        "arm",
     )
 
     # all rows that were in the intervention group had scheduled visits
@@ -65,7 +60,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             1: "as_needed",
             2: "scheduled",
         },
-        "arm",
     )
 
     # all rows that were in the intervention group had 2 visits per month,
@@ -78,7 +72,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             1: pd.NA,
             2: 2,
         },
-        "arm",
     ).astype("Int64")
 
     # ------------------------------------------------------------------
@@ -103,7 +96,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         map_with_check(
             harmonized_df["med_acein"],
             medication_mapping,
-            "med_acein",
         )
     )
 
@@ -111,56 +103,48 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["medications_angiotensin_II_receptor_blockers_(ARBS)"] = map_with_check(
         harmonized_df["med_arb"],
         medication_mapping,
-        "med_arb",
     )
 
     # changes the name to a more descriptive name and values to categorical
     harmonized_df["medications_beta-blocker"] = map_with_check(
         harmonized_df["med_betab"],
         medication_mapping,
-        "med_betab",
     )
 
     # changes the name to a more descriptive name and values to categorical
     harmonized_df["medications_antidepressant"] = map_with_check(
         harmonized_df["med_antid"],
         medication_mapping,
-        "med_antid",
     )
 
     # changes the name to a more descriptive name and values to categorical
     harmonized_df["medications_opiate"] = map_with_check(
         harmonized_df["med_opi"],
         medication_mapping,
-        "med_opi",
     )
 
     # changes the name to a more descriptive name and values to categorical
     harmonized_df["medications_loop_diuretic"] = map_with_check(
         harmonized_df["med_lpdiur"],
         medication_mapping,
-        "med_lpdiur",
     )
 
     # changes the name to a more descriptive name and values to categorical
     harmonized_df["medications_aldosterone_receptor_antagonist"] = map_with_check(
         harmonized_df["med_aldrcnt"],
         medication_mapping,
-        "med_aldrcnt",
     )
 
     # changes the name to a more descriptive name and values to categorical
     harmonized_df["medications_digitalis_glycoside"] = map_with_check(
         harmonized_df["med_dgxn"],
         medication_mapping,
-        "med_dgxn",
     )
 
     # changes the name to a more descriptive name and values to categorical
     harmonized_df["medications_statin_or_lipid-lowering_agent"] = map_with_check(
         harmonized_df["med_statn"],
         medication_mapping,
-        "med_statn",
     )
 
     # return the harmonized dataset which has only the values we want
