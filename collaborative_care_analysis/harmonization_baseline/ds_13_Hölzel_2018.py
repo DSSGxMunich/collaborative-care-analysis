@@ -179,8 +179,8 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["sex"] = map_with_check(
         series=harmonized_df["sex"],
         mapping={
-            "weiblich": "female",
-            "männlich": "male",
+            "weiblich": "Female",
+            "männlich": "Male",
         },
     )
 
@@ -199,7 +199,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "employment_extent",
             "perceived_financial_adequacy",
             "study_center",
-            "intervention_cluster",
             "practice_id",
         ]
     ]

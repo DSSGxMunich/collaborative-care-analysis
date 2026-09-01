@@ -112,7 +112,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "patient_id",
             "sex",
             "race",
-            "race",
             "smoking_status",
             "has_alcohol_abuse_history",
             "has_other_substance_abuse_history",
