@@ -44,8 +44,8 @@ def load(file_path=RAW_DATASETS_DIR / "14_Katon_1995" / "katon1995.sav"):
         value_name="avg_scl90",
     )
 
-    long_df["follow_up_months"] = map_with_check(long_df["_wave"], DEPRES_MONTH_MAP)
-    long_df = long_df.drop(columns=["Time", "_wave"], errors="raise")
+    long_df["follow_up_months"] = map_with_check(long_df["_follow_up_months"], SCL_FOLLOW_UP_MAP)
+    long_df = long_df.drop(columns=["_follow_up_months"])
 
     if long_df.duplicated(["patient_id", "follow_up_months"]).any():
         raise ValueError("Duplicate patient/time-point combinations")

@@ -43,7 +43,8 @@ def load(file_path=RAW_DATASETS_DIR / "16_Katon_1999" / "katon1999.sav"):
         value_name="avg_scl90",
     )
     long_df["follow_up_months"] = map_with_check(
-        long_df["_follow_up_months"], SCL_FOLLOW_UP_MAP, "_follow_up_months"
+        long_df["_follow_up_months"],
+        SCL_FOLLOW_UP_MAP,
     )
     long_df = long_df.drop(columns=["_follow_up_months"])
 
