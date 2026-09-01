@@ -82,7 +82,7 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
         harmonized_df[column] = map_with_check(
             harmonized_df[column],
             PHQ_MAPPING,
-            column,
+            # column,
         ).astype("Int64")
 
     # Store the supplied PHQ-9 total as a nullable integer.
@@ -136,7 +136,7 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
         harmonized_df[column] = map_with_check(
             harmonized_df[column],
             EQ5D_MAPPING,
-            column,
+            # column,
         ).astype("Int64")
 
     return harmonized_df.rename(

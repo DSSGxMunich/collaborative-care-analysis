@@ -22,11 +22,16 @@ RENAME_MAP = {
 
 
 def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
-    """Harmonize outcome variables for Aragones 2019."""
+    """Harmonize outcome variables for Aragones 2019.
+
+    Expects df to already contain ID_COLS and HSCL_COLS under their raw
+    (un-renamed) names.
+    """
 
     harmonized_df = df[OUTCOME_COLS].copy()
 
-    return harmonized_df.rename(
-        columns=RENAME_MAP,
-        errors="raise",
-    )
+    # ensure HSCL scores are numeric, fail loudly on unexpected raw codes
+    for col in HSCL_COLS:
+        harmonized_df[col] = pd.to_numeric(harmonized_df[col], errors="raise")
+
+    return harmonized_df.rename(columns=RENAME_MAP)

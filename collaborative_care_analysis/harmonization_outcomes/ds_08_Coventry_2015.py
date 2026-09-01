@@ -102,7 +102,7 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["gad8"] = map_with_check(
         harmonized_df["gad8"],
         GAD8_MAPPING,
-        "gad8",
+        # "gad8",
     ).astype("Float64")
 
     # Calculate ESSI total only when all seven items are available.
