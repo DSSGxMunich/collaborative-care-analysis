@@ -8,15 +8,17 @@ ID_COLS = [
     "follow_up_months",
 ]
 
+PHQ9_COLS = [f"phq{i:02d}" for i in range(1, 10)]
+
+GAD7_COLS = [f"gad{i:02d}" for i in range(1, 8)]
+
 RENAME_MAP = {
     # PHQ-9
-    "phqtotal": "phq9_total",
-    "phqtotalv2": "phq9_total_v2",
+    # "phqtotalv2": "phq9_total_v2", # TODO: Decide whether to include based on Hannah's feedback
     **{f"phq{i:02d}": f"phq9_{i}" for i in range(1, 10)},
     # Additional PHQ functional difficulty question
     "phq10": "phq9_difficulty",
     # GAD-7
-    "gadtotal": "gad7_total",
     **{f"gad{i:02d}": f"gad7_{i}" for i in range(1, 8)},
     # Additional GAD functional difficulty question
     "gad08": "gad7_difficulty",
@@ -31,13 +33,13 @@ RENAME_MAP = {
     "kccqsf08c": "kccq_sf_8c",
     # Pain
     "pegmean": "peg_mean",
-    **{f"peg{i:02d}": f"peg_{i}" for i in range(1, 4)},
+    # **{f"peg{i:02d}": f"peg_{i}" for i in range(1, 4)},
     # Fatigue
     "ftgtot": "fatigue_total",
-    **{f"ftg{i:02d}": f"fatigue_{i}" for i in range(1, 9)},
+    # **{f"ftg{i:02d}": f"fatigue_{i}" for i in range(1, 9)},
     # Dyspnea
     "dysptot": "dyspnea_total",
-    **{f"dysp{i:02d}": f"dyspnea_{i}" for i in range(1, 4)},
+    # **{f"dysp{i:02d}": f"dyspnea_{i}" for i in range(1, 4)},
     "dyspmean": "dyspnea_mean",
 }
 
@@ -48,6 +50,28 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     """Harmonize outcome variables for Bekelman 2018."""
 
     harmonized_df = df[OUTCOME_COLS].copy()
+
+    # Calculate PHQ-9 total only when all nine items are available.
+    harmonized_df["phq9_total"] = (
+        harmonized_df[PHQ9_COLS]
+        .apply(pd.to_numeric, errors="raise")
+        .sum(
+            axis=1,
+            min_count=len(PHQ9_COLS),
+        )
+        .astype("Int64")
+    )
+
+    # Calculate GAD-7 total only when all seven items are available.
+    harmonized_df["gad7_total"] = (
+        harmonized_df[GAD7_COLS]
+        .apply(pd.to_numeric, errors="raise")
+        .sum(
+            axis=1,
+            min_count=len(GAD7_COLS),
+        )
+        .astype("Int64")
+    )
 
     return harmonized_df.rename(
         columns=RENAME_MAP,

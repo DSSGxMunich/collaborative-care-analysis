@@ -44,7 +44,6 @@ def load(
         value=map_with_check(
             series=df["surv_version"],
             mapping={"baseline": 0, "3month": 3, "6month": 6, "final": 12},
-            label="surv_version",
         ),
     )
     df.drop(labels="surv_version", axis=1, errors="raise", inplace=True)
