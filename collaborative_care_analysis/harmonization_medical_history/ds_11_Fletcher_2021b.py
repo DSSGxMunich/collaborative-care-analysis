@@ -11,9 +11,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     # -------------------------------------------------------------------
     assert "illness_t" in harmonized_df.columns, "illness_t column missing from the export"
     yes_no_map = {0: "no", 1: "yes"}
-    harmonized_df["has_long_term_illness"] = map_with_check(
-        harmonized_df["illness_t"], yes_no_map, "illness_t"
-    )
+    harmonized_df["has_long_term_illness"] = map_with_check(harmonized_df["illness_t"], yes_no_map)
 
     # -------------------------------------------------------------------
     # HEALTH / CONCESSION CARDS
@@ -46,13 +44,13 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         f"Expected card columns missing from the export: {missing_card_cols}"
     )
     for raw_col, new_col in card_cols_0.items():
-        harmonized_df[new_col] = map_with_check(harmonized_df[raw_col], yes_no_map, raw_col)
+        harmonized_df[new_col] = map_with_check(harmonized_df[raw_col], yes_no_map)
 
     # card_any_0: a combined "holds any card" summary flag, distinct
     # from the five individual card-type flags above.
     if "card_any_0" in harmonized_df.columns:
         harmonized_df["has_any_health_care_card"] = map_with_check(
-            harmonized_df["card_any_0"], yes_no_map, "card_any_0"
+            harmonized_df["card_any_0"], yes_no_map
         )
     else:
         harmonized_df["has_any_health_care_card"] = pd.NA
@@ -67,7 +65,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     }
     for raw_col, new_col in card_cols_1.items():
         if raw_col in harmonized_df.columns:
-            harmonized_df[new_col] = map_with_check(harmonized_df[raw_col], yes_no_map, raw_col)
+            harmonized_df[new_col] = map_with_check(harmonized_df[raw_col], yes_no_map)
         else:
             harmonized_df[new_col] = pd.NA
 
@@ -87,7 +85,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     }
     if "card" in harmonized_df.columns:
         harmonized_df["health_care_card_type_follow_up"] = map_with_check(
-            harmonized_df["card"], card_type_map, "card"
+            harmonized_df["card"], card_type_map
         )
     else:
         harmonized_df["health_care_card_type_follow_up"] = pd.NA
@@ -126,12 +124,15 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     }
     for raw_stub, new_col in provider_visit_cols.items():
         if raw_stub in harmonized_df.columns:
-            harmonized_df[new_col] = map_with_check(harmonized_df[raw_stub], visits_map, raw_stub)
+            harmonized_df[new_col] = map_with_check(harmonized_df[raw_stub], visits_map)
         else:
             harmonized_df[new_col] = pd.NA
 
     # family therapist: combine the two misspelled stub variants (see
-    # note above) into a single column.
+    # note above) into a single column. combine_first() loses the
+    # original Series' .name, so we restore one explicitly -- without
+    # it, map_with_check would fall back to "<unnamed series>" in any
+    # assertion error message.
     familytherapist_stubs = [
         c for c in ["familytherapistvisit", "familytherapisvisit"] if c in harmonized_df.columns
     ]
@@ -141,8 +142,9 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     family_therapist_raw = harmonized_df[familytherapist_stubs[0]]
     for extra_stub in familytherapist_stubs[1:]:
         family_therapist_raw = family_therapist_raw.combine_first(harmonized_df[extra_stub])
+    family_therapist_raw = family_therapist_raw.rename("/".join(familytherapist_stubs))
     harmonized_df["family_therapist_visit_frequency"] = map_with_check(
-        family_therapist_raw, visits_map, "/".join(familytherapist_stubs)
+        family_therapist_raw, visits_map
     )
 
     # -------------------------------------------------------------------
@@ -164,7 +166,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     }
     for raw_stub, new_col in visited_gatekeeper_cols.items():
         if raw_stub in harmonized_df.columns:
-            harmonized_df[new_col] = map_with_check(harmonized_df[raw_stub], yes_no_map, raw_stub)
+            harmonized_df[new_col] = map_with_check(harmonized_df[raw_stub], yes_no_map)
         else:
             harmonized_df[new_col] = pd.NA
 
@@ -232,17 +234,17 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         loc_col = f"{raw_prefix}loc"
         pay_col = f"{raw_prefix}pay"
         harmonized_df[f"{out_prefix}_visit_length"] = (
-            map_with_check(harmonized_df[length_col], length_map, length_col)
+            map_with_check(harmonized_df[length_col], length_map)
             if length_col in harmonized_df.columns
             else pd.NA
         )
         harmonized_df[f"{out_prefix}_visit_location"] = (
-            map_with_check(harmonized_df[loc_col], loc_map, loc_col)
+            map_with_check(harmonized_df[loc_col], loc_map)
             if loc_col in harmonized_df.columns
             else pd.NA
         )
         harmonized_df[f"{out_prefix}_visit_out_of_pocket_cost"] = (
-            map_with_check(harmonized_df[pay_col], pay_map, pay_col)
+            map_with_check(harmonized_df[pay_col], pay_map)
             if pay_col in harmonized_df.columns
             else pd.NA
         )
@@ -275,7 +277,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         22: "Sodium valproate / Epilim",
         23: "Clonazepam / Paxam / Rivotril",
         24: "Pain relief",
-        25: "St John's Wart",
+        25: "St John's Wort",
         26: "Valerian",
         27: "Vitamins / Minerals",
         28: "Other",
@@ -286,7 +288,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         long_col = f"medication{i}_long"
         if name_col in harmonized_df.columns:
             harmonized_df[f"medication_{i}_name"] = map_with_check(
-                harmonized_df[name_col], med_name_map, name_col
+                harmonized_df[name_col], med_name_map
             )
         else:
             harmonized_df[f"medication_{i}_name"] = pd.NA
@@ -318,7 +320,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     }
     if "adduration_0" in harmonized_df.columns:
         harmonized_df["antidepressant_duration"] = map_with_check(
-            harmonized_df["adduration_0"], ad_duration_map, "adduration_0"
+            harmonized_df["adduration_0"], ad_duration_map
         )
     else:
         harmonized_df["antidepressant_duration"] = pd.NA
@@ -335,7 +337,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     }
     for raw_stub, new_col in any_flag_cols.items():
         if raw_stub in harmonized_df.columns:
-            harmonized_df[new_col] = map_with_check(harmonized_df[raw_stub], yes_no_map, raw_stub)
+            harmonized_df[new_col] = map_with_check(harmonized_df[raw_stub], yes_no_map)
         else:
             harmonized_df[new_col] = pd.NA
 
@@ -353,12 +355,12 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             harmonized_df[reason_col] if reason_col in harmonized_df.columns else pd.NA
         )
         harmonized_df[f"er_visit_{i}_hospital_type"] = (
-            map_with_check(harmonized_df[type_col], er_type_map, type_col)
+            map_with_check(harmonized_df[type_col], er_type_map)
             if type_col in harmonized_df.columns
             else pd.NA
         )
         harmonized_df[f"er_visit_{i}_out_of_pocket_cost"] = (
-            map_with_check(harmonized_df[pay_col], er_pay_map, pay_col)
+            map_with_check(harmonized_df[pay_col], er_pay_map)
             if pay_col in harmonized_df.columns
             else pd.NA
         )
@@ -400,22 +402,22 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             harmonized_df[reason_col] if reason_col in harmonized_df.columns else pd.NA
         )
         harmonized_df[f"hospital_stay_{i}_hospital_type"] = (
-            map_with_check(harmonized_df[type_col], stay_type_map, type_col)
+            map_with_check(harmonized_df[type_col], stay_type_map)
             if type_col in harmonized_df.columns
             else pd.NA
         )
         harmonized_df[f"hospital_stay_{i}_nights"] = (
-            map_with_check(harmonized_df[num_col], stay_num_map, num_col)
+            map_with_check(harmonized_df[num_col], stay_num_map)
             if num_col in harmonized_df.columns
             else pd.NA
         )
         harmonized_df[f"hospital_stay_{i}_transport_method"] = (
-            map_with_check(harmonized_df[transp_col], stay_transp_map, transp_col)
+            map_with_check(harmonized_df[transp_col], stay_transp_map)
             if transp_col in harmonized_df.columns
             else pd.NA
         )
         harmonized_df[f"hospital_stay_{i}_payment_source"] = (
-            map_with_check(harmonized_df[pay_col], stay_pay_map, pay_col)
+            map_with_check(harmonized_df[pay_col], stay_pay_map)
             if pay_col in harmonized_df.columns
             else pd.NA
         )

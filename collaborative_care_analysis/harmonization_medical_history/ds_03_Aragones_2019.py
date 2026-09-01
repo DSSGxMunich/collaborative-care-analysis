@@ -49,7 +49,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # (hypertension diagnosis), no granularity mismatch.
         harmonized_df["HYPERT"],
         yes_no_map,
-        "HYPERT",
     )
     harmonized_df["has_cardiovascular_disease"] = map_with_check(  # CARDIOVASCULAR
         # NOTE: a broad/umbrella category (unspecified cardiovascular
@@ -60,7 +59,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # own column rather than conflated with any single one of those.
         harmonized_df["CARDIOVASCULAR"],
         yes_no_map,
-        "CARDIOVASCULAR",
     )
 
     # metabolic
@@ -69,7 +67,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # ds_05_Bekelman_2015 - same concept, no granularity mismatch.
         harmonized_df["DIABETES"],
         yes_no_map,
-        "DIABETES",
     )
 
     # respiratory
@@ -82,7 +79,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # column rather than merged with either.
         harmonized_df["RESPIRATORY"],
         yes_no_map,
-        "RESPIRATORY",
     )
 
     # oncology
@@ -91,7 +87,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # granularity mismatch.
         harmonized_df["CANCER"],
         yes_no_map,
-        "CANCER",
     )
 
     # Number of chronic conditions

@@ -32,7 +32,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     )
     yes_no_map = {0: "no", 1: "yes"}
     harmonized_df["is_adherent_to_medication"] = map_with_check(
-        harmonized_df["medication_adherence"], yes_no_map, "medication_adherence"
+        harmonized_df["medication_adherence"], yes_no_map
     )
 
     # return the harmonized dataset which has only the values we want
