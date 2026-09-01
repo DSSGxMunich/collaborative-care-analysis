@@ -292,8 +292,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "has_history_of_stroke_or_transient_ischemic_attack",
             "has_history_of_depression",
             "has_history_of_post_traumatic_stress_disorder",
-            "has_history_of_alcohol_abuse",
-            "has_history_of_other_substance_abuse",
             "is_heart_failure_etiology_alcohol_related",
         ]
     ]

@@ -21,12 +21,12 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["education_level"] = map_with_check(
         series=harmonized_df["education_0"],
         mapping={
-            0: "Left school before completing Year 10",
-            1: "Completed Year 10 or equivalent",
-            2: "Completed Year 11 or equivalent",
-            3: "Completed Year 12 or equivalent",
-            4: "Certificate/Diploma",
-            5: "Bachelor Degree or higher",
+            0: "No school degree",
+            1: "Basic secondary school",
+            2: "Basic secondary school",
+            3: "Intermediate secondary school",
+            4: "Higher education entrance qualification",
+            5: "University degree",
         },
         label="education_level",
     )
@@ -161,7 +161,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
 
     harmonized_df["job_unemployment_since"] = harmonized_df["job_unemploy"].astype("string")
 
-    harmonized_df["insurance_card_type"] = map_with_check(
+    harmonized_df["health_card_type"] = map_with_check(
         series=harmonized_df["card"],
         mapping={
             0: "Health Care Card (Centrelink)",
@@ -211,7 +211,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "alcohol_drug_worker_visit",
             "has_health_insurance",
             "job_unemployment_since",
-            "insurance_card_type",
+            "health_card_type",
             "ability_to_manage_on_income",
             "follow_up_months",
         ]
