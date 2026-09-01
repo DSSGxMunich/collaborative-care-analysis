@@ -34,21 +34,18 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # diagnosis of coronary artery disease, not a heart attack itself.
         harmonized_df["CDI_1"],
         yes_no_map,
-        "CDI_1",
     )
     harmonized_df["has_heart_failure_diagnosis"] = map_with_check(  # CDI_2: Herzschwäche
         # Heart can't pump blood effectively enough for the body's needs
         # (a chronic condition, not a one-time event).
         harmonized_df["CDI_2"],
         yes_no_map,
-        "CDI_2",
     )
     harmonized_df["has_history_of_heart_attack"] = map_with_check(  # CDI_3: Herzinfarkt
         # History of myocardial infarction - a past acute event, asking
         # "did this ever happen", not "is one happening now".
         harmonized_df["CDI_3"],
         yes_no_map,
-        "CDI_3",
     )
 
     # respiratory
@@ -58,7 +55,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # not let us tell which of the three a "yes" refers to.
         harmonized_df["CDI_4"],
         yes_no_map,
-        "CDI_4",
     )
 
     # musculoskeletal
@@ -67,20 +63,17 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # the item doesn't distinguish which type).
         harmonized_df["CDI_5"],
         yes_no_map,
-        "CDI_5",
     )
     harmonized_df["has_osteoporosis"] = map_with_check(  # CDI_6: Osteoporose
         # Bone-density loss / brittle-bone diagnosis.
         harmonized_df["CDI_6"],
         yes_no_map,
-        "CDI_6",
     )
     harmonized_df["has_bone_fracture"] = map_with_check(  # CDI_7: Knochenbruch
         # History of (at least one) broken bone -- like has_history_of_heart_attack,
         # this is "did this ever happen", not an active/current fracture.
         harmonized_df["CDI_7"],
         yes_no_map,
-        "CDI_7",
     )
     harmonized_df["has_joint_replacement"] = map_with_check(  # CDI_8: Gelenkersatz
         # Prosthetic joint surgery (e.g. hip/knee replacement) - a past
@@ -88,20 +81,17 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # surgery is scheduled or ongoing.
         harmonized_df["CDI_8"],
         yes_no_map,
-        "CDI_8",
     )
     harmonized_df["has_joint_fusion"] = map_with_check(  # CDI_9: Gelenkversteifung
         # Joint surgically or naturally fused/stiffened (ankylosis) -
         # distinct from joint_replacement above, no prosthesis involved.
         harmonized_df["CDI_9"],
         yes_no_map,
-        "CDI_9",
     )
     harmonized_df["has_amputation"] = map_with_check(  # CDI_10: Amputation
         # Loss of a limb or part of one, by surgery or injury.
         harmonized_df["CDI_10"],
         yes_no_map,
-        "CDI_10",
     )
 
     # neurological
@@ -109,14 +99,12 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # Progressive neurological disorder affecting movement.
         harmonized_df["CDI_11"],
         yes_no_map,
-        "CDI_11",
     )
     harmonized_df["has_stroke"] = map_with_check(  # CDI_12: Schlaganfall
         # History of stroke (cerebrovascular event) -- again a past event,
         # not "currently having a stroke".
         harmonized_df["CDI_12"],
         yes_no_map,
-        "CDI_12",
     )
 
     # other chronic conditions
@@ -125,7 +113,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # to a diagnosis like sleep apnea.
         harmonized_df["CDI_13"],
         yes_no_map,
-        "CDI_13",
     )
     harmonized_df["has_chronic_pain_syndrome"] = (
         map_with_check(  # CDI_14: Chronisches Schmerzsyndrom
@@ -133,7 +120,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             # pain (e.g. from a recent injury).
             harmonized_df["CDI_14"],
             yes_no_map,
-            "CDI_14",
         )
     )
     harmonized_df["has_cancer"] = map_with_check(  # CDI_15: Krebs
@@ -141,13 +127,11 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # stage, or whether currently in remission/treatment.
         harmonized_df["CDI_15"],
         yes_no_map,
-        "CDI_15",
     )
     harmonized_df["has_diabetes"] = map_with_check(  # CDI_16: Diabetes
         # Diabetes diagnosis - item doesn't distinguish type 1 vs type 2.
         harmonized_df["CDI_16"],
         yes_no_map,
-        "CDI_16",
     )
 
     # eye conditions
@@ -156,13 +140,11 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # intraocular pressure; can lead to vision loss if untreated.
         harmonized_df["CDI_17"],
         yes_no_map,
-        "CDI_17",
     )
     harmonized_df["has_cataract"] = map_with_check(  # CDI_18: Katarakt
         # Clouding of the eye's lens - common age-related condition.
         harmonized_df["CDI_18"],
         yes_no_map,
-        "CDI_18",
     )
 
     # return the harmonized dataset which has only the values we want

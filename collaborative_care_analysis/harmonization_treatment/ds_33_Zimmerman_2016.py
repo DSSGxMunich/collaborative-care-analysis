@@ -14,7 +14,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "Control": "control",
             "Intervention": "intervention",
         },
-        "Group",
     )
 
     return harmonized_df[

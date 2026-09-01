@@ -1,71 +1,58 @@
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
 from collaborative_care_analysis.utils import map_with_check
 
-"""
-katon1999.CLEANED.sav has 599 rows, but only the first 228 contain real data.
-The remaining 371 rows are entirely blank and dropped before reshaping.
 
-Time-varying columns:
-    Depres_0, LTC_0, LTCsev_0   -> follow_up_months = 0
-    Depres_f1                   -> follow_up_months = 1
-    Depres_f2                   -> follow_up_months = 3
-    Depres_f3, Medadh_f3        -> follow_up_months = 6
-"""
+def load(file_path=RAW_DATASETS_DIR / "16_Katon_1999" / "katon1999.sav"):
+    df = pd.read_spss(file_path).convert_dtypes()
+    df = df.rename(
+        columns={
+            "id": "patient_id",
+        },
+        errors="raise",
+    )
 
-DEPRES_MONTH_MAP = {
-    "Depres_0": 0,
-    "Depres_f1": 1,
-    "Depres_f2": 3,
-    "Depres_f3": 6,
-}
+    # drop rows with missing patient_id or assign
+    with_missing_info: int = len(df)
+    df = df[
+        df["patient_id"].notna()
+        & (df["patient_id"] != "")
+        & df["assign"].notna()
+        & (df["assign"] != "")
+    ]
+    logger.trace(f"Dropped {with_missing_info - len(df)} rows with missing patient_id or assign.")
 
-BASELINE_ONLY_COLS = ["LTC_0", "LTCsev_0"]
-
-SIX_MONTHS_ONLY_COLS = ["Medadh_f3"]
-
-
-def load(file_path=RAW_DATASETS_DIR / "16_Katon_1999" / "katon1999.CLEANED.sav"):
-    df = pd.read_spss(file_path)
-
-    # Drop rows with Origpat_id empty or NaN
-    df = df[df["Origpat_id"].notna() & (df["Origpat_id"].astype(str).str.strip() != "")]
-
-    missing = [c for c in DEPRES_MONTH_MAP if c not in df.columns]
-    if missing:
-        raise ValueError(f"Expected columns missing from source file: {missing}")
-
-    value_vars = list(DEPRES_MONTH_MAP.keys())
-    id_vars = [c for c in df.columns if c not in value_vars]
+    # unpivot df to long format
+    # note what is actually recorded: the average of the scores for 20 depression items
+    # in the SCL-90 (each item scores from 0 to 4)
+    SCL_FOLLOW_UP_MAP = {
+        "scscl20": 0,
+        "m1scl20": 1,
+        "m3scl20": 3,
+        "m6scl20": 6,
+    }
+    value_vars = list(SCL_FOLLOW_UP_MAP.keys())
+    id_vars = [col for col in df.columns if col not in value_vars]
 
     long_df = df.melt(
         id_vars=id_vars,
         value_vars=value_vars,
-        var_name="_wave",
-        value_name="depression_severity",
+        var_name="_follow_up_months",
+        value_name="avg_scl90",
     )
-
-    long_df["follow_up_months"] = map_with_check(long_df["_wave"], DEPRES_MONTH_MAP, "_wave")
-    non_baseline = long_df["follow_up_months"] != 0
-    long_df.loc[non_baseline, BASELINE_ONLY_COLS] = pd.NA
-    non_six_months = long_df["follow_up_months"] != 6
-    long_df.loc[non_six_months, SIX_MONTHS_ONLY_COLS] = pd.NA
-    long_df = long_df.drop(columns=["_wave", "Time"], errors="raise")
-
-    long_df = long_df.rename(columns={"Origpat_id": "patient_id"}, errors="raise")
-
-    long_df = long_df.sort_values(
-        ["patient_id", "follow_up_months"],
-        kind="stable",
-    ).reset_index(drop=True)
+    long_df["follow_up_months"] = map_with_check(
+        long_df["_follow_up_months"],
+        SCL_FOLLOW_UP_MAP,
+    )
+    long_df = long_df.drop(columns=["_follow_up_months"])
 
     if long_df.duplicated(["patient_id", "follow_up_months"]).any():
         raise ValueError("Duplicate patient/time-point combinations")
-    front = ["patient_id", "follow_up_months"]
-    rest = [c for c in long_df.columns if c not in front]
-    long_df = long_df[front + rest]
 
-    long_df = long_df.convert_dtypes()
-
-    return long_df
+    # sort by ["patient_id", "follow_up_months"] and reorder columns
+    long_df = long_df.sort_values(["patient_id", "follow_up_months"]).reset_index(drop=True)
+    head = ["patient_id", "follow_up_months"]
+    tail = [col for col in long_df.columns if col not in head]
+    return long_df[head + tail]

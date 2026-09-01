@@ -18,7 +18,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "Usual Care": "control",
             "Intervention": "intervention",
         },
-        "ARM",
     )
 
     # -------------------------------------------------------------------------
@@ -109,7 +108,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # a past event, not "is one happening right now".
         harmonized_df["CRF_MI"],
         yes_no_map,
-        "CRF_MI",
     )
     harmonized_df["has_had_percutaneous_coronary_intervention"] = map_with_check(  # CRF_PCI
         # HISTORY: a past procedure (e.g. angioplasty/stent) to open a
@@ -117,14 +115,12 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # point, not that one is scheduled or ongoing.
         harmonized_df["CRF_PCI"],
         yes_no_map,
-        "CRF_PCI",
     )
     harmonized_df["has_had_coronary_artery_bypass_graft"] = map_with_check(  # CRF_CABG
         # HISTORY: a past open-heart surgery rerouting blood flow around
         # a blocked coronary artery.
         harmonized_df["CRF_CABG"],
         yes_no_map,
-        "CRF_CABG",
     )
     harmonized_df["has_implantable_cardioverter_defibrillator"] = map_with_check(  # CRF_ICD
         # CURRENT STATE: whether the patient has this device implanted
@@ -132,21 +128,18 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # removed).
         harmonized_df["CRF_ICD"],
         yes_no_map,
-        "CRF_ICD",
     )
     harmonized_df["has_biventricular_pacemaker"] = map_with_check(  # CRF_BIV
         # CURRENT STATE: whether this specific device is currently
         # implanted.
         harmonized_df["CRF_BIV"],
         yes_no_map,
-        "CRF_BIV",
     )
     harmonized_df["has_pacemaker"] = map_with_check(  # CRF_PACE
         # CURRENT STATE: a standard (non-biventricular) pacemaker
         # currently implanted.
         harmonized_df["CRF_PACE"],
         yes_no_map,
-        "CRF_PACE",
     )
     harmonized_df["has_atrial_fibrillation_or_flutter"] = map_with_check(  # CRF_AFIB
         # DIAGNOSIS/PRESENCE: has this arrhythmia been diagnosed -
@@ -154,14 +147,12 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # vs. a past, resolved episode.
         harmonized_df["CRF_AFIB"],
         yes_no_map,
-        "CRF_AFIB",
     )
     harmonized_df["has_peripheral_vascular_disease"] = map_with_check(  # CRF_PVD
         # DIAGNOSIS/PRESENCE: a diagnosed circulatory condition
         # (narrowed vessels outside the heart/brain), not an acute event.
         harmonized_df["CRF_PVD"],
         yes_no_map,
-        "CRF_PVD",
     )
 
     # metabolic / respiratory
@@ -169,14 +160,12 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # DIAGNOSIS/PRESENCE: item doesn't distinguish type 1 vs type 2.
         harmonized_df["CRF_DM"],
         yes_no_map,
-        "CRF_DM",
     )
     harmonized_df["has_hypertension"] = map_with_check(  # CRF_HTN
         # DIAGNOSIS/PRESENCE: a chronic diagnosis, not a single elevated
         # reading.
         harmonized_df["CRF_HTN"],
         yes_no_map,
-        "CRF_HTN",
     )
     harmonized_df["has_chronic_obstructive_pulmonary_disease"] = map_with_check(  # CRF_COPD
         # DIAGNOSIS/PRESENCE: a chronic lung-disease diagnosis.
@@ -184,7 +173,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # item is COPD only - don't collapse the two across datasets.
         harmonized_df["CRF_COPD"],
         yes_no_map,
-        "CRF_COPD",
     )
     harmonized_df["has_sleep_apnea"] = map_with_check(  # CRF_APNEA
         # DIAGNOSIS/PRESENCE: a diagnosed sleep-breathing disorder
@@ -211,7 +199,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # separate, non-interchangeable columns across datasets.
         harmonized_df["CRF_APNEA"],
         yes_no_map,
-        "CRF_APNEA",
     )
 
     # neurological
@@ -222,7 +209,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             # source data doesn't let us tell stroke from TIA.
             harmonized_df["CRF_TIA"],
             yes_no_map,
-            "CRF_TIA",
         )
     )
 
@@ -235,27 +221,23 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # pre-existing history, not current screening status.
         harmonized_df["CRF_DEP"],
         yes_no_map,
-        "CRF_DEP",
     )
     harmonized_df["has_history_of_post_traumatic_stress_disorder"] = map_with_check(  # CRF_PTSD
         # HISTORY: a past/ever diagnosis of PTSD.
         harmonized_df["CRF_PTSD"],
         yes_no_map,
-        "CRF_PTSD",
     )
     harmonized_df["has_history_of_alcohol_abuse"] = map_with_check(  # CRF_SA
         # HISTORY: a past/ever diagnosis or documented history of alcohol
         # abuse, not current drinking status.
         harmonized_df["CRF_SA"],
         yes_no_map,
-        "CRF_SA",
     )
     harmonized_df["has_history_of_other_substance_abuse"] = map_with_check(  # CRF_SAO
         # HISTORY: substance abuse other than alcohol; item doesn't
         # specify which substance(s).
         harmonized_df["CRF_SAO"],
         yes_no_map,
-        "CRF_SAO",
     )
 
     # heart failure etiology (kept consistent with ds_04_Bekelman_2018's
@@ -266,7 +248,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         # underlying cause of HF.
         harmonized_df["CRF_ETALC"],
         yes_no_map,
-        "CRF_ETALC",
     )
 
     # -------------------------------------------------------------------------
