@@ -12,7 +12,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "female": "Female",
             "Male": "Male",
         },
-        label="sex",
     )
     harmonized_df["age"] = harmonized_df["Age"]
 

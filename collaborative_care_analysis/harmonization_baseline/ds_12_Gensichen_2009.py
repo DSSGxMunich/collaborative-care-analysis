@@ -12,9 +12,8 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             1.0: "Known",
             2.0: "New + PHQ",
             3.0: "New + PHQ missing",
-            4.0: "None",
+            4.0: pd.NA,
         },
-        label="patient_status",
     )
 
     harmonized_df["survey_date"] = pd.to_datetime(harmonized_df["Befragun"], errors="raise")
@@ -28,7 +27,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             1.0: "Female",
             2.0: "Male",
         },
-        label="sex",
     ).astype("string")
 
     harmonized_df["height"] = pd.to_numeric(harmonized_df["Groesse"], errors="raise")
@@ -41,7 +39,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             2.0: "Quit <1 year",
             3.0: "Quit ≥1 year",
         },
-        label="smoking_status",
     )
 
     harmonized_df["education_level"] = map_with_check(
@@ -54,7 +51,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             5.0: "General higher education entrance qualification",
             6.0: "Other",
         },
-        label="education_level",
     )
 
     harmonized_df["number_of_living_parents"] = pd.to_numeric(
@@ -76,7 +72,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             4.0: "Black/African",
             5.0: "Hispanic/Latino",
         },
-        label="race",
     )
 
     harmonized_df["insurance_type"] = map_with_check(
@@ -85,7 +80,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             1.0: "GKV (public)",
             2.0: "PKV (private)",
         },
-        label="insurance_type",
     )
 
     harmonized_df["insurance_provider"] = harmonized_df["Name_KV"].astype("string")

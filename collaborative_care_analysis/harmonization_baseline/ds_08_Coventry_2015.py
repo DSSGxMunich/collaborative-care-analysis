@@ -17,7 +17,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "Female": "Female",
             "Male": "Male",
         },
-        label="sex",
     ).astype("string")
 
     harmonized_df["ethnic"] = harmonized_df["ethnic"].astype("string")
@@ -60,7 +59,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["race"] = map_with_check(
         harmonized_df["ethnic"],
         race_mapping,
-        label="race",
     ).astype("string")
 
     # accommodation

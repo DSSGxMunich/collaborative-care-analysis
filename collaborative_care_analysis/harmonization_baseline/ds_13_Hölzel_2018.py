@@ -50,7 +50,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "Abgeschlossenes (Fach-) Hochschulstudium": "University degree",
             "Other": "Other",
         },
-        label="education_level",
     )
 
     # Employment status
@@ -58,9 +57,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["employment_status"] = pd.to_numeric(
         harmonized_df["employment_status"], errors="raise"
     )
-    harmonized_df.loc[
-        ~harmonized_df["employment_status"].isin(range(1, 13)), "employment_status"
-    ] = pd.NA
 
     numeric_employment_status_map = {
         1: "Arbeiter/-in",
@@ -93,7 +89,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "Hausfrau/ Hausmann": "Homemaker",
             "Other": "Other",
         },
-        label="employment_status",
     )
 
     # ----------------------------------------------------
@@ -123,7 +118,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "Teilzeit, mindestens halbtags": "Part-time",
             "Teilzeit, weniger als halbtags": "Part-time",
         },
-        label="employment_extent",
     )
 
     # ----------------------------------------------------
@@ -154,7 +148,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "es geht so": "Moderate",
             "nein, schlecht": "No, insufficient",
         },
-        label="perceived_financial_adequacy",
     )
 
     # ----------------------------------------------------
@@ -170,15 +163,12 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             2: "Hamburg",
             pd.NA: "Unknown",
         },
-        label="study_center",
     )
 
     # ----------------------------------------------------
     # Sex
     # ----------------------------------------------------
     harmonized_df["sex"] = pd.to_numeric(harmonized_df["sex"], errors="raise")
-    harmonized_df.loc[~harmonized_df["sex"].isin([1, 2]), "sex"] = pd.NA
-
     numeric_sex_map = {
         1: "männlich",
         2: "weiblich",
@@ -192,7 +182,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "weiblich": "female",
             "männlich": "male",
         },
-        label="sex",
     )
 
     # ----------------------------------------------------
