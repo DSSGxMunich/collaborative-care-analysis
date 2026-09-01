@@ -15,7 +15,6 @@ def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
             0: "control",
             1: "intervention",
         },
-        "study_arm",
     )
 
     # All rows that were in the intervention group had a care manager involved.
@@ -26,7 +25,6 @@ def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
             "control": "no",
             "intervention": "yes",
         },
-        "study_arm",
     )
 
     # All rows that were in the intervention group had a physician with
@@ -38,7 +36,6 @@ def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
             "control": "no",
             "intervention": "yes",
         },
-        "study_arm",
     )
 
     # All rows that were in the intervention group received psychoeducation.
@@ -50,7 +47,6 @@ def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
             "control": "no",
             "intervention": "yes",
         },
-        "study_arm",
     )
 
     # All rows that were in the intervention group received relapse prophylaxis.
@@ -60,7 +56,6 @@ def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
             "control": "no",
             "intervention": "yes",
         },
-        "study_arm",
     )
 
     # All rows that were in the intervention group received
@@ -71,7 +66,6 @@ def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
             "control": "no",
             "intervention": "yes",
         },
-        "study_arm",
     )
 
     # Problem-solving training was provided only where indicated.
@@ -83,7 +77,6 @@ def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
             "control": pd.NA,
             "intervention": "as_indicated",
         },
-        "study_arm",
     )
 
     # The initial contact for intervention patients took place in person
@@ -94,7 +87,6 @@ def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
             "control": pd.NA,
             "intervention": "in_person",
         },
-        "study_arm",
     )
 
     # Subsequent contacts for intervention patients were conducted
@@ -105,7 +97,6 @@ def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
             "control": pd.NA,
             "intervention": "by_telephone",
         },
-        "study_arm",
     )
 
     # Return the harmonized dataset with only the variables we want.

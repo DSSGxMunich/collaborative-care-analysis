@@ -14,7 +14,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             0: "control",  # note that the 0 and 1 (meaning control and intervention) assumption here,  is a decisive assumption and not clearly stated
             1: "intervention",
         },
-        "GROUP",
+        # delete ''GROUP'' bcs it is not needed anymore, map_with_checks changed
     )
 
     return harmonized_df[

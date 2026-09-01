@@ -14,7 +14,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             1: "control",  # note that the 1 and 2 (meaning control and intervention) assumption here,  is a decisive assumption and not clearly stated
             2: "intervention",
         },
-        "group",
     )
 
     return harmonized_df[
