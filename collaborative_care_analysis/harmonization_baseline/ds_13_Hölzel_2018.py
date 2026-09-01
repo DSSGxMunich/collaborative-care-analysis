@@ -18,9 +18,7 @@ COLUMN_RENAME_MAP = {
 def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
 
-    # ----------------------------------------------------
     # Rename variables
-    # ----------------------------------------------------
     harmonized_df = harmonized_df.rename(columns=COLUMN_RENAME_MAP, errors="raise")
 
     # ----------------------------------------------------
@@ -29,9 +27,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["education_level"] = pd.to_numeric(
         harmonized_df["education_level"], errors="coerce"
     )
-    harmonized_df.loc[
-        ~harmonized_df["education_level"].isin([0, 1, 2, 3, 4, 5]), "education_level"
-    ] = pd.NA
 
     numeric_education_map = {
         0: "Kein Schulabschluss",
@@ -55,18 +50,13 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "Abgeschlossenes (Fach-) Hochschulstudium": "University degree",
             "Other": "Other",
         },
-        label="education_level",
     )
 
-    # ----------------------------------------------------
     # Employment status
     # ----------------------------------------------------
     harmonized_df["employment_status"] = pd.to_numeric(
         harmonized_df["employment_status"], errors="raise"
     )
-    harmonized_df.loc[
-        ~harmonized_df["employment_status"].isin(range(1, 13)), "employment_status"
-    ] = pd.NA
 
     numeric_employment_status_map = {
         1: "Arbeiter/-in",
@@ -99,7 +89,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "Hausfrau/ Hausmann": "Homemaker",
             "Other": "Other",
         },
-        label="employment_status",
     )
 
     # ----------------------------------------------------
@@ -126,10 +115,9 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         series=harmonized_df["employment_extent"],
         mapping={
             "Vollzeit": "Full-time",
-            "Teilzeit, mindestens halbtags": "Part-time (≥50%)",
-            "Teilzeit, weniger als halbtags": "Part-time (<50%)",
+            "Teilzeit, mindestens halbtags": "Part-time",
+            "Teilzeit, weniger als halbtags": "Part-time",
         },
-        label="employment_extent",
     )
 
     # ----------------------------------------------------
@@ -160,7 +148,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "es geht so": "Moderate",
             "nein, schlecht": "No, insufficient",
         },
-        label="perceived_financial_adequacy",
     )
 
     # ----------------------------------------------------
@@ -176,15 +163,12 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             2: "Hamburg",
             pd.NA: "Unknown",
         },
-        label="study_center",
     )
 
     # ----------------------------------------------------
     # Sex
     # ----------------------------------------------------
     harmonized_df["sex"] = pd.to_numeric(harmonized_df["sex"], errors="raise")
-    harmonized_df.loc[~harmonized_df["sex"].isin([1, 2]), "sex"] = pd.NA
-
     numeric_sex_map = {
         1: "männlich",
         2: "weiblich",
@@ -198,7 +182,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "weiblich": "female",
             "männlich": "male",
         },
-        label="sex",
     )
 
     # ----------------------------------------------------

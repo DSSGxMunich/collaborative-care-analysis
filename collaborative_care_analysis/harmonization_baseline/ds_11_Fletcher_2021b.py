@@ -13,22 +13,20 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         mapping={
             0: "Male",
             1: "Female",
-            2: "Other",
+            2: pd.NA,
         },
-        label="sex",
     )
 
     harmonized_df["education_level"] = map_with_check(
         series=harmonized_df["education_0"],
         mapping={
-            0: "Left school before completing Year 10",
-            1: "Completed Year 10 or equivalent",
-            2: "Completed Year 11 or equivalent",
-            3: "Completed Year 12 or equivalent",
-            4: "Certificate/Diploma",
-            5: "Bachelor Degree or higher",
+            0: "No school degree",
+            1: "Basic secondary school",
+            2: "Basic secondary school",
+            3: "Intermediate secondary school",
+            4: "Higher education entrance qualification",
+            5: "University degree",
         },
-        label="education_level",
     )
 
     harmonized_df["employment_status"] = map_with_check(
@@ -39,7 +37,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             2: "Unemployed and looking for work",
             3: "Neither working nor looking for work",
         },
-        label="employment_status",
     )
 
     harmonized_df["student_status"] = map_with_check(
@@ -49,35 +46,42 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             1: "Yes, part-time student",
             2: "Yes, full-time student",
         },
-        label="student_status",
     )
 
     # yes/no map
     yes_no_map = {0: "No", 1: "Yes"}
 
     harmonized_df["live_alone"] = map_with_check(
-        harmonized_df["live_alone_0"], yes_no_map, "live_alone"
+        harmonized_df["live_alone_0"],
+        yes_no_map,
     )
     harmonized_df["live_with_spouse"] = map_with_check(
-        harmonized_df["live_spouse_0"], yes_no_map, "live_spouse"
+        harmonized_df["live_spouse_0"],
+        yes_no_map,
     )
     harmonized_df["live_with_defacto"] = map_with_check(
-        harmonized_df["live_defacto_0"], yes_no_map, "live_defacto"
+        harmonized_df["live_defacto_0"],
+        yes_no_map,
     )
     harmonized_df["live_with_child"] = map_with_check(
-        harmonized_df["live_child_0"], yes_no_map, "live_child"
+        harmonized_df["live_child_0"],
+        yes_no_map,
     )
     harmonized_df["live_with_stepchildren"] = map_with_check(
-        harmonized_df["live_childpt_0"], yes_no_map, "live_childpt"
+        harmonized_df["live_childpt_0"],
+        yes_no_map,
     )
     harmonized_df["live_with_parent"] = map_with_check(
-        harmonized_df["live_parent_0"], yes_no_map, "live_parent"
+        harmonized_df["live_parent_0"],
+        yes_no_map,
     )
     harmonized_df["live_with_flatmate"] = map_with_check(
-        harmonized_df["live_flatmate_0"], yes_no_map, "live_flatmate"
+        harmonized_df["live_flatmate_0"],
+        yes_no_map,
     )
     harmonized_df["live_with_other"] = map_with_check(
-        harmonized_df["live_other_0"], yes_no_map, "live_other"
+        harmonized_df["live_other_0"],
+        yes_no_map,
     )
 
     harmonized_df["self_rated_health_status"] = map_with_check(
@@ -89,7 +93,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             4: "Fair",
             5: "Poor",
         },
-        label="self_rated_health_status",
     )
 
     harmonized_df["internet_use"] = map_with_check(
@@ -101,13 +104,11 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             3: "Monthly",
             4: "Less often",
         },
-        label="internet_use",
     )
 
     harmonized_df["has_disability"] = map_with_check(
         series=harmonized_df["disability"],
         mapping=yes_no_map,
-        label="disability",
     )
 
     harmonized_df["disability_name"] = harmonized_df["disabilityname"].astype("string")
@@ -122,7 +123,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             3: "Retired/voluntarily inactive",
             4: "Studying",
         },
-        label="activities",
     )
 
     # domestic violence worker visit
@@ -136,7 +136,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             4: "7-11 times",
             5: "12 times or more",
         },
-        label="domestic_violence_worker_visit",
     )
 
     # alcohol and drug worker visit
@@ -150,27 +149,24 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             4: "7-11 times",
             5: "12 times or more",
         },
-        label="alcohol_drug_worker_visit",
     )
 
     harmonized_df["has_health_insurance"] = map_with_check(
         series=harmonized_df["insured"],
         mapping=yes_no_map,
-        label="insured",
     )
 
     harmonized_df["job_unemployment_since"] = harmonized_df["job_unemploy"].astype("string")
 
-    harmonized_df["insurance_card_type"] = map_with_check(
+    harmonized_df["health_card_type"] = map_with_check(
         series=harmonized_df["card"],
         mapping={
             0: "Health Care Card (Centrelink)",
             1: "Pensioner Concession Card (Centrelink)",
             2: "Commonwealth Seniors Health Card",
             3: "Department of Veterans",
-            4: "None",
+            4: pd.NA,
         },
-        label="card",
     )
 
     harmonized_df["ability_to_manage_on_income"] = map_with_check(
@@ -182,7 +178,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             4: "Difficult all of the time",
             5: "Impossible",
         },
-        label="income",
     )
 
     return harmonized_df[
@@ -211,7 +206,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "alcohol_drug_worker_visit",
             "has_health_insurance",
             "job_unemployment_since",
-            "insurance_card_type",
+            "health_card_type",
             "ability_to_manage_on_income",
             "follow_up_months",
         ]

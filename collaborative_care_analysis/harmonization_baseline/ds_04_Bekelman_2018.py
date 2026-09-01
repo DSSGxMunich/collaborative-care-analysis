@@ -21,7 +21,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         "scr_tele": "has_telephone_access",
         "timept": "follow_up_months",  # inherited from loader — DO NOT MAP
         "crf_sa": "has_alcohol_abuse_history",
-        "crf_sao": "has_substance_abuse_history",
+        "crf_sao": "has_other_substance_abuse_history",
         "schfi04": "physical_activity_frequency",
         "ins_priv": "has_private_insurance",
     }
@@ -58,21 +58,11 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             3: "Quit ≥1 year",
         },
         "education_level": {
-            1: "< High school",
-            2: "High school graduate",
-            3: "Some college",
-            4: "College graduate",
-            5: "Postgraduate",
-        },
-        "employment_status": {
-            1: "Full-time",
-            2: "Part-time",
-            3: "Homemaker",
-            4: "Retired",
-            5: "Unemployed",
-            6: "Disabled",
-            7: "Student",
-            8: "Other",
+            1: "No school degree",
+            2: "Intermediate secondary school",
+            3: "Higher education entrance qualification",
+            4: "University degree",
+            5: "University degree",
         },
         "marital_status": {
             1: "Married",
@@ -95,7 +85,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         "lives_in_facility": {0: "No", 1: "Yes"},
         "has_telephone_access": {0: "No", 1: "Yes"},
         "has_alcohol_abuse_history": {0: "No", 1: "Yes"},
-        "has_substance_abuse_history": {0: "No", 1: "Yes"},
+        "has_other_substance_abuse_history": {0: "No", 1: "Yes"},
         "physical_activity_frequency": {
             1: "Never or rarely",
             2: "Sometimes",
@@ -112,7 +102,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             harmonized_df[var] = map_with_check(
                 series=harmonized_df[var],
                 mapping=mapping,
-                label=var,
             ).astype("string")
 
     # -------------------------
@@ -121,6 +110,34 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     if "age" in harmonized_df.columns:
         harmonized_df["age"] = pd.to_numeric(harmonized_df["age"], errors="raise")
 
+    # Employment extent (Full-time / Part-time only)
+    # -------------------------
+    if "employment_status" in harmonized_df.columns:
+        harmonized_df["employment_extent"] = (
+            harmonized_df["employment_status"]
+            .map(
+                {
+                    1: "Full-time",
+                    2: "Part-time",
+                }
+            )
+            .astype("string")
+        )
+    if "employment_status" in harmonized_df.columns:
+        harmonized_df["employment_status"] = (
+            harmonized_df["employment_status"]
+            .map(
+                {
+                    3: "Homemaker",
+                    4: "Retired",
+                    5: "Unemployed",
+                    6: "Disabled",
+                    7: "Student",
+                    8: "Other",
+                }
+            )
+            .astype("string")
+        )
     # -------------------------
     # Final output
     # -------------------------
@@ -134,6 +151,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "smoking_status",
             "education_level",
             "employment_status",
+            "employment_extent",
             "marital_status",
             "income_level",
             "has_caregiver",
@@ -141,7 +159,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "has_telephone_access",
             "follow_up_months",
             "has_alcohol_abuse_history",
-            "has_substance_abuse_history",
+            "has_other_substance_abuse_history",
             "physical_activity_frequency",
             "has_private_insurance",
         ]
