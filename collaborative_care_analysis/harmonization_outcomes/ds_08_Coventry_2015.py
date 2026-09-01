@@ -105,7 +105,7 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
         "gad8",
     ).astype("Float64")
 
-    # Calculate ESSI total only when all five items are available.
+    # Calculate ESSI total only when all seven items are available.
     harmonized_df["essi_total"] = (
         harmonized_df[ESSI_COLS]
         .apply(pd.to_numeric, errors="raise")
