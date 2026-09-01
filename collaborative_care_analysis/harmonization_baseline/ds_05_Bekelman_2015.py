@@ -17,7 +17,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             0: "No",
             1: "Yes",
         },
-        label="has_alcohol_abuse_history",
     )
 
     # ----------------------------------------------------
@@ -31,7 +30,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             0: "No",
             1: "Yes",
         },
-        label="has_other_substance_abuse_history",
     )
 
     # ----------------------------------------------------
@@ -45,7 +43,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             1: "Male",
             2: "Female",
         },
-        label="sex",
     )
 
     # ----------------------------------------------------
@@ -77,13 +74,12 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     # ----------------------------------------------------
     harmonized_df["CRF_ETH"] = pd.to_numeric(harmonized_df["CRF_ETH"], errors="raise")
 
-    harmonized_df["ethnicity"] = map_with_check(
+    harmonized_df["race"] = map_with_check(
         harmonized_df["CRF_ETH"],
         {
-            1: "Hispanic",
-            2: "Non-Hispanic",
+            1: "Hispanic/Latino",
+            2: "Other",
         },
-        label="ethnicity",
     )
 
     # ----------------------------------------------------
@@ -99,7 +95,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             3: "Former smoker (≥1 year)",
             4: "Never smoked",
         },
-        label="smoking_status",
     )
 
     # ----------------------------------------------------
@@ -117,7 +112,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "patient_id",
             "sex",
             "race",
-            "ethnicity",
+            "race",
             "smoking_status",
             "has_alcohol_abuse_history",
             "has_other_substance_abuse_history",
