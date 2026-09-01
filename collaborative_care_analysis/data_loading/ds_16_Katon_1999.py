@@ -46,7 +46,7 @@ def load(file_path=RAW_DATASETS_DIR / "16_Katon_1999" / "katon1999.CLEANED.sav")
         value_name="depression_severity",
     )
 
-    long_df["follow_up_months"] = map_with_check(long_df["_wave"], DEPRES_MONTH_MAP)
+    long_df["follow_up_months"] = map_with_check(long_df["_wave"], DEPRES_MONTH_MAP, "_wave")
     non_baseline = long_df["follow_up_months"] != 0
     long_df.loc[non_baseline, BASELINE_ONLY_COLS] = pd.NA
     non_six_months = long_df["follow_up_months"] != 6

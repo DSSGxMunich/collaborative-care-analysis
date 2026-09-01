@@ -39,8 +39,6 @@
 !/data/internal/.gitkeep
 !/data/processed/.gitkeep
 !/data/raw/.gitkeep
-!/data/raw/annotations/
-!/data/raw/annotations/*.csv
 
 # Mac OS-specific storage files
 .DS_Store

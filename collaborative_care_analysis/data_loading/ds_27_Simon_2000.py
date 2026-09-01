@@ -44,7 +44,7 @@ def load(file_path=RAW_DATASETS_DIR / "27_Simon_2000" / "simon2000.CLEANED.sav")
         value_name="depression_severity",
     )
 
-    long_df["follow_up_months"] = map_with_check(long_df["_wave"], DEPRES_MONTH_MAP)
+    long_df["follow_up_months"] = map_with_check(long_df["_wave"], DEPRES_MONTH_MAP, "_wave")
     non_baseline = long_df["follow_up_months"] != 0
     long_df.loc[non_baseline, BASELINE_ONLY_COLS] = pd.NA
     long_df = long_df.drop(columns=["_wave", "Time"], errors="raise")
