@@ -17,9 +17,14 @@ PROCESSED_DATA_DIR = DATA_DIR / "processed"
 EXTERNAL_DATA_DIR = DATA_DIR / "external"
 
 RAW_DATASETS_DIR = RAW_DATA_DIR / "Individual Datasets"
+RAW_ANNOTATIONS_DIR = RAW_DATA_DIR / "annotations"
+STUDY_LEVEL_EXTRA_INFOS_CSV = (
+    RAW_ANNOTATIONS_DIR / "study_level_extra_infos.xlsx - extra_infos.csv"
+)
 INTERIM_DATASETS_EXPORT_DIR = INTERIM_DATA_DIR / "exported_datasets"
 HARMONIZED_DATASETS_DIR = INTERIM_DATA_DIR / "harmonized_datasets"
 MERGED_DATASET_DIR = INTERIM_DATA_DIR / "merged_dataset"
+ENRICHED_DATASET_DIR = INTERIM_DATA_DIR / "enriched_dataset"
 GENERATED_CODEBOOKS_DIR = INTERIM_DATA_DIR / "generated_codebooks"
 
 MODELS_DIR = PROJ_ROOT / "models"

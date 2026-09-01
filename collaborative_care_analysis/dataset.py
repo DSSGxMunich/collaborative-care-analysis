@@ -8,10 +8,12 @@ import typer
 
 from collaborative_care_analysis.config import (
     COLNAME_STUDYID,
+    ENRICHED_DATASET_DIR,
     HARMONIZED_DATASETS_DIR,
     INTERIM_DATASETS_EXPORT_DIR,
     MERGED_DATASET_DIR,
 )
+from collaborative_care_analysis.enrichment import enrich
 
 app = typer.Typer()
 PACKAGE_DIR = Path(__file__).parent
@@ -427,6 +429,31 @@ def merge():
     return merged_df, cluster_columns
 
 
+def _save_enriched(enriched_df: pd.DataFrame) -> Path:
+    """Write the enriched frame to the enriched dataset directory."""
+    ENRICHED_DATASET_DIR.mkdir(parents=True, exist_ok=True)
+    _clear_directory(ENRICHED_DATASET_DIR, "enriched dataset")
+    output_path = ENRICHED_DATASET_DIR / "enriched_dataset.csv"
+    enriched_df.to_csv(output_path, index=False)
+    logger.success(
+        f"Saved enriched dataset ({enriched_df.shape[0]} rows, "
+        f"{enriched_df.shape[1]} columns) to {output_path}."
+    )
+    return output_path
+
+
+@app.command(name="enrich")
+def enrich_command():
+    """Merge the study-level extra-info sheet onto the merged dataset."""
+    merged_path = MERGED_DATASET_DIR / "merged_dataset.csv"
+    if not merged_path.exists():
+        raise FileNotFoundError(f"{merged_path} not found. Run 'merge' first.")
+
+    enriched_df = enrich(pd.read_csv(merged_path))
+    _save_enriched(enriched_df)
+    return enriched_df
+
+
 @app.command()
 def run(
     dataset_id: str | None = typer.Argument(
@@ -441,17 +468,21 @@ def run(
     for the export/harmonize stages, so only the matching dataset is
     regenerated while other datasets' output is left in place.
     """
-    logger.info("=== Stage 1/3: export ===")
+    logger.info("=== Stage 1/4: export ===")
     export(dataset_id=dataset_id)
 
-    logger.info("=== Stage 2/3: harmonize ===")
+    logger.info("=== Stage 2/4: harmonize ===")
     harmonize(dataset_id=dataset_id)
 
-    logger.info("=== Stage 3/3: merge ===")
-    merged_df, cluster_columns = merge()
+    logger.info("=== Stage 3/4: merge ===")
+    merged_df, _cluster_columns = merge()
+
+    logger.info("=== Stage 4/4: enrichment ===")
+    enriched_df = enrich(merged_df)
+    _save_enriched(enriched_df)
 
     logger.success("Full pipeline complete.")
-    return merged_df, cluster_columns
+    return enriched_df
 
 
 if __name__ == "__main__":
