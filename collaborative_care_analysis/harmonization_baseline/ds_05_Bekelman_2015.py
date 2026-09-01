@@ -6,9 +6,9 @@ from collaborative_care_analysis.utils import map_with_check
 def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
 
-    # ----------------------------------------------------
-    # Alcohol abuse
-    # ----------------------------------------------------
+    # HISTORY: a past/ever diagnosis or documented history of alcohol
+    # abuse, not current drinking status.
+
     harmonized_df["CRF_SA"] = pd.to_numeric(harmonized_df["CRF_SA"], errors="raise")
 
     harmonized_df["has_alcohol_abuse_history"] = map_with_check(

@@ -18,9 +18,7 @@ COLUMN_RENAME_MAP = {
 def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
 
-    # ----------------------------------------------------
     # Rename variables
-    # ----------------------------------------------------
     harmonized_df = harmonized_df.rename(columns=COLUMN_RENAME_MAP, errors="raise")
 
     # ----------------------------------------------------
@@ -29,9 +27,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["education_level"] = pd.to_numeric(
         harmonized_df["education_level"], errors="coerce"
     )
-    harmonized_df.loc[
-        ~harmonized_df["education_level"].isin([0, 1, 2, 3, 4, 5]), "education_level"
-    ] = pd.NA
 
     numeric_education_map = {
         0: "Kein Schulabschluss",
@@ -58,7 +53,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         label="education_level",
     )
 
-    # ----------------------------------------------------
     # Employment status
     # ----------------------------------------------------
     harmonized_df["employment_status"] = pd.to_numeric(
@@ -126,8 +120,8 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         series=harmonized_df["employment_extent"],
         mapping={
             "Vollzeit": "Full-time",
-            "Teilzeit, mindestens halbtags": "Part-time (≥50%)",
-            "Teilzeit, weniger als halbtags": "Part-time (<50%)",
+            "Teilzeit, mindestens halbtags": "Part-time",
+            "Teilzeit, weniger als halbtags": "Part-time",
         },
         label="employment_extent",
     )
