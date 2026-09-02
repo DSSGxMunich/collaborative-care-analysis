@@ -7,19 +7,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     # Make a copy so that we do not modify the original dataframe
     harmonized_df = df.copy()
 
-    # -------------------------------------------------------------------------
-    # STUDY ARM
-    # -------------------------------------------------------------------------
-    # Standardize the raw ARM values into the common study_arm categories
-    # used across the harmonized datasets.
-    #
-    # map_with_check() is used instead of .map() because:
-    # - genuine missing values are allowed and stay missing
-    # - unexpected NON-missing values will raise an error
-    #
-    # For example, if ARM unexpectedly contained "Treatment" instead of
-    # "Intervention", map_with_check() would alert us rather than silently
-    # turning it into a missing value.
     harmonized_df["study_arm"] = map_with_check(
         harmonized_df["ARM"],
         {
@@ -262,31 +249,25 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         },
     )
 
-    # -------------------------------------------------------------------------
-    # RETURN HARMONIZED TREATMENT VARIABLES
-    # -------------------------------------------------------------------------
-    # Return only the identifiers and treatment-related variables required
-    # from this harmonization module.
-    #
-    # STUDY_ID, patient_id, and follow_up_months are already standardized
-    # before this harmonization function is called.
+    # LIMITATION (discussed on 02.09.2026):
+    # treatment harmonization currently only adds study_arm to the final dataset.
     return harmonized_df[
         [
             "STUDY_ID",
             "patient_id",
             "study_arm",
             "follow_up_months",
-            "is_nurse_involved",
-            "is_care_manager_involved",
-            "is_psychiatrist_involved",
-            "is_cardiologist_involved",
-            "was_depressed_at_baseline",
-            "is_psychoeducation_provided",
-            "is_behavioral_activation_provided",
-            "is_antidepressant_management_training_provided",
-            "is_self_management_education_provided",
-            "is_depression_assessment_education_provided",
-            "is_telemonitoring_used",
-            "telemonitoring_frequency",
+            # "is_nurse_involved",
+            # "is_care_manager_involved",
+            # "is_psychiatrist_involved",
+            # "is_cardiologist_involved",
+            # "was_depressed_at_baseline",
+            # "is_psychoeducation_provided",
+            # "is_behavioral_activation_provided",
+            # "is_antidepressant_management_training_provided",
+            # "is_self_management_education_provided",
+            # "is_depression_assessment_education_provided",
+            # "is_telemonitoring_used",
+            # "telemonitoring_frequency",
         ]
     ]
