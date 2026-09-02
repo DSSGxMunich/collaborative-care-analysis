@@ -75,7 +75,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["employment_status"] = map_with_check(
         harmonized_df["employment"],
         {
-            "In paid work": "Employed/working",
+            "In paid work": "Employee",
             "In education": "Student",
             "Voluntary work": "Volunteer",
             "Looking after home": "Homemaker",

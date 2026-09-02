@@ -32,9 +32,9 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["employment_status"] = map_with_check(
         series=harmonized_df["employment_0"],
         mapping={
-            0: "Employed/working",
+            0: "Employee",
             1: "Sheltered employment",
-            2: "Unemployed and looking for work",
+            2: "Unemployed",
             3: "Unemployed",
         },
     )
