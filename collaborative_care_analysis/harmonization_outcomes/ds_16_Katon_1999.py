@@ -8,20 +8,10 @@ ID_COLS = [
     "follow_up_months",
 ]
 
-RENAME_MAP = {
-    # SCL-20
-    "depression_severity": "scl20_total",
-}
-
-OUTCOME_COLS = ID_COLS + list(RENAME_MAP)
+OUTCOME_COLS = ID_COLS + ["scl20_mean"]
 
 
 def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     """Harmonize outcome variables for Katon 1999."""
 
-    harmonized_df = df[OUTCOME_COLS].copy()
-
-    return harmonized_df.rename(
-        columns=RENAME_MAP,
-        errors="raise",
-    )
+    return df[OUTCOME_COLS]
