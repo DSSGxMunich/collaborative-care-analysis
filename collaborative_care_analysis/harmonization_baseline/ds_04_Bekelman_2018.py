@@ -23,20 +23,22 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         "crf_sa": "has_alcohol_abuse_history",
         "crf_sao": "has_other_substance_abuse_history",
         "schfi04": "physical_activity_frequency",
-        "ins_priv": "has_private_insurance",
+        "ins_priv": "has_health_insurance",
     }
     harmonized_df = harmonized_df.rename(columns=rename_dict)
 
-    # -------------------------
-    # Harmonize private insurance (blank → No)
-    # -------------------------
-    if "has_private_insurance" in harmonized_df.columns:
-        harmonized_df["has_private_insurance"] = (
-            harmonized_df["has_private_insurance"]
+    if "has_health_insurance" in harmonized_df.columns:
+        harmonized_df["has_health_insurance"] = (
+            harmonized_df["has_health_insurance"]
             .apply(lambda x: "Yes" if pd.notna(x) and str(x).strip() != "" else "No")
             .astype("string")
         )
 
+    harmonized_df["insurance_type"] = (
+        harmonized_df["has_health_insurance"]
+        .apply(lambda x: "PKV (private)" if x == "Yes" else pd.NA)
+        .astype("string")
+    )
     # -------------------------
     # Category mappings (strict)
     # -------------------------
@@ -49,7 +51,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             4: "Native Hawaiian/Pacific Islander",
             5: "White",
             6: "Other",
-            99: "Unknown",
+            99: pd.NA,
         },
         "smoking_status": {
             0: "Never",
@@ -161,6 +163,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "has_alcohol_abuse_history",
             "has_other_substance_abuse_history",
             "physical_activity_frequency",
-            "has_private_insurance",
+            "has_health_insurance",
+            "insurance_type",
         ]
     ]

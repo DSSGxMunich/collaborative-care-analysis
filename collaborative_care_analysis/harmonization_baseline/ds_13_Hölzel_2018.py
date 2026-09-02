@@ -11,7 +11,6 @@ COLUMN_RENAME_MAP = {
     "Geld_aureichend": "perceived_financial_adequacy",
     "v_zentrum": "study_center",
     "Cluster": "intervention_cluster",
-    "PIN": "practice_id",
 }
 
 
@@ -97,9 +96,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["employment_extent"] = pd.to_numeric(
         harmonized_df["employment_extent"], errors="raise"
     )
-    harmonized_df.loc[~harmonized_df["employment_extent"].isin([1, 2, 3]), "employment_extent"] = (
-        pd.NA
-    )
 
     numeric_employment_extent_map = {
         1: "Vollzeit",
@@ -126,10 +122,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["perceived_financial_adequacy"] = pd.to_numeric(
         harmonized_df["perceived_financial_adequacy"], errors="raise"
     )
-    harmonized_df.loc[
-        ~harmonized_df["perceived_financial_adequacy"].isin([1, 2, 3]),
-        "perceived_financial_adequacy",
-    ] = pd.NA
 
     numeric_financial_map = {
         1: "ja",
@@ -150,24 +142,17 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         },
     )
 
-    # ----------------------------------------------------
     # Study center
-    # ----------------------------------------------------
     harmonized_df["study_center"] = pd.to_numeric(harmonized_df["study_center"], errors="raise")
-    harmonized_df.loc[~harmonized_df["study_center"].isin([1, 2]), "study_center"] = pd.NA
 
     harmonized_df["study_center"] = map_with_check(
         series=harmonized_df["study_center"],
         mapping={
             1: "Freiburg",
             2: "Hamburg",
-            pd.NA: "Unknown",
         },
     )
 
-    # ----------------------------------------------------
-    # Sex
-    # ----------------------------------------------------
     harmonized_df["sex"] = pd.to_numeric(harmonized_df["sex"], errors="raise")
     numeric_sex_map = {
         1: "männlich",
@@ -179,14 +164,11 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["sex"] = map_with_check(
         series=harmonized_df["sex"],
         mapping={
-            "weiblich": "female",
-            "männlich": "male",
+            "weiblich": "Female",
+            "männlich": "Male",
         },
     )
 
-    # ----------------------------------------------------
-    # Final selection
-    # ----------------------------------------------------
     return harmonized_df[
         [
             "STUDY_ID",
@@ -199,7 +181,5 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "employment_extent",
             "perceived_financial_adequacy",
             "study_center",
-            "intervention_cluster",
-            "practice_id",
         ]
     ]
