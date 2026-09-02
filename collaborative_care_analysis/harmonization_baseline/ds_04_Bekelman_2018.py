@@ -54,10 +54,10 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             99: pd.NA,
         },
         "smoking_status": {
-            0: "Never",
-            1: "Current",
-            2: "Quit <1 year",
-            3: "Quit ≥1 year",
+            0: "Never smoked",
+            1: "Current smoker",
+            2: "Former smoker (<1 year)",
+            3: "Former smoker (≥1 year)",
         },
         "education_level": {
             1: "No school degree",
@@ -65,14 +65,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             3: "Higher education entrance qualification",
             4: "University degree",
             5: "University degree",
-        },
-        "marital_status": {
-            1: "Married",
-            2: "Widowed",
-            3: "Divorced",
-            4: "Separated",
-            5: "Never married",
-            6: "Living with partner",
         },
         "income_level": {
             1: "<=20k",
@@ -113,7 +105,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         harmonized_df["age"] = pd.to_numeric(harmonized_df["age"], errors="raise")
 
     # Employment extent (Full-time / Part-time only)
-    # -------------------------
+
     if "employment_status" in harmonized_df.columns:
         harmonized_df["employment_extent"] = (
             harmonized_df["employment_status"]
@@ -140,6 +132,34 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             )
             .astype("string")
         )
+
+    if "marital_status" in harmonized_df.columns:
+        harmonized_df["marital_status_raw"] = harmonized_df["marital_status"]
+
+    harmonized_df["marital_status"] = (
+        harmonized_df["marital_status_raw"]
+        .map(
+            {
+                1: "Married",
+                2: "Widowed",
+                3: "Divorced",
+                4: "Separated",
+                5: "Single",
+                6: "Single",
+            }
+        )
+        .astype("string")
+    )
+
+    # 3. Create live_with_defacto (Yes/No)
+    harmonized_df["live_with_defacto"] = (
+        harmonized_df["marital_status_raw"]
+        .apply(lambda x: "Yes" if x == 6 else "No")
+        .astype("string")
+    )
+
+    # 4. Optional: drop raw column
+    harmonized_df = harmonized_df.drop(columns=["marital_status_raw"])
     # -------------------------
     # Final output
     # -------------------------
@@ -155,6 +175,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "employment_status",
             "employment_extent",
             "marital_status",
+            "live_with_defacto",
             "income_level",
             "has_caregiver",
             "lives_in_facility",

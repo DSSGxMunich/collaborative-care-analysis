@@ -35,7 +35,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             0: "Employed/working",
             1: "Sheltered employment",
             2: "Unemployed and looking for work",
-            3: "Neither working nor looking for work",
+            3: "Unemployed",
         },
     )
 

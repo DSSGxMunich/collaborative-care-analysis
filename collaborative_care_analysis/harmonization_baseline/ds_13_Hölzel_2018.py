@@ -80,7 +80,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         series=harmonized_df["employment_status"],
         mapping={
             "Arbeiter/-in": "Manual worker",
-            "Angestellte/-r": "Employee",
+            "Angestellte/-r": "Employed/working",
             "Beamte/-r": "Civil servant",
             "Selbstständige/-r": "Self-employed",
             "Arbeitslos": "Unemployed",
