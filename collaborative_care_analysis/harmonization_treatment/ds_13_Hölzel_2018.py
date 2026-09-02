@@ -99,20 +99,21 @@ def harmonize_treatment(df: pd.DataFrame) -> pd.DataFrame:
         },
     )
 
-    # Return the harmonized dataset with only the variables we want.
+    # LIMITATION (discussed on 02.09.2026):
+    # treatment harmonization currently only adds study_arm to the final dataset.
     return harmonized_df[
         [
             "STUDY_ID",
             "patient_id",
             "study_arm",
             "follow_up_months",
-            "is_psychotherapist_or_psychologist_involved_(supervisor)",
-            "is_care_manager_involved",
-            "is_psychoeducation_provided",
-            "is_relapse_prophylaxis_provided",
-            "is_activity_structuring_provided",
-            "problem_solving_training",
-            "initial_contact_mode",
-            "follow_up_contact_mode",
+            # "is_psychotherapist_or_psychologist_involved_(supervisor)",
+            # "is_care_manager_involved",
+            # "is_psychoeducation_provided",
+            # "is_relapse_prophylaxis_provided",
+            # "is_activity_structuring_provided",
+            # "problem_solving_training",
+            # "initial_contact_mode",
+            # "follow_up_contact_mode",
         ]
     ]
