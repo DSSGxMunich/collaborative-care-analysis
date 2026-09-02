@@ -432,7 +432,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         "has_long_term_illness",
         *card_cols_0.values(),
         "has_any_health_care_card",
-        *card_cols_1.values(),
         "health_care_card_type_follow_up",
         *provider_visit_cols.values(),
         "family_therapist_visit_frequency",
@@ -457,14 +456,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             f"er_visit_{i}_reason",
             f"er_visit_{i}_hospital_type",
             f"er_visit_{i}_out_of_pocket_cost",
-        ]
-    for i in range(1, 5):
-        output_cols += [
-            f"hospital_stay_{i}_reason",
-            f"hospital_stay_{i}_hospital_type",
-            f"hospital_stay_{i}_nights",
-            f"hospital_stay_{i}_transport_method",
-            f"hospital_stay_{i}_payment_source",
         ]
 
     return harmonized_df[output_cols]
