@@ -147,27 +147,28 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         medication_mapping,
     )
 
-    # return the harmonized dataset which has only the values we want
+    # LIMITATION (discussed on 02.09.2026):
+    # treatment harmonization currently only adds study_arm to the final dataset.
     return harmonized_df[
         [
             "STUDY_ID",
             "patient_id",
             "study_arm",
             "follow_up_months",
-            "is_nurse_involved",
-            "is_social_worker_involved",
-            "is_palliative_care_specialist_involved",
-            "is_cardiologist_involved",
-            "visit_schedule",
-            "visits_per_month",
-            "medications_angiotensin-converting_enzyme_inhibitor_(ACE Inhibitor)",
-            "medications_angiotensin_II_receptor_blockers_(ARBS)",
-            "medications_beta-blocker",
-            "medications_antidepressant",
-            "medications_opiate",
-            "medications_loop_diuretic",
-            "medications_aldosterone_receptor_antagonist",
-            "medications_digitalis_glycoside",
-            "medications_statin_or_lipid-lowering_agent",
+            # "is_nurse_involved",
+            # "is_social_worker_involved",
+            # "is_palliative_care_specialist_involved",
+            # "is_cardiologist_involved",
+            # "visit_schedule",
+            # "visits_per_month",
+            # "medications_angiotensin-converting_enzyme_inhibitor_(ACE Inhibitor)",
+            # "medications_angiotensin_II_receptor_blockers_(ARBS)",
+            # "medications_beta-blocker",
+            # "medications_antidepressant",
+            # "medications_opiate",
+            # "medications_loop_diuretic",
+            # "medications_aldosterone_receptor_antagonist",
+            # "medications_digitalis_glycoside",
+            # "medications_statin_or_lipid-lowering_agent",
         ]
     ]
