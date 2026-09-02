@@ -10,7 +10,7 @@ ID_COLS = [
 
 RENAME_MAP = {
     # SCL-20
-    "depression_severity": "scl20_total",
+    "avg_scl20": "scl20_total",
 }
 
 OUTCOME_COLS = ID_COLS + list(RENAME_MAP)
