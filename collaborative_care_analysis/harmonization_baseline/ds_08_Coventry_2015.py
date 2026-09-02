@@ -64,8 +64,27 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     # accommodation
     harmonized_df["accommodation"] = harmonized_df["accomodation"].astype("string")
 
+    # live_in_facility
+    harmonized_df["lives_in_facility"] = (
+        harmonized_df["accommodation"]
+        .apply(lambda x: "Yes" if (pd.notna(x) and x == "Care home") else pd.NA)
+        .astype("string")
+    )
+
     # employment
-    harmonized_df["employment"] = harmonized_df["employment"].astype("string")
+    harmonized_df["employment_status"] = map_with_check(
+        harmonized_df["employment"],
+        {
+            "In paid work": "Employee",
+            "In education": "Student",
+            "Voluntary work": "Volunteer",
+            "Looking after home": "Homemaker",
+            "Unable to work due to health": "Disabled",
+            "Retired": "Retired",
+            "Unemployed": "Unemployed",
+            "Other": "Other",
+        },
+    ).astype("string")
 
     return harmonized_df[
         [
@@ -76,6 +95,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "sex",
             "race",
             "accommodation",
-            "employment",
+            "lives_in_facility",
+            "employment_status",
         ]
     ]
