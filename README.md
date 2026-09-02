@@ -50,6 +50,37 @@ uv run collaborative_care_analysis/dataset.py run Katon_2001
 
 Runs `export`, `harmonize`, and `merge` in sequence.
 
+## Run While Excluding Some Datasets
+
+Use `--exclude` to run the full pipeline while excluding a dataset:
+
+```bash
+uv run collaborative_care_analysis/dataset.py run --exclude 04
+```
+
+The shorter `-x` option does the same thing:
+
+```bash
+uv run collaborative_care_analysis/dataset.py run -x 04
+```
+
+Repeat either option to exclude multiple datasets:
+
+```bash
+uv run collaborative_care_analysis/dataset.py run -x 04 -x 17
+```
+
+Alternatively:
+
+```bash
+uv run collaborative_care_analysis/dataset.py run --exclude 04 --exclude 17
+```
+
+An exclusion run regenerates the exported, harmonized, merged, and enriched datasets without the excluded datasets. Raw datasets are not modified.
+
+After the pipeline completes successfully, a bold red warning lists the excluded dataset identifiers.
+
+
 ## Generating Codebooks
 
 If a dataset does not include a codebook, generate one from the metadata embedded in its SPSS or Stata files by specifying the numeric dataset ID: 
