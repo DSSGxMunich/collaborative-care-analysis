@@ -40,7 +40,7 @@ def load(file_path=RAW_DATASETS_DIR / "16_Katon_1999" / "katon1999.sav"):
         id_vars=id_vars,
         value_vars=value_vars,
         var_name="_follow_up_months",
-        value_name="avg_scl20",
+        value_name="scl20_mean",
     )
     long_df["follow_up_months"] = map_with_check(
         long_df["_follow_up_months"],

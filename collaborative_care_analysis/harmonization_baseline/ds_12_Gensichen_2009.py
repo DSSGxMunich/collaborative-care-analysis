@@ -34,10 +34,10 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["smoking_status"] = map_with_check(
         harmonized_df["Raucher_"],
         {
-            0.0: "Never",
-            1.0: "Current",
-            2.0: "Quit <1 year",
-            3.0: "Quit ≥1 year",
+            0.0: "Never smoked",
+            1.0: "Current smoker",
+            2.0: "Former smoker (<1 year)",
+            3.0: "Former smoker (≥1 year)",
         },
     )
 

@@ -1,6 +1,7 @@
 import importlib
 import inspect
 from pathlib import Path
+from typing import Annotated
 
 from loguru import logger
 import pandas as pd
@@ -113,8 +114,9 @@ def _add_identifier(df: pd.DataFrame, script_path: Path) -> pd.DataFrame:
 def _clear_directory(directory: Path, description: str) -> None:
     """Delete all CSVs in a directory before a full regeneration run.
 
-    Only called when no dataset_id was given: a targeted run must not destroy
-    output for the datasets it is not regenerating.
+    This is called when no dataset_id is given, including runs that exclude
+    one or more datasets. A targeted dataset_id run must not destroy output
+    for datasets it is not regenerating.
     """
     existing = sorted(directory.glob("*.csv"))
     if not existing:
@@ -124,6 +126,69 @@ def _clear_directory(directory: Path, description: str) -> None:
     logger.info(f"Cleared {len(existing)} existing {description} file(s) from {directory}.")
 
 
+def _select_loader_scripts(
+    dataset_id: str | None = None,
+    exclude_dataset_ids: list[str] | None = None,
+) -> list[Path]:
+    """Select loader scripts for a full, targeted, or exclusion run."""
+    excluded_ids = list(dict.fromkeys(exclude_dataset_ids or []))
+
+    if dataset_id is not None and excluded_ids:
+        raise typer.BadParameter(
+            "Provide either a dataset_id or --exclude, not both.",
+            param_hint="dataset_id/--exclude",
+        )
+
+    all_loader_scripts = [
+        script_path
+        for script_path in sorted(DATA_LOADING_DIR.rglob("*.py"))
+        if script_path.name != "__init__.py"
+    ]
+
+    if dataset_id is not None:
+        matching_scripts = [
+            script_path
+            for script_path in all_loader_scripts
+            if _matches_dataset_id(script_path, dataset_id)
+        ]
+        if not matching_scripts:
+            raise typer.BadParameter(
+                f"No data-loading script matches '{dataset_id}'.",
+                param_hint="dataset_id",
+            )
+        return matching_scripts
+
+    if not excluded_ids:
+        return all_loader_scripts
+
+    unmatched_excluded_ids = [
+        excluded_id
+        for excluded_id in excluded_ids
+        if not any(
+            _matches_dataset_id(script_path, excluded_id) for script_path in all_loader_scripts
+        )
+    ]
+    if unmatched_excluded_ids:
+        formatted_ids = ", ".join(repr(dataset_id) for dataset_id in unmatched_excluded_ids)
+        raise typer.BadParameter(
+            f"No data-loading script matches excluded dataset ID(s): {formatted_ids}.",
+            param_hint="--exclude",
+        )
+
+    selected_scripts = [
+        script_path
+        for script_path in all_loader_scripts
+        if not any(_matches_dataset_id(script_path, excluded_id) for excluded_id in excluded_ids)
+    ]
+    if not selected_scripts:
+        raise typer.BadParameter(
+            "The exclusions remove every available dataset.",
+            param_hint="--exclude",
+        )
+
+    return selected_scripts
+
+
 @app.callback()
 def main():
     """Empty callback to require command names."""
@@ -131,30 +196,33 @@ def main():
 
 @app.command()
 def export(
-    dataset_id: str | None = typer.Argument(
-        None,
-        help="Dataset ID to export, such as '04' or 'Bekelman_2018'.",
-    ),
+    dataset_id: Annotated[
+        str | None,
+        typer.Argument(
+            help="Dataset ID to export, such as '04' or 'Bekelman_2018'.",
+        ),
+    ] = None,
+    exclude_dataset_ids: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--exclude",
+            "-x",
+            help="Dataset ID to exclude. Repeat this option to exclude multiple datasets.",
+        ),
+    ] = None,
 ):
-    """Load every dataset and save each result to the interim data directory."""
+    """Load selected datasets and save each result to the interim data directory."""
     INTERIM_DATASETS_EXPORT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # A full run regenerates everything, so files left over from renamed or
-    # deleted loaders would otherwise linger.
+    loader_scripts = _select_loader_scripts(
+        dataset_id=dataset_id,
+        exclude_dataset_ids=exclude_dataset_ids,
+    )
+
+    # An all-dataset or exclusion run is a clean regeneration, so files left
+    # over from renamed, deleted, or newly excluded loaders cannot linger.
     if dataset_id is None:
         _clear_directory(INTERIM_DATASETS_EXPORT_DIR, "exported dataset")
-
-    loader_scripts = [
-        script_path
-        for script_path in sorted(DATA_LOADING_DIR.rglob("*.py"))
-        if script_path.name != "__init__.py"
-        and (dataset_id is None or _matches_dataset_id(script_path, dataset_id))
-    ]
-    if dataset_id is not None and not loader_scripts:
-        raise typer.BadParameter(
-            f"No data-loading script matches '{dataset_id}'.",
-            param_hint="dataset_id",
-        )
 
     for script_path in loader_scripts:
         module_path = ".".join(
@@ -173,31 +241,34 @@ def export(
 
 @app.command()
 def harmonize(
-    dataset_id: str | None = typer.Argument(
-        None,
-        help="Dataset ID to harmonize, such as '17' or 'Katon_2001'.",
-    ),
+    dataset_id: Annotated[
+        str | None,
+        typer.Argument(
+            help="Dataset ID to harmonize, such as '17' or 'Katon_2001'.",
+        ),
+    ] = None,
+    exclude_dataset_ids: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--exclude",
+            "-x",
+            help="Dataset ID to exclude. Repeat this option to exclude multiple datasets.",
+        ),
+    ] = None,
 ):
-    """Load datasets, apply harmonization scripts to original data, and save results to interim."""
+    """Load selected datasets, apply harmonization scripts, and save the results."""
     HARMONIZED_DATASETS_DIR.mkdir(parents=True, exist_ok=True)
 
-    # A full run regenerates everything. This is also what removes orphaned
-    # cluster files whose harmonization_* directory was renamed or deleted --
-    # those are what make merge emit "no matching harmonization type".
+    loader_scripts = _select_loader_scripts(
+        dataset_id=dataset_id,
+        exclude_dataset_ids=exclude_dataset_ids,
+    )
+
+    # An all-dataset or exclusion run is a clean regeneration. This also
+    # removes orphaned cluster files whose harmonization_* directory was
+    # renamed or deleted, as well as files belonging to excluded datasets.
     if dataset_id is None:
         _clear_directory(HARMONIZED_DATASETS_DIR, "harmonized cluster")
-
-    loader_scripts = [
-        script_path
-        for script_path in sorted(DATA_LOADING_DIR.rglob("*.py"))
-        if script_path.name != "__init__.py"
-        and (dataset_id is None or _matches_dataset_id(script_path, dataset_id))
-    ]
-    if dataset_id is not None and not loader_scripts:
-        raise typer.BadParameter(
-            f"No data-loading script matches '{dataset_id}'.",
-            param_hint="dataset_id",
-        )
 
     harmonization_dirs = _get_harmonization_dirs()
     if not harmonization_dirs:
@@ -248,7 +319,8 @@ def harmonize(
 
                     output_path = HARMONIZED_DATASETS_DIR / f"{script_path.stem}_{postfix}.csv"
                     logger.info(
-                        f"Applying {func.__name__} from {harm_dir.name}/{harm_script.name} to {script_path.stem}."
+                        f"Applying {func.__name__} from {harm_dir.name}/"
+                        f"{harm_script.name} to {script_path.stem}."
                     )
 
                     # Run harmonization script
@@ -257,17 +329,22 @@ def harmonize(
                     # Check output from harmonization script
                     if harmonized_df is None:
                         raise ValueError(
-                            f"Harmonization function {func.__name__} returned None for {script_path.stem}."
+                            f"Harmonization function {func.__name__} returned None "
+                            f"for {script_path.stem}."
                         )
+
                     # Check whether study identifier is still there
                     if COLNAME_STUDYID not in harmonized_df.columns:
                         raise ValueError(
-                            f"Harmonization function {func.__name__} removed '{COLNAME_STUDYID}' column for {script_path.stem}."
+                            f"Harmonization function {func.__name__} removed "
+                            f"'{COLNAME_STUDYID}' column for {script_path.stem}."
                         )
+
                     # Check whether any rows have been dropped
                     if len(harmonized_df) != len(df):
                         logger.warning(
-                            f"Harmonization function {func.__name__} dropped rows for {script_path.stem}."
+                            f"Harmonization function {func.__name__} dropped rows "
+                            f"for {script_path.stem}."
                         )
 
                     # Export data
@@ -456,23 +533,43 @@ def enrich_command():
 
 @app.command()
 def run(
-    dataset_id: str | None = typer.Argument(
-        None,
-        help="Dataset ID to run, such as '04' or 'Bekelman_2018'. Omit to run every dataset.",
-    ),
+    dataset_id: Annotated[
+        str | None,
+        typer.Argument(
+            help=(
+                "Dataset ID to run, such as '04' or 'Bekelman_2018'. Omit to run every dataset."
+            ),
+        ),
+    ] = None,
+    exclude_dataset_ids: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--exclude",
+            "-x",
+            help=("Dataset ID to exclude. Repeat this option to exclude multiple datasets."),
+        ),
+    ] = None,
 ):
-    """Run the full pipeline: export, then harmonize, then merge.
+    """Run the full pipeline: export, harmonize, merge, then enrich.
 
-    Each stage clears its own output directory first, so this is a clean
-    regeneration from the raw data. Passing dataset_id skips that clearing
-    for the export/harmonize stages, so only the matching dataset is
-    regenerated while other datasets' output is left in place.
+    Omitting dataset_id performs a clean regeneration. Supplying --exclude
+    also performs a clean regeneration, but skips the matching datasets.
+
+    Passing dataset_id retains the existing targeted-run behavior: only that
+    dataset is regenerated during export and harmonization, while other
+    existing harmonized outputs remain available to the merge stage.
     """
     logger.info("=== Stage 1/4: export ===")
-    export(dataset_id=dataset_id)
+    export(
+        dataset_id=dataset_id,
+        exclude_dataset_ids=exclude_dataset_ids,
+    )
 
     logger.info("=== Stage 2/4: harmonize ===")
-    harmonize(dataset_id=dataset_id)
+    harmonize(
+        dataset_id=dataset_id,
+        exclude_dataset_ids=exclude_dataset_ids,
+    )
 
     logger.info("=== Stage 3/4: merge ===")
     merged_df, _cluster_columns = merge()
@@ -482,6 +579,14 @@ def run(
     _save_enriched(enriched_df)
 
     logger.success("Full pipeline complete.")
+
+    if exclude_dataset_ids:
+        excluded_ids = ", ".join(dict.fromkeys(exclude_dataset_ids))
+        logger.opt(colors=True).warning(
+            "<red><bold>WARNING: SOME DATASETS WERE EXCLUDED: {excluded_ids}</bold></red>",
+            excluded_ids=excluded_ids,
+        )
+
     return enriched_df
 
 
