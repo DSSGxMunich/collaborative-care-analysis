@@ -34,24 +34,35 @@ def _ensure_extracted() -> None:
         zf.extract(_MEMBER, _STUDY_DIR)
 
 
-# Standardised HRSD severity column -> follow_up_months, using the codebook's
-# own "Time" labels (f1 = "1-2 months", f2 = "3-4 months", f4 = "8-9 months",
-# f5 = "12 months", f6 = "18 months", f7 = "24 months", f8 = "36 months";
-# f7.5 sits between 24 and 36 -> approximated as 30).
+# Standardised HRSD severity column -> follow_up_months.
+#
+# Bypassing the Blues assessed the HRS-D at baseline and at 2-, 4-, and 8-month
+# follow-up only (JAMA 2009;302:2095-2103, Methods: "at 2 weeks and at 2-, 4-,
+# and 8-month follow-up"; the analysis model uses "time (4 time points)"; the
+# CONSORT figure has no assessment box past 8 months, and recruitment ran only
+# Mar 2004 - Sep 2007 with observation ending Jun 2008). The per-arm non-null
+# counts of Depres_f1 / f2 / f4 line up with the figure's 2- / 4- / 8-month
+# "assessed" boxes; Depres_0's pooled mean (12.0) and per-arm baseline means
+# match Table 1, and Depres_f4's per-arm means match the Table 2 8-month row.
+#
+# The .sav *also* carries Depres_f5 / f6 / f7 / f7.5 / f8. These are NOT part of
+# the trial: nothing in the paper accounts for them, their per-arm behaviour is
+# inconsistent with the published result (at f8 the intervention arm scores
+# worse than usual care), and the only source for a 12 / 18 / 24 / 36-month
+# reading is the generic "Time" grid in the shared meta-analysis codebook
+# (whose TriaI_id is even labelled "Bruce 2004"). We drop them rather than
+# harmonise fabricated long-horizon waves into the merged dataset.
 DEPRES_TO_MONTHS = {
     "Depres_0": 0,
     "Depres_f1": 2,
     "Depres_f2": 4,
     "Depres_f4": 8,
-    "Depres_f5": 12,
-    "Depres_f6": 18,
-    "Depres_f7": 24,
-    "Depres_f7.5": 30,
-    "Depres_f8": 36,
 }
 
-# HRSD suicide item T2..T10 lines up with the Depres_* series above (matched by
-# non-null counts: T2<->Depres_0, T4<->Depres_f2, T8<->Depres_f7, T10<->Depres_f8).
+# HRSD suicide item: T2..T5 line up with the Depres_* series above (matched by
+# non-null counts: T2<->Depres_0, T3<->Depres_f1, T4<->Depres_f2, T5<->Depres_f4).
+# T6..T10 are the suicide-item counterparts of the out-of-scope Depres_f5..f8
+# waves and are dropped for the same reason.
 HSRDSUIC_TO_MONTHS = dict(
     zip(
         [
@@ -59,11 +70,6 @@ HSRDSUIC_TO_MONTHS = dict(
             "HSRDsuic_T3",
             "HSRDsuic_T4",
             "HSRDsuic_T5",
-            "HSRDsuic_T6",
-            "HSRDsuic_T7",
-            "HSRDsuic_T8",
-            "HSRDsuic_T9",
-            "HSRDsuic_T10",
         ],
         DEPRES_TO_MONTHS.values(),
     )
