@@ -8,18 +8,11 @@ ID_COLS = [
     "follow_up_months",
 ]
 
-RENAME_MAP = {
-    # SCL-20 (average of 20 depression items from the SCL-90, 0-4 scale)
-    "avg_scl90": "scl20_total",
-}
-
-OUTCOME_COLS = ID_COLS + list(RENAME_MAP)
+# Depression severity = SCL-20 (mean of the 20 depression items of the SCL-90,
+# 0-4 scale). Same construct/column name as ds_15/16/17 and ds_27 (Simon 2000).
+OUTCOME_COLS = ID_COLS + ["scl20_mean"]
 
 
 def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     """Harmonize outcome variables for Katon 2001."""
-    harmonized_df = df[OUTCOME_COLS].copy()
-    return harmonized_df.rename(
-        columns=RENAME_MAP,
-        errors="raise",
-    )
+    return df[OUTCOME_COLS].copy()
