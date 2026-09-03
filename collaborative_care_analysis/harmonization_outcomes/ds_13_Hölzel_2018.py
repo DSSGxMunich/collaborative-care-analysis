@@ -45,6 +45,8 @@ EQ5D_MAPPING = {
 
 PHQ9_COLS = [f"PHQ9_{item}" for item in range(1, 10)]
 
+GAD7_COLS = [f"GAD7_{item}" for item in range(1, 8)]
+
 EQ5D_COLS = [
     "EQ5D_Beweglichkeit",
     "EQ5D_Selbstversorgung",
