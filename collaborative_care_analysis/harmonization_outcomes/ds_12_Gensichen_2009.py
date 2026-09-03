@@ -8,10 +8,11 @@ ID_COLS = [
     "follow_up_months",
 ]
 
+PHQ9_COLS = [f"phq9_{i}" for i in range(1, 10)]
+
 RENAME_MAP = {
     # PHQ-9 items
     **{f"phqf{i}": f"phq9_{i}" for i in range(1, 10)},
-    "PHQges": "phq9_total",
     # SF-36 health survey value
     "pfi": "sf36_physical_functioning_value",
     "rolph": "sf36_role_physical_value",
@@ -43,8 +44,20 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     """Harmonize outcome variables for Gensichen 2009."""
 
     harmonized_df = df[OUTCOME_COLS].copy()
-
-    return harmonized_df.rename(
+    harmonized_df = harmonized_df.rename(
         columns=RENAME_MAP,
         errors="raise",
     )
+
+    # Calculate PHQ-9 total only when all nine items are available.
+    harmonized_df["phq9_total"] = (
+        harmonized_df[PHQ9_COLS]
+        .apply(pd.to_numeric, errors="raise")
+        .sum(
+            axis=1,
+            min_count=len(PHQ9_COLS),
+        )
+        .astype("Int64")
+    )
+
+    return harmonized_df
