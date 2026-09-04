@@ -14,5 +14,5 @@ OUTCOME_COLS = ID_COLS + ["scl20_mean"]
 
 
 def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
-    """Harmonize outcome variables for Katon 1995."""
+    """Harmonize outcome variables for Katon 1996."""
     return df[OUTCOME_COLS].copy()
