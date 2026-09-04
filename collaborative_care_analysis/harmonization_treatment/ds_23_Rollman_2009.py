@@ -10,7 +10,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     # non-randomised non-depressed comparison cohort -> no study arm.
     harmonized_df["study_arm"] = map_with_check(
         harmonized_df["Group"],
-        {0: "control", 1: "intervention", 3: pd.NA},
+        {0: "control", 1: "intervention"},
     )
 
     return harmonized_df[["STUDY_ID", "patient_id", "study_arm", "follow_up_months"]]

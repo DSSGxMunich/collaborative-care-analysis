@@ -107,6 +107,11 @@ def load() -> pd.DataFrame:
     if df["patient_id"].duplicated().any():
         raise ValueError("Duplicate patient IDs in wide dataset")
 
+    # Drop the non-depressed comparison cohort (Group == 3); only the
+    # randomised collaborative-care (1) and usual-care (2) arms are kept.
+    if "Group" in df.columns:
+        df = df[df["Group"] != 3].reset_index(drop=True)
+
     static_present = [c for c in TIME_INDEPENDENT_COLS if c in df.columns]
     all_months = sorted(set(DEPRES_TO_MONTHS.values()))
 
