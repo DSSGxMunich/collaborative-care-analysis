@@ -20,4 +20,4 @@ COMBINED_COLS = ID_COLS + OUTCOME_COLS
 def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     """Harmonize outcome variables for Katon 2001."""
 
-    return df[OUTCOME_COLS].rename(columns=RENAME_MAP, errors="raise")
+    return df[COMBINED_COLS]
