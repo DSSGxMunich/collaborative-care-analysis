@@ -10,7 +10,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
 
     harmonized_df["sex"] = map_with_check(
         harmonized_df["sex"],
-        {1: "Male", 2: "Female", 3: "Other"},
+        {1: "Male", 2: "Female", 3: "Transgender"},
     ).astype("string")
 
     return harmonized_df[["STUDY_ID", "patient_id", "follow_up_months", "age", "sex"]]
