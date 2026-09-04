@@ -10,9 +10,24 @@ ID_COLS = [
 
 # Depression severity = SCL-20 (mean of 20 items, 0-4), already produced as
 # ``scl20_mean`` by the loader. Same name as ds_14/15/16/17/18 and ds_27.
-OUTCOME_COLS = ID_COLS + ["scl20_mean"]
+#
+# WHODAS = physical and social function scales (WHO Disability Assessment
+# Schedule subscales + total), already produced as ``whodas_*`` by the loader.
+WHODAS_COLS = [
+    "whodas_total",
+    "whodas_getting_around",
+    "whodas_self_care",
+    "whodas_household",
+]
+
+OUTCOME_COLS = ID_COLS + ["scl20_mean", *WHODAS_COLS]
 
 
 def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     """Harmonize outcome variables for Katon 2010 (TEAMcare)."""
-    return df[OUTCOME_COLS].copy()
+    harmonized_df = df.copy()
+
+    for col in WHODAS_COLS:
+        harmonized_df[col] = pd.to_numeric(harmonized_df[col], errors="raise")
+
+    return harmonized_df[OUTCOME_COLS].copy()
