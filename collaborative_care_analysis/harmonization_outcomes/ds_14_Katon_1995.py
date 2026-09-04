@@ -19,4 +19,4 @@ OUTCOME_COLS = ID_COLS + list(RENAME_MAP)
 def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     """Harmonize outcome variables for Katon 1995."""
 
-    return df[OUTCOME_COLS]
+    return df[OUTCOME_COLS].rename(columns=RENAME_MAP, errors="raise")
