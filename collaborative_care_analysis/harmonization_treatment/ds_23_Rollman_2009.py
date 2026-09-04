@@ -6,7 +6,7 @@ from collaborative_care_analysis.utils import map_with_check
 def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
 
-    # ``Group``: 0 = usual care, 1 = telephone collaborative care.
+    # ``Group``: 0 = usual care, 1 = telephone collaborative care .
     harmonized_df["study_arm"] = map_with_check(
         harmonized_df["Group"],
         {0: "control", 1: "intervention"},
