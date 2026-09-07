@@ -18,17 +18,12 @@ ID_COLS = [COLNAME_STUDYID, "patient_id", "follow_up_months"]
 #             score ("Sum across 23 depressed symptoms 0-100 scale"), so it is a
 #             rescaling of the above rather than an independent measure.
 #                                            -> cesd23_percent_of_maximum
-#   CESD1820  the standard 20-item CES-D, max 60. Collected at month 18 only,
-#             so this is the one wave that is directly comparable with a
-#             conventional CES-D from another study.
-#                                            -> cesd20_total
 #
 # There is deliberately no plain ``cesd_total`` for this study: any pooled
 # analysis has to pick a scale explicitly.
 RENAME_MAP = {
     "NWCESD": "cesd23_total",
     "CESD": "cesd23_percent_of_maximum",
-    "CESD20": "cesd20_total",
 }
 
 # Observed/definitional bounds, checked here so a re-export that silently swaps
@@ -36,7 +31,6 @@ RENAME_MAP = {
 _RANGES = {
     "cesd23_total": (0, 69),
     "cesd23_percent_of_maximum": (0, 100),
-    "cesd20_total": (0, 60),
 }
 
 
