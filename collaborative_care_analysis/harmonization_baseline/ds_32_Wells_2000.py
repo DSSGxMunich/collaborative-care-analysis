@@ -28,10 +28,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         {1: "Employed", 0: "Unemployed"},
     ).astype("string")
 
-    harmonized_df["net_worth_thousands"] = pd.to_numeric(harmonized_df["NETWORTH"], errors="raise")
-
-    harmonized_df["net_worth_rank"] = pd.to_numeric(harmonized_df["RANKWLTH"], errors="raise")
-
     return harmonized_df[
         [
             "STUDY_ID",
@@ -42,7 +38,5 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "marital_status",
             "race",
             "employment_status",
-            "net_worth_thousands",
-            "net_worth_rank",
         ]
     ]
