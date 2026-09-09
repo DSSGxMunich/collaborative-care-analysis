@@ -29,7 +29,7 @@ def _broadcast_within_patient(df, col):
 
 def create():
     df = pd.read_csv(
-        DATA_DIR / "interim" / "merged_dataset" / "merged_dataset.csv", low_memory=False
+        DATA_DIR / "interim" / "enriched_dataset" / "enriched_dataset.csv", low_memory=False
     )
     _report("original shape of merged_df", df)
 
