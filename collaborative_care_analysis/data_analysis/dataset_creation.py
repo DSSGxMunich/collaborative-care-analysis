@@ -103,6 +103,13 @@ def _clean() -> pd.DataFrame:
         "shape after dropping patients with missing gad7_total at baseline",
     )
 
+    # drop patients with sex=Other
+    df = _drop_patients_matching(
+        df,
+        df["sex"] == "Other",
+        "shape after dropping patients with sex=Other",
+    )
+
     return df
 
 
