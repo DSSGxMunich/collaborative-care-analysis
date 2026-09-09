@@ -17,6 +17,15 @@ def _drop_patients_matching(df, mask, msg):
     return df
 
 
+def _keep_patients_with_any(df, mask, msg):
+    """Keep only patients with >=1 row matching `mask`; drop everyone else entirely."""
+    keep_ids = df.loc[mask, ["STUDY_ID", "patient_id"]].drop_duplicates()
+    df = df.merge(keep_ids.assign(_keep=True), on=["STUDY_ID", "patient_id"], how="left")
+    df = df.loc[df["_keep"].notna()].drop(columns="_keep")
+    _report(msg, df)
+    return df
+
+
 def _broadcast_within_patient(df, col):
     """Forward/back-fill a time-invariant column across all of a patient's rows."""
     df[col] = (
@@ -41,18 +50,18 @@ def create():
     df = df.groupby("STUDY_ID").filter(lambda g: g["phq9_total"].notna().any())
     _report("shape after dropping studies with no phq9_total", df)
 
-    # drop patients with missing phq9_total at baseline
-    df = _drop_patients_matching(
+    # drop patients with no valid baseline phq9_total row at all
+    df = _keep_patients_with_any(
         df,
-        df["phq9_total"].isna() & (df["follow_up_months"] == 0.0),
-        "shape after dropping patients with no phq9_total at baseline",
+        df["follow_up_months"] == 0.0,
+        "shape after dropping patients with no baseline phq9_total",
     )
 
-    # drop patients with missing phq9_total in [11.5, 12.5]
-    df = _drop_patients_matching(
+    # drop patients with no follow-up row in [11.5, 12.5] at all
+    df = _keep_patients_with_any(
         df,
-        df["phq9_total"].isna() & df["follow_up_months"].between(11.5, 12.5),
-        "shape after dropping patients with missing phq9_total at 12mo",
+        df["follow_up_months"].between(11.5, 12.5),
+        "shape after dropping patients with no follow_up at 12mo",
     )
 
     # drop follow-ups outside of [11.5, 12.5] or != 0 months post-randomization
@@ -90,3 +99,5 @@ def create():
         df["gad7_total"].isna() & (df["follow_up_months"] == 0.0),
         "shape after dropping patients with missing gad7_total at baseline",
     )
+
+    return df
