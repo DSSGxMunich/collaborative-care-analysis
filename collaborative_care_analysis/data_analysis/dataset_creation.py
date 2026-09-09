@@ -36,7 +36,10 @@ def _broadcast_within_patient(df, col):
     return df
 
 
-def create():
+def _clean() -> pd.DataFrame:
+    """Shared cleaning pipeline, producing the long-format analysis dataset
+    (baseline row + 12mo row per patient). Used as the basis for both
+    create_long() and create_wide()."""
     df = pd.read_csv(
         DATA_DIR / "interim" / "enriched_dataset" / "enriched_dataset.csv", low_memory=False
     )
@@ -101,3 +104,59 @@ def create():
     )
 
     return df
+
+
+def create_long(save: bool = True) -> pd.DataFrame:
+    """Long-format analysis dataset: baseline row + 12mo row per patient."""
+    df = _clean()
+
+    if save:
+        path = DATA_DIR / "interim" / "analysis_datasets" / "analysis_dataset.csv"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        df.to_csv(path, index=False)
+        logger.info(f"saved long-format dataset to {path}")
+
+    return df
+
+
+def create_wide(save: bool = True) -> pd.DataFrame:
+    """Wide-format analysis dataset: one row per patient, baseline predictors
+    as columns, 12mo phq9_total as the outcome (phq9_12mo). Suitable for orm()."""
+    df = _clean()
+
+    baseline = (
+        df.loc[df["follow_up_months"] == 0.0]
+        .drop(columns=["follow_up_months"])
+        .rename(columns={"phq9_total": "baseline_phq9"})
+        .set_index(["STUDY_ID", "patient_id"])
+    )
+    outcome = (
+        df.loc[
+            df["follow_up_months"].between(11.5, 12.5), ["STUDY_ID", "patient_id", "phq9_total"]
+        ]
+        .rename(columns={"phq9_total": "phq9_12mo"})
+        .set_index(["STUDY_ID", "patient_id"])
+    )
+    wide = baseline.join(outcome, how="inner").reset_index()
+    _report("shape after reshaping to wide (one row per patient)", wide)
+
+    n_dropped_by_join = baseline.shape[0] - wide.shape[0]
+    if n_dropped_by_join:
+        logger.warning(
+            f"inner join dropped {n_dropped_by_join} patients who had a baseline row "
+            "but no matching 12mo row -- this shouldn't happen given the earlier "
+            "_keep_patients_with_any filters; investigate if nonzero"
+        )
+
+    if save:
+        path = DATA_DIR / "interim" / "analysis_datasets" / "analysis_dataset_wide.csv"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        wide.to_csv(path, index=False)
+        logger.info(f"saved wide-format dataset to {path}")
+
+    return wide
+
+
+if __name__ == "__main__":
+    create_long()
+    create_wide()
