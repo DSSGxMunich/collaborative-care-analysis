@@ -3,17 +3,12 @@ import pandas as pd
 from collaborative_care_analysis.utils import map_with_check
 
 _YES_NO_STR = {"Yes": "yes", "No": "no"}
-# "." = not assessed for most patients (268/329) - PTSD wasn't part of the
-# core screen. Treated as missing, not "no".
+# "." = not assessed (268/329 patients) - treated as missing, not "no".
 _YES_NO_STR_WITH_DOT_MISSING = {"Yes": "yes", "No": "no", ".": pd.NA}
 
 # Physical comorbidities, from the loader's collapsed PHYS_COMORBIDS column
-# (semicolon-joined condition names per patient; NA for the 42/329 patients
-# the sheet doesn't cover - kept as NA here too, not "no", per the loader's
-# own note that absence could mean "not assessed").
-# Names reused from ds_05/ds_08/ds_23/ds_25 for the same conditions. Cancer
-# and arthritis subtypes combined into one flag each, same as ds_25 - no
-# dataset here distinguishes them anyway.
+# (semicolon-joined names; NA for the 42/329 patients not covered - kept as
+# NA, not "no").
 _SINGLE_CONDITION_COLS = {
     "Hypertension": "has_hypertension",
     "Diabetes": "has_diabetes",
@@ -31,32 +26,31 @@ _SINGLE_CONDITION_COLS = {
 _CANCER_CATEGORIES = ["History of Cancer", "Active Cancer", "Skin Cancer (Non-Melanoma)"]
 _ARTHRITIS_CATEGORIES = ["Osteoarthritis/Arthritis", "Rheumatoid Arthritis"]
 
-# Psychiatric intake diagnoses, from PARTICIPANTS (PRIME-MD). Checked against
-# Rollman 2016 Table 1: disorder_GAD (154) and disorder_depression (279) both
-# match the paper's counts exactly - confirms disorder_depression, not
-# disorder_major_depressive, is behind the "Major depression" row.
+# Psychiatric intake diagnoses (PARTICIPANTS, PRIME-MD). GAD (154) and
+# depression (279) match Rollman 2016's Table 1 exactly.
 #
-# disorder_depression vs disorder_major_depressive aren't duplicates: per the
-# codebook, one is "MDD or partial remission, no dysthymia", the other is
-# "MDD or dysthymia". Kept both.
+# disorder_depression and disorder_major_depressive aren't duplicates -
+# codebook: one excludes dysthymia, the other includes it. Kept both.
 #
-# disorder_ocd is one combined diagnosis here, unlike ds_25's separate
-# obsessive/compulsive symptom screens - different instrument, not renamed
-# to match.
+# disorder_depression -> has_history_of_depression and disorder_ptsd ->
+# has_history_of_post_traumatic_stress_disorder to match ds_05's names for
+# the same idea.
 _PSYCH_DIAGNOSIS_COLS = {
     "disorder_GAD": ("has_generalized_anxiety_disorder", _YES_NO_STR),
     "disorder_panic": ("has_panic_disorder", _YES_NO_STR),
-    "disorder_depression": ("has_major_depression_or_partial_remission", _YES_NO_STR),
+    "disorder_depression": ("has_history_of_depression", _YES_NO_STR),
     "disorder_major_depressive": ("has_major_depression_or_dysthymia", _YES_NO_STR),
     "disorder_social_phobia": ("has_social_phobia", _YES_NO_STR),
     "disorder_ocd": ("has_obsessive_compulsive_disorder", _YES_NO_STR),
-    "disorder_ptsd": ("has_post_traumatic_stress_disorder", _YES_NO_STR_WITH_DOT_MISSING),
+    "disorder_ptsd": (
+        "has_history_of_post_traumatic_stress_disorder",
+        _YES_NO_STR_WITH_DOT_MISSING,
+    ),
 }
 
 
 def _has_any(names_col: pd.Series, categories: list[str]) -> pd.Series:
-    # Seed from the first category's real result, not an all-NA placeholder --
-    # NA | False stays NA forever, so an NA seed would never resolve to False.
+    # Seed with a real result, not NA - NA | False stays NA forever.
     result = names_col.str.contains(categories[0], regex=False, na=pd.NA)
     for category in categories[1:]:
         result = result | names_col.str.contains(category, regex=False, na=pd.NA)
@@ -82,7 +76,9 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     for raw_col, (new_col, mapping) in _PSYCH_DIAGNOSIS_COLS.items():
         harmonized_df[new_col] = map_with_check(harmonized_df[raw_col], mapping)
 
-    harmonized_df["number_of_chronic_conditions"] = pd.to_numeric(
+    # Not "chronic conditions" - the raw list has non-chronic stuff too
+    # (Pregnancy, Tobacco Use, Bariatric Surgery...), just a plain count.
+    harmonized_df["number_of_recorded_comorbidities"] = pd.to_numeric(
         harmonized_df["n_phys_comorbids"], errors="raise"
     ).astype("Int64")
 
@@ -95,6 +91,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "has_cancer",
             "has_arthritis",
             *[new_col for new_col, _ in _PSYCH_DIAGNOSIS_COLS.values()],
-            "number_of_chronic_conditions",
+            "number_of_recorded_comorbidities",
         ]
     ]
