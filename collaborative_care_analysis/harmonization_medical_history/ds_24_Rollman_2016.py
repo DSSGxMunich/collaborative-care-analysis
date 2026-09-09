@@ -24,8 +24,8 @@ _SINGLE_CONDITION_COLS = {
     "Myocardial Infarction": "has_history_of_heart_attack",
     "Congestive Heart Failure": "has_heart_failure_diagnosis",
     "Stroke/TIA": "has_history_of_stroke_or_transient_ischemic_attack",
-    "Alcohol Abuse": "has_history_of_alcohol_abuse",
-    "Substance Abuse": "has_history_of_other_substance_abuse",
+    "Alcohol Abuse": "has_alcohol_abuse_history",
+    "Substance Abuse": "has_other_substance_abuse_history",
     "Other Psychiatric Diagnosis": "has_other_psychiatric_condition",
 }
 _CANCER_CATEGORIES = ["History of Cancer", "Active Cancer", "Skin Cancer (Non-Melanoma)"]
