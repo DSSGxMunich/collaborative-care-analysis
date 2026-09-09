@@ -45,6 +45,8 @@ EQ5D_MAPPING = {
 
 PHQ9_COLS = [f"PHQ9_{item}" for item in range(1, 10)]
 
+GAD7_COLS = [f"GAD7_{item}" for item in range(1, 8)]
+
 EQ5D_COLS = [
     "EQ5D_Beweglichkeit",
     "EQ5D_Selbstversorgung",
@@ -56,8 +58,6 @@ EQ5D_COLS = [
 RENAME_MAP = {
     # PHQ-9
     **{f"PHQ9_{i}": f"phq9_{i}" for i in range(1, 10)},
-    "PHQ_Summe": "phq9_total",
-    "PHQ9_Schweregrad": "phq9_severity",
     # GAD-7
     **{f"GAD7_{i}": f"gad7_{i}" for i in range(1, 8)},
     # EQ-5D-3L
@@ -85,15 +85,10 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
             # column,
         ).astype("Int64")
 
-    # Store the supplied PHQ-9 total as a nullable integer.
-    harmonized_df["PHQ_Summe"] = pd.to_numeric(
-        harmonized_df["PHQ_Summe"],
-        errors="raise",
-    ).astype("Int64")
-
-    # Calculate the PHQ-9 total only when all nine items are available.
-    phq9_total_calculated = (
+    # Calculate PHQ-9 total only when all nine items are available.
+    harmonized_df["phq9_total"] = (
         harmonized_df[PHQ9_COLS]
+        .apply(pd.to_numeric, errors="raise")
         .sum(
             axis=1,
             min_count=len(PHQ9_COLS),
@@ -101,34 +96,15 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
         .astype("Int64")
     )
 
-    calculated_position = harmonized_df.columns.get_loc("PHQ_Summe") + 1
-
-    harmonized_df.insert(
-        calculated_position,
-        "phq9_total_calculated",
-        phq9_total_calculated,
-    )
-
-    # Compare supplied and calculated totals only when both are available.
-    comparable = (
-        harmonized_df["PHQ_Summe"].notna() & harmonized_df["phq9_total_calculated"].notna()
-    )
-
-    phq9_total_inconsistent = pd.Series(
-        pd.NA,
-        index=harmonized_df.index,
-        dtype="boolean",
-    )
-
-    phq9_total_inconsistent.loc[comparable] = (
-        harmonized_df.loc[comparable, "PHQ_Summe"]
-        != harmonized_df.loc[comparable, "phq9_total_calculated"]
-    )
-
-    harmonized_df.insert(
-        calculated_position + 1,
-        "phq9_total_inconsistent",
-        phq9_total_inconsistent,
+    # Calculate GAD-7 total only when all seven items are available.
+    harmonized_df["gad7_total"] = (
+        harmonized_df[GAD7_COLS]
+        .apply(pd.to_numeric, errors="raise")
+        .sum(
+            axis=1,
+            min_count=len(GAD7_COLS),
+        )
+        .astype("Int64")
     )
 
     # Map EQ-5D-3L responses to scores from 1 to 3.
@@ -136,7 +112,6 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
         harmonized_df[column] = map_with_check(
             harmonized_df[column],
             EQ5D_MAPPING,
-            # column,
         ).astype("Int64")
 
     return harmonized_df.rename(

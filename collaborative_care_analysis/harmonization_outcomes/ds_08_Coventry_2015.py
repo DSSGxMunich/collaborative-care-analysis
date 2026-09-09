@@ -56,9 +56,6 @@ GAD8_MAPPING = {
 RENAME_MAP = {
     # PHQ-9 items
     **{f"phq{i}": f"phq9_{i}" for i in range(1, 10)},
-    # PHQ-9 derived measures
-    "phqchange": "phq9_change",  # PHQ at baseine - PHQ at follow-up
-    "phqcsc": "phq9_sig_change",
     # SCL-13 items
     **{f"scl{i}": f"scl13_{i}" for i in range(1, 14)},
     # GAD-7 items

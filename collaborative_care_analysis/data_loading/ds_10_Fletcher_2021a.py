@@ -2,25 +2,74 @@ import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
 
+# Fletcher 2021a = the Link-me trial (Australian primary care). A depression/
+# anxiety severity prediction tool triaged patients; those predicted to have
+# *minimal/mild* or *severe* symptoms were randomised to a matched-care
+# intervention vs usual care. Assessments at baseline and 6, 12, 18 months.
+# Primary outcome: K10 (Kessler-10) psychological distress at 6 months.
+#
+# The raw data ships as one Stata file per survey wave, each wide with every
+# measure suffixed by the wave number (_1 screening/baseline, _2 six-month,
+# _3 twelve-month, _4 eighteen-month). This loader strips the wave suffix from
+# each file, tags it with follow_up_months, and stacks the four into long
+# format. "*_CLEAR.dta" files in the same folder are column subsets of the
+# corresponding "*_ForAnalysis.dta" and are not used.
 
-def load(
-    file_path=RAW_DATASETS_DIR / "10_Fletcher_2021a" / "Link Me 6month_ForAnalysis.dta",
-) -> pd.DataFrame:
-    """
-    "Link Me <n>month_CLEAR.dta" files are subsets of the corresponding "Link Me <n>month_ForAnalysis.dta" files, n = 6, 12, 18.
-    Careful when joining: some patients only have measurements at some of the three timepoints.
-    """
-    return pd.read_stata(
-        filepath_or_buffer=file_path,
-        convert_dates=True,
-        convert_categoricals=True,
-        index_col=None,
-        convert_missing=False,
-        preserve_dtypes=False,  # numeric data are upcast to pd default types for foreign data (float64 or int64)
-        columns=None,
-        order_categoricals=True,
-        chunksize=None,
-        iterator=False,
-        compression="infer",
-        storage_options=None,
+_STUDY_DIR = RAW_DATASETS_DIR / "10_Fletcher_2021a"
+
+# survey wave file -> (raw column suffix, follow_up_months)
+WAVE_FILES = {
+    "Link Me ScreeningBaseline_ForAnalysis.dta": ("_1", 0),
+    "Link Me 6month_ForAnalysis.dta": ("_2", 6),
+    "Link Me 12month_ForAnalysis.dta": ("_3", 12),
+    "Link Me 18month_ForAnalysis.dta": ("_4", 18),
+}
+
+# Present (unsuffixed) and identical in every wave file.
+TIME_INDEPENDENT_COLS = [
+    "practice",
+    "practice_rec",
+    "phn",
+    "group",
+    "group_r_scr",
+    "severity_r",
+]
+
+# Per-file bookkeeping markers that duplicate follow_up_months; dropped.
+_WAVE_MARKER_COLS = {"bas", "mnth6", "mnth12", "mnth18", "screening_complete"}
+
+
+def load() -> pd.DataFrame:
+    """Load the four Link-me survey waves and return one row per patient-visit."""
+    frames = []
+
+    for file_name, (suffix, months) in WAVE_FILES.items():
+        wave = pd.read_stata(_STUDY_DIR / file_name, convert_categoricals=False)
+        wave = wave.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
+        wave.columns = wave.columns.str.strip()
+
+        assert wave["patient_id"].notna().all(), f"{file_name}: rows with missing patient_id"
+        if wave["patient_id"].duplicated().any():
+            raise ValueError(f"{file_name}: duplicate patient_id")
+
+        keep = ["patient_id", *[c for c in TIME_INDEPENDENT_COLS if c in wave.columns]]
+        wave_cols = [c for c in wave.columns if c not in _WAVE_MARKER_COLS]
+        suffixed = [c for c in wave_cols if c.endswith(suffix)]
+        unexpected = set(wave_cols) - set(keep) - set(suffixed)
+        if unexpected:
+            raise ValueError(f"{file_name}: columns with no wave suffix: {sorted(unexpected)}")
+
+        renamed = wave[keep + suffixed].rename(columns={c: c[: -len(suffix)] for c in suffixed})
+        renamed.insert(1, "follow_up_months", months)
+        frames.append(renamed)
+
+    long = (
+        pd.concat(frames, ignore_index=True, sort=False)
+        .sort_values(["patient_id", "follow_up_months"], kind="stable")
+        .reset_index(drop=True)
     )
+
+    if long.duplicated(["patient_id", "follow_up_months"]).any():
+        raise ValueError("Duplicate patient/time-point combinations")
+
+    return long.convert_dtypes()
