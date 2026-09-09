@@ -178,3 +178,20 @@ uvx pre-commit install
 ```
 
 This will automatically run checks, such as the linter and tests, before each commit. If any of the checks fail, the commit will be aborted.
+
+### Stripping Notebook Outputs
+
+This repo uses [nbstripout](https://github.com/kynan/nbstripout) to keep notebook outputs out of git history. Install it once per clone:
+
+```bash
+uv add nbstripout
+nbstripout --install
+```
+
+This registers a git filter that strips outputs from notebooks when they're staged for commit. Your local `.ipynb` files on disk keep their outputs — only what gets committed is stripped.
+
+Verify it's active with:
+
+```bash
+uv run nbstripout --status
+```
