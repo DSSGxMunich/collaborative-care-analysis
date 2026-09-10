@@ -15,6 +15,7 @@ from collaborative_care_analysis.config import (
     MERGED_DATASET_DIR,
 )
 from collaborative_care_analysis.enrichment import enrich
+from collaborative_care_analysis.pool2 import backfill_baseline_demographics
 
 app = typer.Typer()
 PACKAGE_DIR = Path(__file__).parent
@@ -521,12 +522,13 @@ def _save_enriched(enriched_df: pd.DataFrame) -> Path:
 
 @app.command(name="enrich")
 def enrich_command():
-    """Merge the study-level extra-info sheet onto the merged dataset."""
+    """Backfill baseline demographics from POOL2, then merge the study-level extra-info sheet."""
     merged_path = MERGED_DATASET_DIR / "merged_dataset.csv"
     if not merged_path.exists():
         raise FileNotFoundError(f"{merged_path} not found. Run 'merge' first.")
 
-    enriched_df = enrich(pd.read_csv(merged_path))
+    merged_df = backfill_baseline_demographics(pd.read_csv(merged_path, low_memory=False))
+    enriched_df = enrich(merged_df)
     _save_enriched(enriched_df)
     return enriched_df
 
@@ -550,7 +552,7 @@ def run(
         ),
     ] = None,
 ):
-    """Run the full pipeline: export, harmonize, merge, then enrich.
+    """Run the full pipeline: export, harmonize, merge, backfill demographics, then enrich.
 
     Omitting dataset_id performs a clean regeneration. Supplying --exclude
     also performs a clean regeneration, but skips the matching datasets.
@@ -559,22 +561,25 @@ def run(
     dataset is regenerated during export and harmonization, while other
     existing harmonized outputs remain available to the merge stage.
     """
-    logger.info("=== Stage 1/4: export ===")
+    logger.info("=== Stage 1/5: export ===")
     export(
         dataset_id=dataset_id,
         exclude_dataset_ids=exclude_dataset_ids,
     )
 
-    logger.info("=== Stage 2/4: harmonize ===")
+    logger.info("=== Stage 2/5: harmonize ===")
     harmonize(
         dataset_id=dataset_id,
         exclude_dataset_ids=exclude_dataset_ids,
     )
 
-    logger.info("=== Stage 3/4: merge ===")
+    logger.info("=== Stage 3/5: merge ===")
     merged_df, _cluster_columns = merge()
 
-    logger.info("=== Stage 4/4: enrichment ===")
+    logger.info("=== Stage 4/5: POOL2 demographic backfill ===")
+    merged_df = backfill_baseline_demographics(merged_df)
+
+    logger.info("=== Stage 5/5: enrichment ===")
     enriched_df = enrich(merged_df)
     _save_enriched(enriched_df)
 

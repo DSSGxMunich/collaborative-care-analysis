@@ -21,6 +21,14 @@ RAW_ANNOTATIONS_DIR = RAW_DATA_DIR / "annotations"
 STUDY_LEVEL_EXTRA_INFOS_CSV = (
     RAW_ANNOTATIONS_DIR / "study_level_extra_infos.xlsx - extra_infos.csv"
 )
+# Maps the POOL2 study number (StudyNo_POOL) to this project's dataset number
+# (StudyNo_OURS). See collaborative_care_analysis/pool2.py.
+DATASET_ID_CONVERSIONS_CSV = RAW_ANNOTATIONS_DIR / "dataset_id_conversions.csv"
+# The POOL2 participant-level multi-study export (one row per patient), shipped
+# as a zip that must be extracted into POOL2_DIR before use.
+POOL2_DIR = RAW_DATA_DIR / "260810_POOL2"
+POOL2_ZIP = RAW_DATA_DIR / "260810_POOL2.zip"
+POOL2_CSV = POOL2_DIR / "POOL2_final.csv"
 INTERIM_DATASETS_EXPORT_DIR = INTERIM_DATA_DIR / "exported_datasets"
 HARMONIZED_DATASETS_DIR = INTERIM_DATA_DIR / "harmonized_datasets"
 MERGED_DATASET_DIR = INTERIM_DATA_DIR / "merged_dataset"
