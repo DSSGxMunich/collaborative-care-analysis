@@ -15,7 +15,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             1: "Female",
             2: pd.NA,
         },
-    )
+    ).astype("category")
 
     harmonized_df["education_level"] = map_with_check(
         series=harmonized_df["education_0"],

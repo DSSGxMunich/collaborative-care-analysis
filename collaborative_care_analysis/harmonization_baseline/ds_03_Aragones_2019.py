@@ -18,7 +18,7 @@ def harmonize_baseline(df: pd.DataFrame):
         harmonized_df["sex"] = map_with_check(
             series=harmonized_df["sex"],
             mapping={0: "Female", 1: "Male"},
-        ).astype("string")
+        ).astype("category")
 
     # numeric age
     if "age" in harmonized_df.columns:

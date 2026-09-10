@@ -29,7 +29,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["sex"] = map_with_check(
         harmonized_df["gender"],
         SEX_MAPPING,
-    ).astype("string")
+    ).astype("category")
     harmonized_df = harmonized_df.drop(columns=["gender"])
 
     # numeric age

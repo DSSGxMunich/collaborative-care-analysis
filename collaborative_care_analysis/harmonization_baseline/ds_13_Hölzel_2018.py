@@ -167,7 +167,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "weiblich": "Female",
             "männlich": "Male",
         },
-    )
+    ).astype("category")
 
     return harmonized_df[
         [

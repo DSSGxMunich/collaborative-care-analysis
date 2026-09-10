@@ -11,7 +11,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["sex"] = map_with_check(
         series=harmonized_df["sex"],
         mapping={1: "Male", 2: "Female"},
-    ).astype("string")
+    ).astype("category")
 
     return harmonized_df[
         [
