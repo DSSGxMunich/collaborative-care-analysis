@@ -3,18 +3,15 @@
 POOL2 is a single wide CSV, one row per patient, pooling participant-level data
 from most of the source trials. It is **not** placed under ``data_loading/`` on
 purpose: the main pipeline must not treat POOL2 as one more dataset. It is a
-side input, used to backfill baseline demographics that a study's own
-harmonization could not recover (see :func:`backfill_baseline_demographics`).
+side input, used to backfill baseline demographics and potentially enrich the
+data.
 
 POOL2 numbers studies with its own ``Trial_ID`` (``StudyNo_POOL``), which
 differs from this project's dataset numbering (``StudyNo_OURS``). The mapping
-between the two lives in ``dataset_id_conversions.csv``;
-:func:`pool_trial_id_to_study_id` turns a POOL2 ``Trial_ID`` into the
-``STUDY_ID`` string used everywhere else (e.g. ``9`` -> ``05_Bekelman_2015``).
+between the two lives in ``dataset_id_conversions.csv``.
 """
 
 from pathlib import Path
-import re
 
 from loguru import logger
 import pandas as pd
@@ -31,12 +28,6 @@ DATA_LOADING_DIR = Path(__file__).parent / "data_loading"
 
 COLNAME_PATIENT_ID = "patient_id"
 
-# POOL2's own columns that this loader renames / harmonizes.
-_COLNAME_POOL_TRIAL_ID = "Trial_ID"
-_COLNAME_POOL_ORIGINAL_PATIENT_ID = "Original_Patient_ID"
-_COLNAME_POOL_AGE = "Age"
-_COLNAME_POOL_FEMALE = "Female"
-
 # The ``Female`` column is mostly free-text labels; a handful of rows still
 # carry a raw code. Only the two clean labels are trusted; anything else
 # (a stray "2.0", blanks) becomes missing.
@@ -46,8 +37,8 @@ BASELINE_DEMOGRAPHIC_COLS = ["age", "sex"]
 
 
 def _require_pool2_csv(csv_path: Path) -> None:
-    """Raise a message that says how to get the POOL2 export in place."""
-    if Path(csv_path).exists():
+    """Raise with the unzip command if the POOL2 export has not been extracted yet."""
+    if csv_path.exists():
         return
     raise FileNotFoundError(
         f"POOL2 export not found at {csv_path}.\n"
@@ -57,46 +48,27 @@ def _require_pool2_csv(csv_path: Path) -> None:
     )
 
 
-def load_dataset_id_conversions(csv_path=DATASET_ID_CONVERSIONS_CSV) -> dict[int, int]:
-    """Return ``{StudyNo_POOL: StudyNo_OURS}`` for every row that has both.
-
-    The CSV also carries study-name columns, but those reached the repo with
-    their accented characters already replaced by U+FFFD, so they are unusable
-    and ignored here -- only the two numeric columns are read.
-    """
-    conversions = pd.read_csv(csv_path)
-    both_present = conversions.dropna(subset=["StudyNo_POOL", "StudyNo_OURS"])
-    return {
-        int(row.StudyNo_POOL): int(row.StudyNo_OURS)
-        for row in both_present.itertuples(index=False)
-    }
-
-
-def _dataset_number_to_study_id() -> dict[int, str]:
-    """Map each loader's numeric id to its ``STUDY_ID`` (``17`` -> ``17_Katon_2001``)."""
-    mapping: dict[int, str] = {}
-    for path in sorted(DATA_LOADING_DIR.glob("ds_*.py")):
-        match = re.match(r"ds_(\d+)_(.+)", path.stem)
-        if match is None:
-            continue
-        number, rest = match.groups()
-        mapping[int(number)] = f"{number}_{rest}"
-    return mapping
-
-
 def pool_trial_id_to_study_id(csv_path=DATASET_ID_CONVERSIONS_CSV) -> dict[int, str]:
-    """Map a POOL2 ``Trial_ID`` to this project's ``STUDY_ID`` string.
+    """Map a POOL2 ``Trial_ID`` to this project's ``STUDY_ID`` (``17`` -> ``17_Katon_2001``).
 
-    POOL2 trials with no counterpart in this project (``StudyNo_OURS`` blank, or
-    a dataset number with no loader) are simply absent from the result.
+    ``dataset_id_conversions.csv`` maps the POOL2 study number (``StudyNo_POOL``)
+    to this project's dataset number (``StudyNo_OURS``); only its two numeric
+    columns are read, as the study-name columns reached the repo with their
+    accents mangled. POOL2 trials with no counterpart here (``StudyNo_OURS``
+    blank, or a dataset number with no loader) are absent from the result.
     """
-    number_to_study_id = _dataset_number_to_study_id()
-    trial_id_to_study_id: dict[int, str] = {}
-    for pool_number, our_number in load_dataset_id_conversions(csv_path).items():
-        study_id = number_to_study_id.get(our_number)
-        if study_id is not None:
-            trial_id_to_study_id[pool_number] = study_id
-    return trial_id_to_study_id
+    study_id_by_number: dict[int, str] = {}
+    for path in DATA_LOADING_DIR.glob("ds_*.py"):
+        parts = path.stem.split("_")  # ds_17_Katon_2001 -> ["ds", "17", "Katon", "2001"]
+        if len(parts) >= 3 and parts[1].isdigit():
+            study_id_by_number[int(parts[1])] = "_".join(parts[1:])
+
+    conversions = pd.read_csv(csv_path).dropna(subset=["StudyNo_POOL", "StudyNo_OURS"])
+    return {
+        int(row.StudyNo_POOL): study_id_by_number[int(row.StudyNo_OURS)]
+        for row in conversions.itertuples(index=False)
+        if int(row.StudyNo_OURS) in study_id_by_number
+    }
 
 
 def load(csv_path=POOL2_CSV, conversions_path=DATASET_ID_CONVERSIONS_CSV) -> pd.DataFrame:
@@ -113,11 +85,9 @@ def load(csv_path=POOL2_CSV, conversions_path=DATASET_ID_CONVERSIONS_CSV) -> pd.
     df = pd.read_csv(csv_path, low_memory=False)
 
     trial_id_to_study_id = pool_trial_id_to_study_id(conversions_path)
-    df[COLNAME_STUDYID] = df[_COLNAME_POOL_TRIAL_ID].map(trial_id_to_study_id)
+    df[COLNAME_STUDYID] = df["Trial_ID"].map(trial_id_to_study_id)
 
-    unmapped_trial_ids = sorted(
-        df.loc[df[COLNAME_STUDYID].isna(), _COLNAME_POOL_TRIAL_ID].dropna().unique()
-    )
+    unmapped_trial_ids = sorted(df.loc[df[COLNAME_STUDYID].isna(), "Trial_ID"].dropna().unique())
     if unmapped_trial_ids:
         dropped = int(df[COLNAME_STUDYID].isna().sum())
         logger.info(
@@ -126,15 +96,15 @@ def load(csv_path=POOL2_CSV, conversions_path=DATASET_ID_CONVERSIONS_CSV) -> pd.
         )
     df = df[df[COLNAME_STUDYID].notna()].copy()
 
-    df[COLNAME_PATIENT_ID] = df[_COLNAME_POOL_ORIGINAL_PATIENT_ID].astype("string")
+    df[COLNAME_PATIENT_ID] = df["Original_Patient_ID"].astype("string")
 
-    df["age"] = pd.to_numeric(df[_COLNAME_POOL_AGE], errors="raise")
+    df["age"] = pd.to_numeric(df["Age"], errors="raise")
 
-    female = df[_COLNAME_POOL_FEMALE].astype("string")
+    female = df["Female"].astype("string")
     uncoded = female.notna() & ~female.isin(_SEX_MAPPING)
     if uncoded.any():
         logger.info(
-            f"POOL2: {int(uncoded.sum())} row(s) have an unrecognised '{_COLNAME_POOL_FEMALE}' "
+            f"POOL2: {int(uncoded.sum())} row(s) have an unrecognised 'Female' "
             f"value; treating their sex as missing."
         )
     df["sex"] = female.map(_SEX_MAPPING).astype("string")
@@ -144,15 +114,6 @@ def load(csv_path=POOL2_CSV, conversions_path=DATASET_ID_CONVERSIONS_CSV) -> pd.
 
     head = [COLNAME_STUDYID, COLNAME_PATIENT_ID, *BASELINE_DEMOGRAPHIC_COLS]
     return df[head + [c for c in df.columns if c not in head]].reset_index(drop=True)
-
-
-def load_baseline_demographics(
-    csv_path=POOL2_CSV, conversions_path=DATASET_ID_CONVERSIONS_CSV
-) -> pd.DataFrame:
-    """Return just ``[STUDY_ID, patient_id, age, sex]`` from POOL2."""
-    return load(csv_path, conversions_path)[
-        [COLNAME_STUDYID, COLNAME_PATIENT_ID, *BASELINE_DEMOGRAPHIC_COLS]
-    ]
 
 
 def backfill_baseline_demographics(
@@ -168,40 +129,34 @@ def backfill_baseline_demographics(
     The merged frame is one row per patient-visit; POOL2 demographics are
     time-invariant and broadcast to every visit of a patient.
     """
-    for key in (COLNAME_STUDYID, COLNAME_PATIENT_ID):
-        if key not in merged_df.columns:
-            raise ValueError(f"Merged frame is missing join key '{key}'.")
-    for col in BASELINE_DEMOGRAPHIC_COLS:
-        if col not in merged_df.columns:
-            raise ValueError(f"Merged frame is missing column '{col}' to backfill.")
+    required = [COLNAME_STUDYID, COLNAME_PATIENT_ID, *BASELINE_DEMOGRAPHIC_COLS]
+    missing = [c for c in required if c not in merged_df.columns]
+    if missing:
+        raise ValueError(f"Merged frame is missing column(s) {missing}.")
 
-    demographics = load_baseline_demographics(csv_path, conversions_path)
-
-    studies_with_gaps = sorted(
-        merged_df.loc[
-            merged_df[BASELINE_DEMOGRAPHIC_COLS].isna().any(axis=1), COLNAME_STUDYID
-        ].unique()
-    )
-    if not studies_with_gaps:
+    has_gap = merged_df[BASELINE_DEMOGRAPHIC_COLS].isna().any(axis=1)
+    if not has_gap.any():
         logger.info("POOL2 backfill: no missing age/sex in the merged frame; nothing to do.")
         return merged_df
 
-    covered = set(demographics[COLNAME_STUDYID].unique())
+    demographics = load(csv_path, conversions_path)[required]
+    studies_with_gaps = sorted(merged_df.loc[has_gap, COLNAME_STUDYID].unique())
+    covered = sorted(set(studies_with_gaps) & set(demographics[COLNAME_STUDYID]))
     logger.info(
         f"POOL2 backfill: {len(studies_with_gaps)} study/studies have missing age/sex "
-        f"({studies_with_gaps}); POOL2 covers {sorted(set(studies_with_gaps) & covered)}."
+        f"({studies_with_gaps}); POOL2 covers {covered}."
     )
 
     # Join on patient id as a string on both sides: the merged frame may have
     # read it back as an int or float, while POOL2 ids are free-form strings.
     result = merged_df.copy()
-    result["_pool_join_id"] = result[COLNAME_PATIENT_ID].astype("string")
+    result["_join_id"] = result[COLNAME_PATIENT_ID].astype("string")
     lookup = demographics.rename(
-        columns={COLNAME_PATIENT_ID: "_pool_join_id", "age": "_pool_age", "sex": "_pool_sex"}
+        columns={COLNAME_PATIENT_ID: "_join_id", "age": "_pool_age", "sex": "_pool_sex"}
     )
-    lookup["_pool_join_id"] = lookup["_pool_join_id"].astype("string")
+    lookup["_join_id"] = lookup["_join_id"].astype("string")
     result = result.merge(
-        lookup, on=[COLNAME_STUDYID, "_pool_join_id"], how="left", validate="many_to_one"
+        lookup, on=[COLNAME_STUDYID, "_join_id"], how="left", validate="many_to_one"
     )
 
     result["age"] = pd.to_numeric(result["age"], errors="raise")
@@ -209,13 +164,9 @@ def backfill_baseline_demographics(
     for col, pool_col in (("age", "_pool_age"), ("sex", "_pool_sex")):
         fillable = result[col].isna() & result[pool_col].notna()
         result.loc[fillable, col] = result.loc[fillable, pool_col]
-        by_study = {
-            k: int(v)
-            for k, v in result.loc[fillable, COLNAME_STUDYID].value_counts().sort_index().items()
-        }
         logger.info(
-            f"POOL2 backfill: filled {int(fillable.sum())} '{col}' value(s) {by_study}; "
+            f"POOL2 backfill: filled {int(fillable.sum())} '{col}' value(s); "
             f"{int(result[col].isna().sum())} still missing."
         )
 
-    return result.drop(columns=["_pool_join_id", "_pool_age", "_pool_sex"])
+    return result.drop(columns=["_join_id", "_pool_age", "_pool_sex"])

@@ -11,9 +11,10 @@ from collaborative_care_analysis.pool2 import (
     COLNAME_PATIENT_ID,
     backfill_baseline_demographics,
     load,
-    load_baseline_demographics,
     pool_trial_id_to_study_id,
 )
+
+BASELINE_COLS = [COLNAME_STUDYID, COLNAME_PATIENT_ID, *BASELINE_DEMOGRAPHIC_COLS]
 
 
 def _loader_study_ids() -> set[str]:
@@ -38,6 +39,7 @@ def test_load_is_one_row_per_patient_with_harmonized_demographics() -> None:
     assert pool[COLNAME_STUDYID].notna().all()
     assert set(pool[COLNAME_STUDYID]) <= _loader_study_ids()
 
+    assert list(pool.columns[: len(BASELINE_COLS)]) == BASELINE_COLS
     assert pd.api.types.is_numeric_dtype(pool["age"])
     assert set(pool["sex"].dropna()) <= {"Male", "Female"}
 
@@ -47,18 +49,9 @@ def test_missing_export_raises_with_unzip_instructions(tmp_path) -> None:
         load(csv_path=tmp_path / "POOL2_final.csv")
 
 
-def test_load_baseline_demographics_is_a_projection() -> None:
-    demographics = load_baseline_demographics()
-    assert list(demographics.columns) == [
-        COLNAME_STUDYID,
-        COLNAME_PATIENT_ID,
-        *BASELINE_DEMOGRAPHIC_COLS,
-    ]
-
-
 def test_backfill_only_fills_missing_cells() -> None:
     real_study = next(iter(pool_trial_id_to_study_id().values()))
-    pool_rows = load_baseline_demographics()
+    pool_rows = load()[BASELINE_COLS]
     pool_rows = pool_rows[pool_rows[COLNAME_STUDYID] == real_study].head(3).reset_index(drop=True)
     assert len(pool_rows) == 3
 
