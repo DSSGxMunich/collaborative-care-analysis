@@ -67,10 +67,7 @@ This produces `data/raw/260810_POOL2/POOL2_final.csv` (and `POOL2_final_NEU.csv`
 If the CSV is missing, the pipeline stops with an error repeating this command.
 
 POOL2 numbers studies with its own `Trial_ID`; `data/raw/annotations/dataset_id_conversions.csv`
-maps that to this project's dataset numbering. See
-`collaborative_care_analysis/pool2.py`. Only missing cells are filled — a study
-whose own harmonization already provides `age` / `sex` is left untouched, and a
-patient absent from POOL2 stays missing.
+maps that to this project's dataset numbering.
 
 ## Run While Excluding Some Datasets
 
