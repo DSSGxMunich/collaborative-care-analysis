@@ -432,7 +432,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         "has_long_term_illness",
         *card_cols_0.values(),
         "has_any_health_care_card",
-        "health_care_card_type_follow_up",
         *provider_visit_cols.values(),
         "family_therapist_visit_frequency",
         *visited_gatekeeper_cols.values(),
@@ -451,11 +450,13 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         ]
     output_cols.append("antidepressant_duration")
     output_cols += list(any_flag_cols.values())
+
     for i in range(1, 5):
-        output_cols += [
-            f"er_visit_{i}_reason",
-            f"er_visit_{i}_hospital_type",
-            f"er_visit_{i}_out_of_pocket_cost",
-        ]
+        output_cols.append(f"er_visit_{i}_reason")
+        if i not in (3, 4):
+            output_cols += [
+                f"er_visit_{i}_hospital_type",
+                f"er_visit_{i}_out_of_pocket_cost",
+            ]
 
     return harmonized_df[output_cols]

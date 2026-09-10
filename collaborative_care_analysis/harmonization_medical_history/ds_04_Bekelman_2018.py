@@ -10,7 +10,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
 
     # Max points per item, per codebook.
     tics_max = {
-        "tics01": 2,
         "tics02": 5,
         "tics03": 5,
         "tics04": 2,
