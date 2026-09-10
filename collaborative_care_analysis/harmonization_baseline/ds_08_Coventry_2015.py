@@ -17,7 +17,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "Female": "Female",
             "Male": "Male",
         },
-    ).astype("string")
+    ).astype("category")
 
     harmonized_df["ethnic"] = harmonized_df["ethnic"].astype("string")
 

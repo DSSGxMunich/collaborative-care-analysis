@@ -43,7 +43,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             1: "Male",
             2: "Female",
         },
-    )
+    ).astype("category")
 
     # ----------------------------------------------------
     # Race (single column)
