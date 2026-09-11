@@ -118,8 +118,9 @@ MANUAL_CROSSWALK = [
     (("t0", "TelSeel"), ("t1", "TelSeeT1")),
 ]
 
-# the follow-up month each visit represents
-VISIT_MONTHS = {"t0": 0, "t1": 3, "t2": 6, "t3": 12}
+# The follow-up month each visit represents. Corrected from 3/6/12 to match
+# the paper's actual baseline/6/12/24-month schedule (survey dates confirm).
+VISIT_MONTHS = {"t0": 0, "t1": 6, "t2": 12, "t3": 24}
 
 GRAIN = ["patient_id", "follow_up_months"]
 
