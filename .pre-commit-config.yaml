@@ -15,9 +15,7 @@ repos:
 
       - id: run-pipeline
         name: run pipeline
-        entry: |
-          sh -c "echo '🚀 Running pipeline...' && uv run collaborative_care_analysis/dataset.py run \
-          -x 02 -x 09 -x 10 -x 18 -x 19 -x 20 -x 21 -x 22 -x 23 -x 24 -x 25 -x 26 -x 28 -x 29 -x 30 -x 31 -x 32"
+        entry: sh -c "echo '🚀 Running pipeline...' && uv run collaborative_care_analysis/dataset.py run"
         language: system
         stages: [pre-commit]
         pass_filenames: false
