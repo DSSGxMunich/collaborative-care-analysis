@@ -1,5 +1,6 @@
 import re
 
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -16,6 +17,12 @@ from collaborative_care_analysis.config import RAW_DATASETS_DIR
 # ``Baseline_/FourMonth_/TwelveMonth_/ThirtySixMonth_`` prefix. This loader
 # reshapes that single file to long -- no cross-file merge is needed (the old
 # loader's merge with the 36-month file was redundant).
+#
+# ``Group`` is 0 = usual care (n=305), 1 = collaborative care (n=276). Do not
+# take this from the file's own value labels, which read "1 = Site 1, 2 = Site
+# 2" and describe neither the codes present (0/1) nor the variable; they are
+# stale metadata. The coding above is fixed by Table 1: sex (216F/89M vs
+# 202F/74M) and age (44.5+-13.4 vs 45.0+-13.2) match arm for arm.
 
 _STUDY_DIR = RAW_DATASETS_DIR / "22_Richards_2013"
 
@@ -67,15 +74,26 @@ def _normalise_stem(stem: str) -> str:
 
 def load() -> pd.DataFrame:
     df = pd.read_spss(_STUDY_DIR / "Richards 2013 CLEANED.sav", convert_categoricals=False)
+    # treat blank or whitespace-only strings as missing, before dtype inference
+    with pd.option_context("future.no_silent_downcasting", True):
+        df = df.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
     df = df.drop(columns=[c for c in _METADATA_COLS if c in df.columns]).convert_dtypes()
     df = df.rename(columns={"Origpat_id": "patient_id"}, errors="raise")
     df["patient_id"] = df["patient_id"].astype("string").str.strip()
 
-    assert df["patient_id"].notna().all(), "Rows with missing patient_id"
-    if df["patient_id"].duplicated().any():
-        raise ValueError("Duplicate patient IDs in wide dataset")
+    incomplete = df["patient_id"].isna() | df["Group"].isna()
+    if incomplete.any():
+        logger.warning(f"Dropped {int(incomplete.sum())} rows with missing patient_id or Group.")
+        df = df.loc[~incomplete]
+
+    duplicated_id = df["patient_id"].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(f"Dropped {int(duplicated_id.sum())} rows with duplicated patient_id.")
+        df = df.loc[~duplicated_id]
 
     static_present = [c for c in TIME_INDEPENDENT_COLS if c in df.columns]
+    if absent := [c for c in TIME_INDEPENDENT_COLS if c not in df.columns]:
+        logger.warning(f"Declared time-independent column(s) absent from the export: {absent}")
     comorbidity_cols = [c for c in df.columns if c.startswith("Com_") and c.endswith("_HaveIt")]
     static_cols = ["patient_id", *static_present, *comorbidity_cols]
 
