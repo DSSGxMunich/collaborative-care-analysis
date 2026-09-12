@@ -23,13 +23,13 @@ What happens here, in order:
   5. Merge the T3 medication export into the T3 visit only - it is a
      one-row-per-patient supplement scoped to that wave, not a repeated
      measure.
-  6. Stack the four visits (months 0, 3, 6, 12) and attach patient_level.
+  6. Stack the four visits (months 0, 6, 12, 24) and attach patient_level.
      Rows for patients who did not attend a given wave are kept: they carry
      no substantive data, but dropping them would understate the trial's
      randomised cohort, and ``attended_t{n}`` records their status directly.
 
 Call ``build()`` for the five cleaned, harmonised (but still wide) frames, or
-``build_long()`` for the final long-format dataset.
+``load()`` for the final long-format dataset.
 
 Every step here was checked interactively against the real data before being
 folded in; see the project conversation history for what each check found.
@@ -38,6 +38,7 @@ folded in; see the project conversation history for what each check found.
 from collections import Counter
 import re
 
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -70,6 +71,14 @@ POST_RENAME_CONSTANT_TAG_COLS = {
     "t1": ["bdi", "phq", "atccodes"],
     "t2": ["phq"],
 }
+
+# t2's export stores these two date-like fields ("Arbeitslos seit Datum",
+# "Befragungsdatum") as whitespace-padded fixed-width text (e.g. " 10406"),
+# while t0/t1 have the same DDMMYY-encoded number as a plain float. Left
+# alone, harmonize_columns still merges them by name into one column, but
+# every t2 row stays a str and every t0/t1 row a float -- normalize here so
+# the merged column has one consistent numeric dtype.
+T2_PADDED_NUMERIC_COLS = ["ArblosT2", "DatBefT2"]
 
 # internal practice/form/timestamp bookkeeping: fully (or near-fully)
 # populated regardless of visit attendance, and holding no clinical content
@@ -322,7 +331,7 @@ def harmonize_columns(
             label_edges.append((anchor, other))
 
     if skipped:
-        print(
+        logger.info(
             f"harmonize_columns: ignored {len(skipped)} label match(es) that would have "
             f"merged two independently name-matched groups (likely coincidental or a "
             f"source labelling error, not a real match): {skipped}"
@@ -429,7 +438,7 @@ def broadcast_time_independent(long: pd.DataFrame, columns: list[str]) -> pd.Dat
         conflicts = overwritten & (long[col] != long["patient_id"].map(baseline[col]))
         if conflicts.any():
             offenders = sorted(long.loc[conflicts, "patient_id"].unique())
-            print(
+            logger.warning(
                 f"broadcast_time_independent: {col!r} disagreed with baseline for "
                 f"{len(offenders)} patient(s) at a non-baseline visit; baseline value "
                 f"kept: {offenders[:10]}"
@@ -497,6 +506,8 @@ def build():
     t0 = read_and_clean(DATA_DIR / "PRoMPT_Daten_T0_09082010_final.dta")
     t1 = read_and_clean(DATA_DIR / "PRoMPT_Daten_T1_09082010_final.dta")
     t2 = read_and_clean(DATA_DIR / "PRoMPT_Daten_T2_09082010_final.dta")
+    for col in T2_PADDED_NUMERIC_COLS:
+        t2[col] = pd.to_numeric(t2[col].astype("string").str.strip(), errors="raise")
     t3 = read_and_clean(DATA_DIR / "PRoMPT_T3_2010_08_09.dta")
     meds = read_and_clean(DATA_DIR / "PRoMPT_T3_Medikamente_2009_03_17.dta")
 
@@ -554,7 +565,7 @@ def build():
     ].tolist()
 
     if mismatched_ids:
-        print(
+        logger.warning(
             f"Dropping {len(mismatched_ids)} patient(s) with a mismatched Patienten_ID "
             f"on one or more T1 form pages: {mismatched_ids}"
         )
