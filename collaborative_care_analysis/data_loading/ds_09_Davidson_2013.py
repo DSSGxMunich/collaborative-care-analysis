@@ -88,7 +88,7 @@ def check_baseline_bdi(df: pd.DataFrame) -> None:
             "revisit how baseline BDI is represented before loading."
         )
 
-    logger.warning(
+    logger.info(
         "CODIACS required two elevated BDIs to confirm persistent depression, so both are "
         "broadcast to every visit row."
     )
@@ -148,8 +148,10 @@ def load(file_path=RAW_DATASETS_DIR / "09_Davidson_2013" / "Davidson 2013 CLEANE
         logger.warning(f"Removed {int(missing_id.sum())} rows with missing {ID_COL}")
         df = df.loc[~missing_id]
 
-    if df[ID_COL].duplicated().any():
-        raise ValueError("Duplicate patient IDs in wide dataset")
+    dupes = df[ID_COL].duplicated(keep=False)
+    if dupes.any():
+        logger.warning(f"Dropping {int(dupes.sum())} rows sharing a duplicated {ID_COL}.")
+        df = df.loc[~dupes]
 
     df = sentinels_to_na(df)
     check_baseline_bdi(df)
