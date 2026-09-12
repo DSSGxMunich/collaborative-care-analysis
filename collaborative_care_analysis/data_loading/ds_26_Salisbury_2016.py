@@ -1,3 +1,4 @@
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -10,9 +11,9 @@ from collaborative_care_analysis.config import RAW_DATASETS_DIR
 # N = 609. Primary outcome: PHQ-9 response at 4 months. Assessments at baseline,
 # 4, 8, 12 months.
 #
-# ``allocation`` 1 = usual care, 2 = Healthlines intervention (inferred: the
-# intervention-only "was the blood-pressure webpage helpful/easy" items are
-# answered almost entirely by allocation 2).
+# ``allocation`` 1 = usual care, 2 = Healthlines intervention, per the value
+# label in the dataset's own readme; the paper's 307 assigned to the
+# intervention matches allocation 2.
 #
 # The raw CSV is wide, every repeated measure suffixed ``_0``/``_4``/``_8``/
 # ``_12`` (= months). This loader stacks them into long format.
@@ -37,10 +38,19 @@ TIME_INDEPENDENT_COLS = [
 
 def load() -> pd.DataFrame:
     df = pd.read_csv(_CSV, na_values=_NA_VALUES)
+    # blank/whitespace-only cells are missing, before any dtype work
+    with pd.option_context("future.no_silent_downcasting", True):
+        df = df.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
 
-    assert df["id"].notna().all(), "Rows with missing id"
-    if df["id"].duplicated().any():
-        raise ValueError("Duplicate patient IDs in wide dataset")
+    incomplete = df["id"].isna() | df["allocation"].isna()
+    if incomplete.any():
+        logger.warning(f"Dropped {int(incomplete.sum())} rows with missing id or allocation.")
+        df = df.loc[~incomplete]
+
+    duplicated_id = df["id"].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(f"Dropped {int(duplicated_id.sum())} rows with duplicated id.")
+        df = df.loc[~duplicated_id]
 
     static_cols = ["id", *[c for c in TIME_INDEPENDENT_COLS if c in df.columns]]
 
