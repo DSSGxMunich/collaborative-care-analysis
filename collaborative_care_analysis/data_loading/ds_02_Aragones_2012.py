@@ -1,3 +1,4 @@
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -77,9 +78,18 @@ def load(
     df.dropna(how="all", axis="columns", inplace=True)
     df.columns = df.columns.str.strip()
 
-    assert df["ip1"].notna().all(), "Rows with missing patient id"
-    if df["ip1"].duplicated().any():
-        raise ValueError("Duplicate patient IDs in wide dataset")
+    missing_id = df["ip1"].isna()
+    if missing_id.any():
+        logger.warning(f"Dropping {missing_id.sum()} row(s) with missing patient id.")
+        df = df[~missing_id]
+
+    duplicated_id = df["ip1"].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(
+            f"Dropping {duplicated_id.sum()} row(s) sharing a duplicated patient id "
+            f"({df.loc[duplicated_id, 'ip1'].nunique()} id(s) affected)."
+        )
+        df = df[~duplicated_id]
 
     expected_cols = {
         "ip1",
@@ -94,12 +104,9 @@ def load(
     if missing:
         raise ValueError(f"Expected columns missing from dataset: {sorted(missing)}")
 
-    # Every column in this export is numeric, but the blanks make ``read_csv``
-    # parse some of them as ``object`` holding digit strings. Left alone, the
-    # baseline PHQ-9 columns (no blanks -> int64) and the follow-up ones (blanks
-    # -> object) stack into a single column mixing Python ``int`` and ``str``,
-    # which raises on any comparison. Coerce up front so ``load()`` is usable
-    # without every consumer re-coercing.
+    # Blanks make read_csv parse some columns as object-holding-strings; stacking
+    # those with a blank-free int64 column later would mix str and int. Coerce
+    # to numeric now so every column is uniformly numeric before the reshape.
     df = df.apply(pd.to_numeric, errors="raise")
 
     df = to_long(df)
