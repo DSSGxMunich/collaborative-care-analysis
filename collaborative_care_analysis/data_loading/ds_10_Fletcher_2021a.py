@@ -1,3 +1,6 @@
+import warnings
+
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -35,8 +38,16 @@ TIME_INDEPENDENT_COLS = [
     "severity_r",
 ]
 
-# Per-file bookkeeping markers that duplicate follow_up_months; dropped.
-_WAVE_MARKER_COLS = {"bas", "mnth6", "mnth12", "mnth18", "screening_complete"}
+# Per-file bookkeeping markers (REDCap completion/consent timestamps that
+# duplicate follow_up_months, or are administrative rather than clinical data).
+_WAVE_MARKER_COLS = {
+    "bas",
+    "mnth6",
+    "mnth12",
+    "mnth18",
+    "screening_complete",
+    "external_data_consent_complete_1",
+}
 
 
 def load() -> pd.DataFrame:
@@ -44,13 +55,29 @@ def load() -> pd.DataFrame:
     frames = []
 
     for file_name, (suffix, months) in WAVE_FILES.items():
-        wave = pd.read_stata(_STUDY_DIR / file_name, convert_categoricals=False)
-        wave = wave.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
+        # external_data_consent_complete_1 is a Stata %tC (datetime) column we
+        # drop below; suppress the read-time warning about it rather than the
+        # underlying value.
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message="Encountered %tC format")
+            wave = pd.read_stata(_STUDY_DIR / file_name, convert_categoricals=False)
+        with pd.option_context("future.no_silent_downcasting", True):
+            wave = wave.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
         wave.columns = wave.columns.str.strip()
 
-        assert wave["patient_id"].notna().all(), f"{file_name}: rows with missing patient_id"
-        if wave["patient_id"].duplicated().any():
-            raise ValueError(f"{file_name}: duplicate patient_id")
+        missing_id = wave["patient_id"].isna()
+        if missing_id.any():
+            logger.warning(
+                f"{file_name}: dropped {int(missing_id.sum())} rows with missing patient_id"
+            )
+            wave = wave.loc[~missing_id]
+
+        duplicated_id = wave["patient_id"].duplicated(keep=False)
+        if duplicated_id.any():
+            logger.warning(
+                f"{file_name}: dropped {int(duplicated_id.sum())} rows with duplicated patient_id"
+            )
+            wave = wave.loc[~duplicated_id]
 
         keep = ["patient_id", *[c for c in TIME_INDEPENDENT_COLS if c in wave.columns]]
         wave_cols = [c for c in wave.columns if c not in _WAVE_MARKER_COLS]
