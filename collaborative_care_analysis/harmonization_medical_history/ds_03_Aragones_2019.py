@@ -41,7 +41,7 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     # map_with_check's own unmapped-value check will catch it (since
     # "0" wouldn't be a recognized key), instead of both silently
     # collapsing into the same bucket.
-    yes_no_map = {"1": "yes", pd.NA: "no"}
+    yes_no_map = {1: "yes", pd.NA: "no"}
 
     # cardiac / cardiovascular
     harmonized_df["has_hypertension"] = map_with_check(  # HYPERT

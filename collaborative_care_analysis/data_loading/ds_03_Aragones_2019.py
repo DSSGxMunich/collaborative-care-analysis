@@ -1,6 +1,14 @@
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
+
+# Aragonès 2019: cluster RCT, 328 patients with major depression and chronic
+# musculoskeletal pain, randomised to a collaborative-care intervention vs.
+# usual care. Depression severity via HSCL; assessed at 0, 3, 6 and 12 months.
+#
+# Shares its raw folder with Aragonès 2012 (ds_02); this loader uses
+# ``DROP_Christos.csv``.
 
 TIME_INDEPENDENT_COLS = [
     "CLUSTER",
@@ -82,10 +90,18 @@ def load(
     df.dropna(how="all", axis="columns", inplace=True)
     df.columns = df.columns.str.strip()
 
-    assert df["Id"].notna().all(), "Rows with missing Id"
+    missing_id = df["Id"].isna()
+    if missing_id.any():
+        logger.warning(f"Dropping {missing_id.sum()} row(s) with missing patient id.")
+        df = df[~missing_id]
 
-    if df["Id"].duplicated().any():
-        raise ValueError("Duplicate patient IDs in wide dataset")
+    duplicated_id = df["Id"].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(
+            f"Dropping {duplicated_id.sum()} row(s) sharing a duplicated patient id "
+            f"({df.loc[duplicated_id, 'Id'].nunique()} id(s) affected)."
+        )
+        df = df[~duplicated_id]
 
     expected_cols = {
         "Id",
@@ -95,15 +111,17 @@ def load(
 
     unaccounted = set(df.columns) - expected_cols
     missing = expected_cols - set(df.columns)
-
     if unaccounted:
         raise ValueError(f"Unaccounted columns: {sorted(unaccounted)}")
-
     if missing:
         raise ValueError(f"Expected columns missing from dataset: {sorted(missing)}")
 
+    # Blanks make read_csv parse some columns as object-holding-strings (e.g.
+    # baseline HSCLTOTb is float64 but follow-up HSCL_3_TOT is object); stacking
+    # them in to_long() would silently produce a str/float-mixed column. Coerce
+    # to numeric now so every column is uniformly numeric before the reshape.
+    df = df.apply(pd.to_numeric, errors="raise")
+
     df = to_long(df)
 
-    df = df.convert_dtypes()
-
-    return df
+    return df.convert_dtypes()
