@@ -31,7 +31,7 @@ from collaborative_care_analysis.config import RAW_DATASETS_DIR
 # correctly instead of silently losing rows, and a newly added sheet is picked
 # up rather than dropped.
 #
-# PARTICIPANTS IS THE ROSTER OF RANDOMISED PATIENTS AND IS JOINED INNER.
+# PARTICIPANTS IS THE ROSTER OF ENROLLED PATIENTS AND IS JOINED INNER.
 # The instrument sheets reach further than the trial: SIGHA has 374 distinct
 # ``acrid``, GADSS 372, PDSS 373, SF36v2 335, PHQ9 331, against 329 in
 # PARTICIPANTS -- which is the published N. The extra ids carry a single
@@ -39,10 +39,16 @@ from collaborative_care_analysis.config import RAW_DATASETS_DIR
 # patients. A left join kept them with a null arm and null demographics, which
 # is worse than not having them: they were silently counted as patients and
 # ``map_with_check`` cannot flag a null ``group``. The inner join plus the
-# assertion below pins the cohort to the randomised sample. Every *other*
+# check below pins the cohort to the enrolled sample. Every *other*
 # per-patient sheet is joined left onto that cohort, so it can contribute
 # columns but can never add or drop a patient.
-_RANDOMISED_PATIENT_COUNT = 329
+#
+# "Enrolled", not "randomised": the 329 are 250 highly anxious patients
+# randomised at baseline (126 UC / 124 CC) plus 79 watchful-waiting patients,
+# of whom only 23 were later randomised. The other 56 were never randomised and
+# are kept here with their own ``group`` value; harmonization_treatment maps
+# "WW never randomized" to a null arm.
+_ENROLLED_PATIENT_COUNT = 329
 _ID = "acrid"
 _MONTHS = "follow_up_months"
 
@@ -77,6 +83,9 @@ def _column_stem(sheet: str) -> str:
 def _prep(book: pd.ExcelFile, sheet: str) -> pd.DataFrame:
     """Parse one sheet and normalise its key columns."""
     frame = book.parse(sheet).drop(columns=list(_DROP_COLUMNS), errors="ignore")
+    # treat blank or whitespace-only cells as missing, before any dtype work
+    with pd.option_context("future.no_silent_downcasting", True):
+        frame = frame.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
 
     if _ID not in frame.columns:
         raise ValueError(
@@ -92,6 +101,11 @@ def _prep(book: pd.ExcelFile, sheet: str) -> pd.DataFrame:
         )
     if aliases:
         frame = frame.rename(columns={aliases[0]: _MONTHS})
+
+    missing_id = frame[_ID].isna()
+    if missing_id.any():
+        logger.warning(f"Sheet {sheet!r}: dropped {int(missing_id.sum())} rows with no {_ID}.")
+        frame = frame.loc[~missing_id]
 
     return frame
 
@@ -228,9 +242,9 @@ def load(
     merged = merged.merge(cohort, on=_ID, how="inner", validate="many_to_one")
 
     n_patients = merged[_ID].nunique()
-    if n_patients != _RANDOMISED_PATIENT_COUNT:
+    if n_patients != _ENROLLED_PATIENT_COUNT:
         raise ValueError(
-            f"Expected {_RANDOMISED_PATIENT_COUNT} randomised patients "
+            f"Expected {_ENROLLED_PATIENT_COUNT} enrolled patients "
             f"(the published RELAX N), got {n_patients}."
         )
 
@@ -238,10 +252,10 @@ def load(
     # but must not be able to add or drop a patient.
     for name, frame in per_patient.items():
         covered = int(merged[_ID].drop_duplicates().isin(frame[_ID]).sum())
-        if covered < _RANDOMISED_PATIENT_COUNT:
+        if covered < _ENROLLED_PATIENT_COUNT:
             logger.warning(
-                f"Sheet {name!r} covers {covered}/{_RANDOMISED_PATIENT_COUNT} "
-                f"randomised patients; the rest get <NA> for its columns."
+                f"Sheet {name!r} covers {covered}/{_ENROLLED_PATIENT_COUNT} "
+                f"enrolled patients; the rest get <NA> for its columns."
             )
         merged = merged.merge(frame, on=_ID, how="left", validate="many_to_one")
 
