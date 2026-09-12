@@ -4,9 +4,24 @@ import pandas as pd
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
 from collaborative_care_analysis.utils import map_with_check
 
+# Katon 2001, the relapse-prevention trial: all 386 randomised patients are
+# here. ``grp`` is an unlabelled code -- 1 is the relapse prevention
+# intervention (n=194), 2 is usual care (n=192). That direction is confirmed
+# three ways: the arm sizes and the 71.9% female figure match the paper's
+# Table 1, and grp 1 has both lower SCL-20 scores at every follow-up and
+# higher antidepressant adherence, as the paper reports.
+#
+# Do not take the arm labels from ``katon2001.CLEANED.sav``: joined on patient
+# id, all 194 grp-1 patients are labelled "Control" there and all 192 grp-2
+# patients "Intervention", i.e. the two arms are swapped relative to the paper.
+# The file is otherwise the same 386 patients and is not used here.
+
 
 def load(file_path=RAW_DATASETS_DIR / "17_Katon_2001" / "katon2001.sav"):
-    df = pd.read_spss(file_path).convert_dtypes()
+    df = pd.read_spss(file_path)
+    # treat blank or whitespace-only strings as missing, before dtype inference
+    with pd.option_context("future.no_silent_downcasting", True):
+        df = df.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
     df = df.rename(
         columns={
             "id": "patient_id",
@@ -14,12 +29,15 @@ def load(file_path=RAW_DATASETS_DIR / "17_Katon_2001" / "katon2001.sav"):
         errors="raise",
     )
 
-    # drop rows with missing patient_id or grp
-    with_missing_info: int = len(df)
-    df = df[
-        df["patient_id"].notna() & (df["patient_id"] != "") & df["grp"].notna() & (df["grp"] != "")
-    ]
-    logger.trace(f"Dropped {with_missing_info - len(df)} rows with missing patient_id or grp.")
+    incomplete = df["patient_id"].isna() | df["grp"].isna()
+    if incomplete.any():
+        logger.warning(f"Dropped {int(incomplete.sum())} rows with missing patient_id or grp.")
+        df = df.loc[~incomplete]
+
+    duplicated_id = df["patient_id"].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(f"Dropped {int(duplicated_id.sum())} rows with duplicated patient_id.")
+        df = df.loc[~duplicated_id]
 
     # unpivot df to long format
     # note what is actually recorded: the average of the scores for 20 depression items
@@ -50,4 +68,4 @@ def load(file_path=RAW_DATASETS_DIR / "17_Katon_2001" / "katon2001.sav"):
     long_df = long_df.sort_values(["patient_id", "follow_up_months"]).reset_index(drop=True)
     head = ["patient_id", "follow_up_months"]
     tail = [col for col in long_df.columns if col not in head]
-    return long_df[head + tail]
+    return long_df[head + tail].convert_dtypes()
