@@ -1,5 +1,6 @@
 import re
 
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -85,4 +86,14 @@ def load(
     df = df.dropna(how="all", axis="index")
     df = df.dropna(how="all", axis="columns")
 
-    return to_long(df)
+    missing_id = df["ID"].isna()
+    if missing_id.any():
+        logger.warning(f"Dropped {int(missing_id.sum())} rows with missing ID")
+        df = df.loc[~missing_id]
+
+    duplicated_id = df["ID"].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(f"Dropped {int(duplicated_id.sum())} rows with duplicated ID")
+        df = df.loc[~duplicated_id]
+
+    return to_long(df).convert_dtypes()
