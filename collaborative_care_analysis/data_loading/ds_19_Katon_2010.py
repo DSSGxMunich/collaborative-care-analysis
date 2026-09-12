@@ -1,3 +1,4 @@
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -57,14 +58,27 @@ ALL_MONTHS = sorted({m for mapping in REPEATED_MEASURES.values() for m in mappin
 
 
 def load(file_path=_STUDY_DIR / "KATON TEAMCARE.sav") -> pd.DataFrame:
-    df = pd.read_spss(file_path).convert_dtypes()
+    df = pd.read_spss(file_path)
+    # treat blank or whitespace-only strings as missing, before dtype inference
+    with pd.option_context("future.no_silent_downcasting", True):
+        df = df.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
     df = df.rename(columns={ID_COL: "patient_id"}, errors="raise")
 
-    assert df["patient_id"].notna().all(), "Rows with missing patient_id"
-    if df["patient_id"].duplicated().any():
-        raise ValueError("Duplicate patient IDs in wide dataset")
+    incomplete = df["patient_id"].isna() | df["intervention"].isna()
+    if incomplete.any():
+        logger.warning(
+            f"Dropped {int(incomplete.sum())} rows with missing patient_id or intervention."
+        )
+        df = df.loc[~incomplete]
+
+    duplicated_id = df["patient_id"].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(f"Dropped {int(duplicated_id.sum())} rows with duplicated patient_id.")
+        df = df.loc[~duplicated_id]
 
     static_present = [c for c in TIME_INDEPENDENT_COLS if c in df.columns]
+    if absent := [c for c in TIME_INDEPENDENT_COLS if c not in df.columns]:
+        logger.warning(f"Declared time-independent column(s) absent from the export: {absent}")
 
     frames = []
     for months in ALL_MONTHS:
