@@ -1,3 +1,4 @@
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -7,6 +8,16 @@ from collaborative_care_analysis.config import RAW_DATASETS_DIR
 #                                                  not used by this loader
 #   Zimmermann_2016.sui.dta                    -> source file used by this loader
 #   Zimmermann 2016.pdf                        -> published trial paper
+#
+# UNRESOLVED: ``Group`` appears to be inverted relative to the paper, and is
+# passed through unchanged pending a decision. The file labels 191 patients
+# "Intervention" and 134 "Control"; the paper says the opposite -- "325
+# participants (IG N = 134, CG N = 191)" and "patients were enrolled in the
+# intervention group (IG), 191 in the control group (CG)", with completion
+# percentages that only work that way round (61/134 = 45.5%, 107/191 = 56.0%).
+# This file's 12-month completers are 71 for "Control" and 107 for
+# "Intervention", and 107 is the paper's CG figure exactly. Taking the labels
+# at face value therefore inverts this study's arms downstream.
 
 
 # These are the only visit timings that are confirmed for this file.
@@ -206,10 +217,15 @@ def load(
     if unaccounted:
         raise ValueError(f"Unaccounted columns: {sorted(unaccounted)}")
 
-    if df["Origpat_id"].isna().any():
-        raise ValueError("Rows with missing Origpat_id")
-    if df["Origpat_id"].duplicated().any():
-        raise ValueError("Duplicate patient IDs in wide dataset")
+    missing_id = df["Origpat_id"].isna()
+    if missing_id.any():
+        logger.warning(f"Dropped {int(missing_id.sum())} rows with missing Origpat_id.")
+        df = df.loc[~missing_id]
+
+    duplicated_id = df["Origpat_id"].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(f"Dropped {int(duplicated_id.sum())} rows with duplicated Origpat_id.")
+        df = df.loc[~duplicated_id]
 
     unexpectedly_nonempty = [col for col in KNOWN_EMPTY_COLS if df[col].notna().any()]
     if unexpectedly_nonempty:
