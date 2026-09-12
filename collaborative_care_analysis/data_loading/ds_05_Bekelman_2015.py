@@ -1,3 +1,4 @@
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -18,23 +19,42 @@ def load(
     df_long.drop(labels="Unnamed: 0", axis=1, errors="raise", inplace=True)
     df_wide.drop(labels="Unnamed: 0", axis=1, errors="raise", inplace=True)
 
-    # Merge both datasets using patient ID
-    if df_long.duplicated(["pt_id", "surv_version"]).any():
-        raise ValueError("Duplicate patient/time-point combinations")
-    df = df_long.merge(
-        df_wide,
-        on="pt_id",
-        how="inner",
-        validate="many_to_one",
-    )
+    # A missing key would silently vanish in the inner join below (NaN never
+    # matches), so check before merging, not after.
+    missing_long = df_long["pt_id"].isna() | df_long["surv_version"].isna()
+    if missing_long.any():
+        logger.warning(f"Dropping {missing_long.sum()} row(s) with missing pt_id or surv_version.")
+        df_long = df_long[~missing_long]
 
-    # Merge tables on the unique patient ids.
+    missing_wide = df_wide["pt_id"].isna()
+    if missing_wide.any():
+        logger.warning(f"Dropping {missing_wide.sum()} row(s) with missing pt_id.")
+        df_wide = df_wide[~missing_wide]
+
+    dupes = df_long.duplicated(["pt_id", "surv_version"], keep=False)
+    if dupes.any():
+        n_patients = df_long.loc[dupes, "pt_id"].nunique()
+        logger.warning(
+            f"Dropping {dupes.sum()} row(s) sharing a duplicated (pt_id, surv_version) "
+            f"({n_patients} patient(s) affected)."
+        )
+        df_long = df_long[~dupes]
+
+    unmatched_long = ~df_long["pt_id"].isin(df_wide["pt_id"])
+    if unmatched_long.any():
+        logger.warning(f"{unmatched_long.sum()} row(s) have a pt_id absent from the wide file.")
+
+    unmatched_wide = ~df_wide["pt_id"].isin(df_long["pt_id"])
+    if unmatched_wide.any():
+        logger.warning(
+            f"{unmatched_wide.sum()} wide-file patient(s) have no rows in the long file."
+        )
+
+    df = df_long.merge(df_wide, on="pt_id", how="inner", validate="many_to_one")
+
     df.dropna(how="all", axis=0, inplace=True)
     df.dropna(how="all", axis=1, inplace=True)
     df.columns = df.columns.str.strip()
-
-    assert df["pt_id"].notna().all(), "Rows with missing pt_id"
-    assert df["surv_version"].notna().all(), "Rows with missing surv_version"
 
     # Safely rename pt_id and surv_version columns.
     df.rename(columns={"pt_id": "patient_id"}, inplace=True, errors="raise")
