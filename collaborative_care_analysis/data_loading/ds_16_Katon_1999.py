@@ -4,9 +4,19 @@ import pandas as pd
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
 from collaborative_care_analysis.utils import map_with_check
 
+# Katon 1999 randomised all 228 patients held here, 114 per arm -- unlike
+# ds_14/ds_15, this export is the whole trial, not a depression subgroup.
+# ``scscl20`` is the screening SCL-20, which is also what the paper reports as
+# the baseline clinical characteristic, so it is month 0.
+# ``katon1999.CLEANED.sav`` alongside it is the same 228 patients restated in
+# the meta-analysis schema (plus empty padding rows), so it adds no cases.
+
 
 def load(file_path=RAW_DATASETS_DIR / "16_Katon_1999" / "katon1999.sav"):
-    df = pd.read_spss(file_path).convert_dtypes()
+    df = pd.read_spss(file_path)
+    # treat blank or whitespace-only strings as missing
+    with pd.option_context("future.no_silent_downcasting", True):
+        df = df.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
     df = df.rename(
         columns={
             "id": "patient_id",
@@ -14,15 +24,15 @@ def load(file_path=RAW_DATASETS_DIR / "16_Katon_1999" / "katon1999.sav"):
         errors="raise",
     )
 
-    # drop rows with missing patient_id or assign
-    with_missing_info: int = len(df)
-    df = df[
-        df["patient_id"].notna()
-        & (df["patient_id"] != "")
-        & df["assign"].notna()
-        & (df["assign"] != "")
-    ]
-    logger.trace(f"Dropped {with_missing_info - len(df)} rows with missing patient_id or assign.")
+    incomplete = df["patient_id"].isna() | df["assign"].isna()
+    if incomplete.any():
+        logger.warning(f"Dropped {int(incomplete.sum())} rows with missing patient_id or assign.")
+        df = df.loc[~incomplete]
+
+    duplicated_id = df["patient_id"].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(f"Dropped {int(duplicated_id.sum())} rows with duplicated patient_id.")
+        df = df.loc[~duplicated_id]
 
     # unpivot df to long format
     # note what is actually recorded: the average of the scores for 20 depression items
@@ -55,4 +65,4 @@ def load(file_path=RAW_DATASETS_DIR / "16_Katon_1999" / "katon1999.sav"):
     long_df = long_df.sort_values(["patient_id", "follow_up_months"]).reset_index(drop=True)
     head = ["patient_id", "follow_up_months"]
     tail = [col for col in long_df.columns if col not in head]
-    return long_df[head + tail]
+    return long_df[head + tail].convert_dtypes()
