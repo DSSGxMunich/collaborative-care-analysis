@@ -35,58 +35,56 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         f"Expected comorbidity columns missing from the export: {missing_cols}"
     )
 
-    # Map missing/blank explicitly to "no" in the mapping dict itself,
-    # rather than pre-filling with fillna("0") - this way, if load()
-    # ever starts producing an actual "0" value alongside blanks,
-    # map_with_check's own unmapped-value check will catch it (since
-    # "0" wouldn't be a recognized key), instead of both silently
-    # collapsing into the same bucket.
-    yes_no_map = {1: "yes", pd.NA: "no"}
+    # A blank in the export means "no". That fill cannot live in the mapping
+    # dict: on a nullable dtype .map() ignores a pd.NA key and silently yields
+    # NaN, so it is applied to the result instead. Keeping the dict to real
+    # codes also preserves the original intent -- if load() ever starts
+    # producing an actual 0 alongside the blanks, map_with_check raises on it
+    # rather than letting it collapse into the same bucket as missing.
+    yes_no_map = {1: "yes"}
+
+    def yes_no(series: pd.Series) -> pd.Series:
+        return map_with_check(series, yes_no_map).fillna("no")
 
     # cardiac / cardiovascular
-    harmonized_df["has_hypertension"] = map_with_check(  # HYPERT
+    harmonized_df["has_hypertension"] = yes_no(  # HYPERT
         # Reuses the name used in ds_05_Bekelman_2015 - same concept
         # (hypertension diagnosis), no granularity mismatch.
-        harmonized_df["HYPERT"],
-        yes_no_map,
+        harmonized_df["HYPERT"]
     )
-    harmonized_df["has_cardiovascular_disease"] = map_with_check(  # CARDIOVASCULAR
+    harmonized_df["has_cardiovascular_disease"] = yes_no(  # CARDIOVASCULAR
         # NOTE: a broad/umbrella category (unspecified cardiovascular
         # condition) - not the same granularity as the specific cardiac
         # fields used in other datasets (e.g.
         # has_history_of_heart_attack, has_had_percutaneous_coronary_
         # intervention, is_heart_failure_etiology_ischemic). Kept as its
         # own column rather than conflated with any single one of those.
-        harmonized_df["CARDIOVASCULAR"],
-        yes_no_map,
+        harmonized_df["CARDIOVASCULAR"]
     )
 
     # metabolic
-    harmonized_df["has_diabetes"] = map_with_check(  # DIABETES
+    harmonized_df["has_diabetes"] = yes_no(  # DIABETES
         # Reuses the name used in ds_13_Hölzel_2018 and
         # ds_05_Bekelman_2015 - same concept, no granularity mismatch.
-        harmonized_df["DIABETES"],
-        yes_no_map,
+        harmonized_df["DIABETES"]
     )
 
     # respiratory
-    harmonized_df["has_respiratory_disease"] = map_with_check(  # RESPIRATORY
+    harmonized_df["has_respiratory_disease"] = yes_no(  # RESPIRATORY
         # NOTE: a broad/umbrella category (unspecified respiratory
         # condition) - not directly comparable to more specific fields
         # in other datasets, e.g. ds_13_Hölzel_2018's
         # "has_asthma_or_copd" or ds_05_Bekelman_2015's
         # "has_chronic_obstructive_pulmonary_disease". Kept as its own
         # column rather than merged with either.
-        harmonized_df["RESPIRATORY"],
-        yes_no_map,
+        harmonized_df["RESPIRATORY"]
     )
 
     # oncology
-    harmonized_df["has_cancer"] = map_with_check(  # CANCER
+    harmonized_df["has_cancer"] = yes_no(  # CANCER
         # Reuses the name used in ds_13_Hölzel_2018 - same concept, no
         # granularity mismatch.
-        harmonized_df["CANCER"],
-        yes_no_map,
+        harmonized_df["CANCER"]
     )
 
     # Number of chronic conditions
