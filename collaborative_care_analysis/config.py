@@ -1,4 +1,5 @@
 from pathlib import Path
+import unicodedata
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -40,6 +41,25 @@ REPORTS_DIR = PROJ_ROOT / "reports"
 FIGURES_DIR = REPORTS_DIR / "figures"
 
 COLNAME_STUDYID = "STUDY_ID"
+
+
+def normalize_study_id(value: str) -> str:
+    """Return a study ID or filename stem in a single, comparable Unicode form.
+
+    Two studies have non-ASCII names (Hölzel, Unützer), and an accented letter
+    has two valid encodings: composed (ö as one character) and decomposed (o
+    followed by a combining diaeresis). They render identically and compare
+    unequal. git stores the composed form, but macOS writes the decomposed one
+    whenever a name round-trips through an archive, and this repo's raw data
+    directories are decomposed today.
+
+    Anything that turns a filename into a study ID, or matches a study ID
+    against a name read off disk or out of a CSV, must normalize both sides
+    first. Otherwise those two studies silently fail to match: no error, just
+    a lookup that finds nothing and a study missing from the result.
+    """
+    return unicodedata.normalize("NFC", value)
+
 
 # If tqdm is installed, configure loguru with tqdm.write
 # https://github.com/Delgan/loguru/issues/135
