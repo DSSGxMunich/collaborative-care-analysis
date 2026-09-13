@@ -27,7 +27,10 @@ import pandas as pd
 
 from collaborative_care_analysis.config import COLNAME_STUDYID, INTERIM_DATA_DIR
 from collaborative_care_analysis.harmonization_column_clusters.concat import ID_COLS
-from collaborative_care_analysis.harmonization_column_clusters.registry import cluster_modules
+from collaborative_care_analysis.harmonization_column_clusters.registry import (
+    cluster_modules,
+    source_pairs,
+)
 from collaborative_care_analysis.harmonization_column_clusters.variable_labels import (
     describe_column,
 )
@@ -47,9 +50,7 @@ def touched_by_cluster() -> dict[str, set[str]]:
     touched = {}
     for module in cluster_modules():
         consumption = module.CONSUMPTION
-        columns: set[str] = set()
-        for key in ("sources", "fallback_sources"):
-            columns.update(consumption.get(key, {}).values())
+        columns: set[str] = {column for _, column in source_pairs(consumption)}
         for key in ("superseded", "review", "conditional_on"):
             columns.update(consumption.get(key, {}))
         touched[module.CLUSTER_KEY] = columns

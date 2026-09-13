@@ -20,7 +20,10 @@ import json
 import pandas as pd
 
 from collaborative_care_analysis.config import COLNAME_STUDYID, INTERIM_DATA_DIR
-from collaborative_care_analysis.harmonization_column_clusters.registry import cluster_modules
+from collaborative_care_analysis.harmonization_column_clusters.registry import (
+    cluster_modules,
+    source_pairs,
+)
 from collaborative_care_analysis.harmonization_column_clusters.variable_labels import (
     describe_column,
 )
@@ -81,19 +84,15 @@ def collect_drops(
     are reused across studies for unrelated constructs.
     """
     consumption = CLUSTER_CONSUMPTION[cluster_key]
-    # "sources" (always consumed) and "fallback_sources" (consumed only where the
-    # primary source is missing/implausible) are both real {study_id: column}
-    # maps. A study can appear in both under DIFFERENT columns (e.g. ds_11's
-    # primary age source is "AGE", its fallback is "age_0"), so the per-column
+    # "sources" (always consumed) and "fallback_sources" (consumed only where
+    # the primary is missing/implausible) both map a study to the raw column(s)
+    # it contributes. A study can appear in both under DIFFERENT columns (ds_11's
+    # primary age source is "AGE", its fallback "age_0"), so the per-column
     # study-sets are unioned rather than the dicts merged by key.
-    primary = consumption["sources"]
-    fallback = consumption.get("fallback_sources", {})
-    source_columns = set(primary.values()) | set(fallback.values())
-    accounted_studies = {
-        column: {sid for sid, col in primary.items() if col == column}
-        | {sid for sid, col in fallback.items() if col == column}
-        for column in source_columns
-    }
+    accounted_studies: dict[str, set[str]] = {}
+    for study_id, column in source_pairs(consumption):
+        accounted_studies.setdefault(column, set()).add(study_id)
+    source_columns = set(accounted_studies)
 
     # A column can appear in more than one bucket -- e.g. ds_12's `gebdatum` is
     # both the input to its derived age and a birth date needing a conscious
