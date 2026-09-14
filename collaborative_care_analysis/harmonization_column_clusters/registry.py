@@ -35,6 +35,7 @@ IMPLEMENTED_CLUSTERS = [
     "service_use",
     "sex",
     "sociodemographic",
+    "treatment",
 ]
 
 # The contract every cluster module satisfies. Checked on load so a module that
