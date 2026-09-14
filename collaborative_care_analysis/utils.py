@@ -14,6 +14,11 @@ def ensure_unzipped(zip_path: Path, extract_dir: Path, marker_path: Path) -> Non
     """
     if marker_path.exists():
         return
+    if not zip_path.exists():
+        raise FileNotFoundError(
+            f"{marker_path} is missing, and {zip_path.name} is not there to extract "
+            f"it from. The study folder may ship the extracted files instead."
+        )
     logger.info(f"Extracting {zip_path} to {extract_dir} ...")
     with zipfile.ZipFile(zip_path) as zf:
         zf.extractall(extract_dir)
