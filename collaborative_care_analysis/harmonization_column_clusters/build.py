@@ -22,6 +22,7 @@ from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import COLNAME_STUDYID, INTERIM_DATA_DIR
+from collaborative_care_analysis.harmonization_column_clusters import checks, registry
 from collaborative_care_analysis.harmonization_column_clusters.concat import (
     ID_COLS,
     load_concatenated_raw,
@@ -56,6 +57,52 @@ def _coverage_by_study(built: pd.DataFrame, column: str) -> dict:
     }
 
 
+def _final_audit(built: pd.DataFrame, column_mapping: dict) -> None:
+    """Log what the assembled frame looks like, and flag anything unusable.
+
+    Run once at the end, because some problems only exist across clusters: a
+    column no study populates, a column only one study populates, or a study
+    that came out of the whole process with nothing at all.
+    """
+    harmonized = [c for c in built.columns if c not in ID_COLS]
+    logger.info(f"Built {len(harmonized)} harmonized column(s) over {len(built)} rows.")
+
+    for column in harmonized:
+        if built[column].notna().sum() == 0:
+            raise ValueError(
+                f"{column!r} is empty for every row in every study. A harmonized column "
+                f"that nothing populates is a broken mapping, not a sparse one."
+            )
+
+    single = [
+        column
+        for column in harmonized
+        if built.loc[built[column].notna(), COLNAME_STUDYID].nunique() == 1
+    ]
+    if single:
+        logger.info(
+            f"{len(single)} column(s) come from a single study and carry only "
+            f"within-study information: {single}."
+        )
+
+    contributing = {
+        study
+        for column in harmonized
+        for study in built.loc[built[column].notna(), COLNAME_STUDYID].unique()
+    }
+    if barren := sorted(set(built[COLNAME_STUDYID].unique()) - contributing):
+        logger.warning(
+            f"{len(barren)} study(ies) contribute to no harmonized column at all: {barren}."
+        )
+
+    per_study = built[harmonized].notna().groupby(built[COLNAME_STUDYID]).any().sum(axis=1)
+    logger.info(
+        f"Columns answered per study: median {int(per_study.median())}, "
+        f"range {int(per_study.min())} ({per_study.idxmin()}) to "
+        f"{int(per_study.max())} ({per_study.idxmax()})."
+    )
+
+
 def build() -> pd.DataFrame:
     """Apply every implemented cluster and write the harmonized outputs."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -69,6 +116,14 @@ def build() -> pd.DataFrame:
     for module in cluster_modules():
         cluster_key = module.CLUSTER_KEY
         provenance = module.COLUMN_PROVENANCE
+        for study_id, column in registry.source_pairs(module.CONSUMPTION):
+            if column in raw_df.columns:
+                checks.check_magnitude(
+                    raw_df.loc[raw_df[COLNAME_STUDYID] == study_id, column],
+                    cluster_key,
+                    study_id,
+                    column,
+                )
         cluster_df = module.harmonize(raw_df)
 
         if list(cluster_df.columns[: len(ID_COLS)]) != ID_COLS:
@@ -79,16 +134,39 @@ def build() -> pd.DataFrame:
                 f"({len(cluster_df)} vs {len(raw_df)}); it must stay row-aligned"
             )
 
-        for column in cluster_df.columns[len(ID_COLS) :]:
+        emitted = list(cluster_df.columns[len(ID_COLS) :])
+        if declared := [c for c in module.HARMONIZED_COLS if c not in emitted]:
+            raise ValueError(
+                f"{cluster_key}: HARMONIZED_COLS promises {declared} but harmonize() did "
+                f"not return them; the module's contract and its code disagree."
+            )
+        if undeclared := [c for c in emitted if c not in module.HARMONIZED_COLS]:
+            raise ValueError(
+                f"{cluster_key}: harmonize() returned {undeclared}, which HARMONIZED_COLS "
+                f"does not declare, so nothing downstream knows they exist."
+            )
+        if clash := [c for c in emitted if c in built.columns]:
+            raise ValueError(
+                f"{cluster_key}: would overwrite {clash}, already produced by another "
+                f"cluster. Two clusters must not claim the same column name."
+            )
+        if missing_provenance := [c for c in emitted if c not in provenance]:
+            raise ValueError(
+                f"{cluster_key}: {missing_provenance} have no COLUMN_PROVENANCE entry, so "
+                f"column_mapping.json would not say where they came from."
+            )
+
+        for column in emitted:
             built[column] = cluster_df[column].to_numpy()
             column_mapping[column] = {
                 "cluster": cluster_key,
                 **provenance[column],
                 **_coverage_by_study(built, column),
             }
-        logger.success(
-            f"Cluster '{cluster_key}': added {list(cluster_df.columns[len(ID_COLS) :])}"
-        )
+        checks.summarize(raw_df, cluster_df, cluster_key)
+        logger.success(f"Cluster '{cluster_key}': added {emitted}")
+
+    _final_audit(built, column_mapping)
 
     built.to_csv(OUTPUT_DIR / "harmonized_data.csv", index=False)
     (OUTPUT_DIR / "column_mapping.json").write_text(json.dumps(column_mapping, indent=2) + "\n")

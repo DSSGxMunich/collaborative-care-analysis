@@ -25,7 +25,6 @@ from types import ModuleType
 PACKAGE = "collaborative_care_analysis.harmonization_column_clusters"
 
 # Approved clusters, one per line and alphabetical so appends merge cleanly.
-# Empty until the first cluster module lands; each cluster PR appends one name.
 IMPLEMENTED_CLUSTERS: list[str] = []
 
 # The contract every cluster module satisfies. Checked on load so a module that

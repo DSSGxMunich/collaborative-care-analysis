@@ -18,6 +18,7 @@ STUDY_ID always matches what the existing ``harmonize`` pipeline would assign.
 
 from pathlib import Path
 
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import COLNAME_STUDYID, INTERIM_DATASETS_EXPORT_DIR
@@ -74,7 +75,54 @@ def load_concatenated_raw() -> pd.DataFrame:
     if absent := [col for col in ID_COLS if col not in concatenated.columns]:
         raise ValueError(f"Missing required join key column(s): {absent}")
 
+    _report_frame(concatenated, frames, study_stems)
     return concatenated
+
+
+def _report_frame(
+    concatenated: pd.DataFrame, frames: list[pd.DataFrame], study_stems: list[str]
+) -> None:
+    """Log the shape of the assembled frame and flag structural problems.
+
+    Three things are worth knowing before any cluster runs: how wide each study
+    is, whether the join key is actually unique, and which column names are
+    shared between studies. That last one is the quiet hazard, because a
+    cluster that maps a column for one study will read the same name in another
+    study where it may mean something else entirely.
+    """
+    logger.info(
+        f"Concatenated {len(frames)} study export(s): {len(concatenated)} rows, "
+        f"{concatenated.shape[1]} columns."
+    )
+    widths = sorted(
+        ((frame.shape[1], stem) for frame, stem in zip(frames, study_stems, strict=True)),
+        reverse=True,
+    )
+    logger.debug("Widest exports: " + ", ".join(f"{stem} ({width})" for width, stem in widths[:5]))
+
+    duplicated = concatenated.duplicated(subset=ID_COLS, keep=False)
+    if duplicated.any():
+        affected = concatenated.loc[duplicated, COLNAME_STUDYID].value_counts().to_dict()
+        logger.warning(
+            f"{int(duplicated.sum())} row(s) share a (study, patient, visit) key, so the "
+            f"join key is not unique: {affected}. A cluster that aggregates per patient "
+            f"will count these rows more than once."
+        )
+
+    shared: dict[str, int] = {}
+    for frame in frames:
+        for column in frame.columns:
+            if column in ID_COLS:
+                continue
+            shared[column] = shared.get(column, 0) + 1
+    reused = {c: n for c, n in shared.items() if n > 1}
+    if reused:
+        worst = sorted(reused.items(), key=lambda kv: -kv[1])[:8]
+        logger.info(
+            f"{len(reused)} column name(s) appear in more than one study; the most "
+            f"shared are {worst}. Cluster modules must map these per study, never "
+            f"frame-wide."
+        )
 
 
 def broadcast_within_patient(df: pd.DataFrame, series: pd.Series) -> tuple[pd.Series, pd.Series]:
