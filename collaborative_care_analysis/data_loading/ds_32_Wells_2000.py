@@ -1,5 +1,6 @@
 import re
 
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -16,7 +17,13 @@ from collaborative_care_analysis.utils import ensure_unzipped
 #
 # The raw archive is a merged SPSS file, wide, with each repeated measure
 # suffixed by its month (00/06/12/18/24/48/96). This loader stacks those into
-# long format. Two groups of columns do not follow that rule and are mapped
+# long format. ``INTERV`` is the two-level arm (1 = QI, n=913; 0 = control,
+# n=443) and ``CLNTYPE`` the three-level one (T = QI-Therapy 489, M = QI-Meds
+# 424, U = usual care 443); both match the paper exactly. The zip this used to
+# be extracted from is no longer in the study folder, which now ships the
+# extracted files.
+#
+# Two groups of columns do not follow that rule and are mapped
 # explicitly below: the P<month>CES.. CES-D items, and a handful of variables
 # whose names predate the suffix convention (_IRREGULAR_TIME_VARYING).
 #
@@ -122,9 +129,15 @@ def load() -> pd.DataFrame:
     df = df.convert_dtypes()
     df = df.rename(columns={k: v for k, v in _SCREENER_RENAMES.items() if k in df.columns})
 
-    assert df[ID_COL].notna().all(), "Rows with missing AID"
-    if df[ID_COL].duplicated().any():
-        raise ValueError("Duplicate patient IDs in wide dataset")
+    missing_id = df[ID_COL].isna()
+    if missing_id.any():
+        logger.warning(f"Dropped {int(missing_id.sum())} rows with missing {ID_COL}.")
+        df = df.loc[~missing_id]
+
+    duplicated_id = df[ID_COL].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(f"Dropped {int(duplicated_id.sum())} rows with duplicated {ID_COL}.")
+        df = df.loc[~duplicated_id]
 
     # (stem, months) -> raw column
     time_varying: dict[tuple[str, int], str] = {}
