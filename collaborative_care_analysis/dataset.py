@@ -13,6 +13,7 @@ from collaborative_care_analysis.config import (
     HARMONIZED_DATASETS_DIR,
     INTERIM_DATASETS_EXPORT_DIR,
     MERGED_DATASET_DIR,
+    normalize_study_id,
 )
 from collaborative_care_analysis.enrichment import enrich
 from collaborative_care_analysis.pool2 import backfill_baseline_demographics
@@ -45,11 +46,18 @@ def _matches_dataset_id(script_path: Path, dataset_id: str) -> bool:
 
 
 def _get_study_id(script_path: Path) -> str:
-    """Extract study ID from script path stem (e.g. '17_Katon_2001' from 'ds_17_Katon_2001')."""
-    name_parts = script_path.stem.split("_")
+    """Extract study ID from script path stem (e.g. '17_Katon_2001' from 'ds_17_Katon_2001').
+
+    The stem is normalized first: a filename read off disk can spell the two
+    non-ASCII study names either way round, so an un-normalized ID silently
+    fails to match anything keyed on the composed form. See
+    config.normalize_study_id.
+    """
+    stem = normalize_study_id(script_path.stem)
+    name_parts = stem.split("_")
     if len(name_parts) >= 3 and name_parts[0] == "ds":
         return "_".join(name_parts[1:])
-    return script_path.stem
+    return stem
 
 
 def _get_harmonization_dirs(package_dir: Path | None = None) -> list[Path]:
