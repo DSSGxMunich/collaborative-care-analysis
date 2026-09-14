@@ -2,6 +2,18 @@ import pandas as pd
 
 from collaborative_care_analysis.utils import map_with_check
 
+# GebJahr is a two-digit birth year (e.g. 43 for 1943), not age -- confirmed
+# against gebdatum, which agrees on the year for 99%+ of patients. Age is
+# derived as (baseline survey date) - gebdatum instead, coalescing whichever
+# of these baseline-visit date columns was recorded, then broadcasting the
+# result from the baseline row to the patient's other visit rows.
+_BASELINE_DATE_COLS = ["PHQBeDat", "Befragun", "PHQ2BDat"]
+
+# gebdatum disagreed across visits for these patients (see the loader's own
+# warning); the true birth date is unknown, so age is left missing rather
+# than trusting either recorded value.
+_CONFLICTING_GEBDATUM_PATIENT_IDS = {1611, 5401, 5502, 5604, 6605}
+
 
 def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
@@ -16,10 +28,16 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         },
     )
 
-    harmonized_df["survey_date"] = pd.to_datetime(harmonized_df["Befragun"], errors="raise")
-    harmonized_df["age"] = pd.to_numeric(harmonized_df["GebJahr"], errors="raise")
+    baseline_date = pd.Series(pd.NaT, index=harmonized_df.index, dtype="datetime64[ns]")
+    for col in _BASELINE_DATE_COLS:
+        baseline_date = baseline_date.fillna(harmonized_df[col])
 
-    harmonized_df["birth_year"] = harmonized_df["survey_date"].dt.year - harmonized_df["age"]
+    age = (baseline_date - harmonized_df["gebdatum"]).dt.days / 365.25
+    conflicting = harmonized_df["patient_id"].isin(_CONFLICTING_GEBDATUM_PATIENT_IDS)
+    harmonized_df["age"] = age.where(~conflicting)
+    harmonized_df["age"] = harmonized_df.groupby("patient_id")["age"].transform(
+        lambda s: s.ffill().bfill()
+    )
 
     harmonized_df["sex"] = map_with_check(
         pd.to_numeric(harmonized_df["Sex"], errors="coerce"),
