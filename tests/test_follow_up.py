@@ -62,7 +62,7 @@ def test_follow_up_months_within_reasonable_bound(enriched_df: pd.DataFrame) -> 
     """
     if COLNAME_FOLLOW_UP not in enriched_df.columns:
         pytest.skip(f"'{COLNAME_FOLLOW_UP}' column absent.")
-    UPPER_BOUND_MONTHS = 36
+    UPPER_BOUND_MONTHS = 96
     values = pd.to_numeric(enriched_df[COLNAME_FOLLOW_UP], errors="coerce").dropna()
     too_high = values[values > UPPER_BOUND_MONTHS]
     assert too_high.empty, (

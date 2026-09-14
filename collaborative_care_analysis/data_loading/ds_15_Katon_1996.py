@@ -7,6 +7,12 @@ from collaborative_care_analysis.utils import map_with_check
 
 def load(file_path=RAW_DATASETS_DIR / "15_Katon_1996" / "katon1996.sav"):
     df = pd.read_spss(file_path).convert_dtypes()
+    # Treat blank or whitespace-only strings as missing values.
+    df = df.replace(
+        to_replace=r"^\s*$",
+        value=pd.NA,
+        regex=True,
+    )
     df = df.rename(
         columns={
             "studyno": "patient_id",
@@ -55,4 +61,4 @@ def load(file_path=RAW_DATASETS_DIR / "15_Katon_1996" / "katon1996.sav"):
     head = ["patient_id", "follow_up_months"]
     tail = [col for col in long_df.columns if col not in head]
 
-    return long_df[head + tail]
+    return long_df[head + tail].convert_dtypes()

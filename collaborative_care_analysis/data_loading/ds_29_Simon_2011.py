@@ -10,4 +10,11 @@ from collaborative_care_analysis.config import RAW_DATASETS_DIR
 
 
 def load(file_path=RAW_DATASETS_DIR / "29_Simon_2011" / "simon2011.CLEANED.sav"):
-    return pd.read_spss(file_path)
+    df = pd.read_spss(file_path)
+    # Treat blank or whitespace-only strings as missing values.
+    df = df.replace(
+        to_replace=r"^\s*$",
+        value=pd.NA,
+        regex=True,
+    )
+    return df.convert_dtypes()

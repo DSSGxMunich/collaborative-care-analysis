@@ -19,7 +19,7 @@ def test_no_duplicate_column_content(enriched_df: pd.DataFrame) -> None:
     seen: dict[tuple, str] = {}
     dupes: list[tuple[str, str]] = []
     for col in enriched_df.columns:
-        fingerprint = tuple(enriched_df[col].fillna("<NA>").astype(str))
+        fingerprint = tuple(enriched_df[col].astype(object).fillna("<NA>").astype(str))
         if fingerprint in seen:
             dupes.append((seen[fingerprint], col))
         else:

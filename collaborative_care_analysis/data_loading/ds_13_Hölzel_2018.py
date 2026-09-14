@@ -85,4 +85,4 @@ def load(
     df = df.dropna(how="all", axis="index")
     df = df.dropna(how="all", axis="columns")
 
-    return to_long(df)
+    return to_long(df).convert_dtypes()

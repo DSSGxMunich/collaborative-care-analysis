@@ -486,8 +486,12 @@ def load(
         after_notna = df[RAW_TIME_INDEPENDENT_COLS].notna().sum().sum()
         print(f"Time-independent values forward-filled: {after_notna - before_notna}")
 
+    # Drop patients missing age and gender entirely
+    df = df[df["age"].notna() & df["gender"].notna()]
+
     # Normalize the time axis. follow_up_months is a NEW column, not a rename,
     # so it's introduced directly rather than routed through RENAME_MAP.
+    df = df[df["age"].notna() & df["gender"].notna()]
     df["follow_up_months"] = df["timept"].map(TIMEPT_TO_MONTHS)
     unmapped = df.loc[df["follow_up_months"].isna(), "timept"].unique()
     assert len(unmapped) == 0, f"Unmapped timept codes: {unmapped}"
@@ -518,5 +522,5 @@ def load(
         "days_until_death",
     ]
     remaining = [c for c in df.columns if c not in cols_first]
-    df = df[cols_first + remaining]
+    df = df[cols_first + remaining].convert_dtypes()
     return df

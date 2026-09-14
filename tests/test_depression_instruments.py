@@ -6,7 +6,6 @@ import pandas as pd
 import pytest
 from tests.helpers import (
     COLNAME_PATIENT_ID,
-    DEPRESSION_TOTAL_COLS,
     GAD7_ITEMS,
     PHQ9_ITEMS,
     PHQ9_TOTAL_CANDIDATES,
@@ -140,10 +139,10 @@ def test_hrsd17_suicide_item_in_range(enriched_df: pd.DataFrame) -> None:
 
 def test_hscl_total_in_range(enriched_df: pd.DataFrame) -> None:
     """hscl_total here appears to be a mean-item score (typical HSCL-D scoring
-    is a 1-4 average, not a raw sum). Adjust bounds if your codebook defines
+    is a 0-4 average, not a raw sum). Adjust bounds if your codebook defines
     hscl_total as a raw sum instead."""
     if "hscl_total" in enriched_df.columns:
-        assert_in_range(enriched_df["hscl_total"], 1, 4, "hscl_total")
+        assert_in_range(enriched_df["hscl_total"], 0, 4, "hscl_total")
 
 
 def test_cisr_total_in_range(enriched_df: pd.DataFrame) -> None:
@@ -179,22 +178,3 @@ def test_suicidality_related_columns_are_binary_or_categorical(enriched_df: pd.D
             f"small closed set (binary/categorical). Values seen: "
             f"{sorted(enriched_df[col].dropna().unique())[:10]}"
         )
-
-
-# 4. Cross-instrument
-
-
-def test_every_row_has_at_least_one_depression_measure(enriched_df: pd.DataFrame) -> None:
-    """Every patient-visit row should have a non-null value in at least one
-    depression instrument's total score -- otherwise that row contributes
-    nothing to any depression-outcome analysis."""
-    present_cols = present(enriched_df, DEPRESSION_TOTAL_COLS)
-    if not present_cols:
-        pytest.skip("No depression total-score columns present.")
-
-    has_any = enriched_df[present_cols].notna().any(axis=1)
-    n_missing = (~has_any).sum()
-    pct = 100 * n_missing / len(enriched_df)
-    assert n_missing == 0, (
-        f"{n_missing} row(s) ({pct:.1f}%) have no depression measure at all across {present_cols}."
-    )

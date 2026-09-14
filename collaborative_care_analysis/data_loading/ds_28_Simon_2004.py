@@ -26,6 +26,13 @@ TIME_INDEPENDENT_COLS = ["group", "age", "Sex"]
 
 def load(file_path=_STUDY_DIR / "simon2004.CLEANEDsav.sav") -> pd.DataFrame:
     df = pd.read_spss(file_path, convert_categoricals=False).convert_dtypes()
+    # Treat blank or whitespace-only strings as missing values.
+    df = df.replace(
+        to_replace=r"^\s*$",
+        value=pd.NA,
+        regex=True,
+    )
+
     df = df.rename(columns={"Origpat_id": "patient_id"}, errors="raise")
 
     assert df["patient_id"].notna().all(), "Rows with missing patient_id"
@@ -47,4 +54,4 @@ def load(file_path=_STUDY_DIR / "simon2004.CLEANEDsav.sav") -> pd.DataFrame:
 
     long_df = long_df.sort_values(["patient_id", "follow_up_months"]).reset_index(drop=True)
     head = ["patient_id", "follow_up_months"]
-    return long_df[head + [c for c in long_df.columns if c not in head]]
+    return long_df[head + [c for c in long_df.columns if c not in head]].convert_dtypes()

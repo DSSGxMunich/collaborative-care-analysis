@@ -95,7 +95,8 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
         )
         .astype("Int64")
     )
-
+    # Two rows have gad7_1 == 9, outside the valid 0-3 range; treated as missing.
+    harmonized_df.loc[harmonized_df["GAD7_1"] == 9, "GAD7_1"] = pd.NA
     # Calculate GAD-7 total only when all seven items are available.
     harmonized_df["gad7_total"] = (
         harmonized_df[GAD7_COLS]
