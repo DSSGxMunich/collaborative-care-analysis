@@ -22,6 +22,7 @@ from collaborative_care_analysis.config import (
     POOL2_CSV,
     POOL2_DIR,
     POOL2_ZIP,
+    normalize_study_id,
 )
 
 DATA_LOADING_DIR = Path(__file__).parent / "data_loading"
@@ -59,7 +60,9 @@ def pool_trial_id_to_study_id(csv_path=DATASET_ID_CONVERSIONS_CSV) -> dict[int, 
     """
     study_id_by_number: dict[int, str] = {}
     for path in DATA_LOADING_DIR.glob("ds_*.py"):
-        parts = path.stem.split("_")  # ds_17_Katon_2001 -> ["ds", "17", "Katon", "2001"]
+        # Normalized, like dataset._get_study_id: this builds the same STUDY_ID
+        # values POOL2 rows are merged on, so the two must agree byte for byte.
+        parts = normalize_study_id(path.stem).split("_")  # ds_17_Katon_2001 -> ["ds", "17", ...]
         if len(parts) >= 3 and parts[1].isdigit():
             study_id_by_number[int(parts[1])] = "_".join(parts[1:])
 
