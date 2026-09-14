@@ -1,3 +1,4 @@
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -17,7 +18,8 @@ from collaborative_care_analysis.utils import map_with_check
 # counterpart. The raw ``bscl/cscl/dscl/escl/fscl`` columns ("SCL - Avg of C8a
 # through C8t", i.e. the mean of the 20 depression items, 0-4) are the source of
 # truth and include the true baseline (``bscl``, 329/329 non-null). This loader
-# uses the raw series; the ``Depres_*`` columns are dropped.
+# selects the raw series only, so the ``Depres_*`` columns never reach the
+# output.
 #
 # DATA NOTE 2: the letters do NOT run baseline->12mo in alphabetical order --
 # ``escl``/``fscl`` are swapped relative to that naive reading, and ``fscl`` is
@@ -52,19 +54,26 @@ SCL_TO_MONTHS = {
     "escl": 12,
 }
 
-_STANDARDISED_COLS = ["Depres_0", "Depres_f2", "Depres_f3", "Depres_f4", "Depres_f5"]
-
 TIME_INDEPENDENT_COLS = ["Group", "Age", "Sex", "LTC_0", "LTCsev_0"]
 
 
 def load(file_path=RAW_DATASETS_DIR / "18_Katon_2004" / "katon2004.sav"):
-    df = pd.read_spss(file_path).convert_dtypes()
+    df = pd.read_spss(file_path)
+    # treat blank or whitespace-only strings as missing, before dtype inference
+    with pd.option_context("future.no_silent_downcasting", True):
+        df = df.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
 
     df = df.rename(columns={"Origpat_id": "patient_id"}, errors="raise")
 
-    assert df["patient_id"].notna().all(), "Rows with missing patient_id"
-    if df["patient_id"].duplicated().any():
-        raise ValueError("Duplicate patient IDs in wide dataset")
+    incomplete = df["patient_id"].isna() | df["Group"].isna()
+    if incomplete.any():
+        logger.warning(f"Dropped {int(incomplete.sum())} rows with missing patient_id or Group.")
+        df = df.loc[~incomplete]
+
+    duplicated_id = df["patient_id"].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(f"Dropped {int(duplicated_id.sum())} rows with duplicated patient_id.")
+        df = df.loc[~duplicated_id]
 
     value_vars = list(SCL_TO_MONTHS)
     id_vars = ["patient_id", *TIME_INDEPENDENT_COLS]
@@ -83,4 +92,4 @@ def load(file_path=RAW_DATASETS_DIR / "18_Katon_2004" / "katon2004.sav"):
 
     long_df = long_df.sort_values(["patient_id", "follow_up_months"]).reset_index(drop=True)
     head = ["patient_id", "follow_up_months"]
-    return long_df[head + [c for c in long_df.columns if c not in head]]
+    return long_df[head + [c for c in long_df.columns if c not in head]].convert_dtypes()
