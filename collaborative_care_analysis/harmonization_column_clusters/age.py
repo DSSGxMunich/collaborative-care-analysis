@@ -22,15 +22,47 @@ stay in the raw frame as ``age_categorical`` (0 = <40, 1 = 40-49, 2 = 50-59,
 rather than dropped, so anyone who wants that study's age can still reach it
 deliberately.
 
-Two studies contribute no age at all: ds_05 Bekelman 2015 and ds_29 Simon
-2011. Neither has an age variable to draw on -- ds_29's export does carry
-``Age`` and ``Sex`` columns upstream, but both are empty for all 208 patients,
-so its loader drops them rather than pass on two all-null columns.
+Two studies have no age variable of their own: ds_05 Bekelman 2015 and ds_29
+Simon 2011. ds_29's export does carry ``Age`` and ``Sex`` columns upstream,
+but both are empty for all 208 patients, so its loader drops them rather than
+pass on two all-null columns.
+
+``is_age_from_pool2``
+    Whether that patient's age was backfilled from the POOL2 participant-level
+    export rather than read from the study's own data. False where the study
+    supplied it, True where POOL2 did, missing where age is still unknown.
+
+    POOL2 fills 775 patients in three studies: ds_26 Salisbury 2016 completely
+    (609 of 609), ds_05 Bekelman 2015 partially (160 of 384), and 6 in ds_12
+    Gensichen 2009. ds_29 Simon 2011 has POOL2 rows but its Age column is
+    empty there too, so it stays missing -- it is now the only study with no
+    age at all. Overall coverage goes from 93.6% to 97.7% of patients.
+
+    The ds_12 six are worth knowing about: five of them are the patients whose
+    own gebdatum disagrees across visits, which the conflict rule above
+    deliberately sets to missing rather than picking a side between two of the
+    study's own values. POOL2 is an independent third source, so filling them
+    resolves that standoff rather than arbitrating it -- but it is still an
+    external value standing in for a contested internal one, which is exactly
+    what the flag is for.
+
+    The ds_05 coverage is *not* a random subset, and the flag exists so that
+    this cannot be forgotten. POOL2 is a depression IPD pool and CASA enrolled
+    on heart failure, so POOL2 holds that trial's depressed stratum: the 160
+    covered patients average PHQ-9 14.5 at baseline against 5.2 for the 224 it
+    does not cover (GAD-7 9.2 vs 3.2). Sex and arm are balanced, so this is a
+    real selection in POOL2's inclusion, not a broken join. Complete-casing on
+    age therefore silently restricts ds_05 to its depressed patients. That may
+    well be the right cohort for a depression model, but it has to be a stated
+    inclusion criterion -- filter on ``is_age_from_pool2`` to see or exclude
+    the backfilled values.
 """
 
+from loguru import logger
 import numpy as np
 import pandas as pd
 
+from collaborative_care_analysis import pool2
 from collaborative_care_analysis.config import COLNAME_STUDYID
 from collaborative_care_analysis.harmonization_column_clusters.concat import (
     ID_COLS,
@@ -38,7 +70,7 @@ from collaborative_care_analysis.harmonization_column_clusters.concat import (
 )
 
 CLUSTER_KEY = "age"
-HARMONIZED_COLS = ["age_at_baseline"]
+HARMONIZED_COLS = ["age_at_baseline", "is_age_from_pool2"]
 
 # Ages outside this range are treated as data-entry corruption rather than
 # real values. Applied uniformly to every study; only ds_11 Fletcher 2021b
@@ -235,6 +267,31 @@ def _raw_age_per_row(df: pd.DataFrame) -> pd.Series:
     return raw_age.where(raw_age.between(*PLAUSIBLE_AGE_RANGE))
 
 
+def _pool2_age_per_row(df: pd.DataFrame) -> pd.Series:
+    """Age per row from POOL2, aligned to df's index. All-missing if unavailable.
+
+    POOL2 ships as a zip that has to be extracted before use. A machine that
+    has not done so is a setup state, not a broken build, so this warns and
+    contributes nothing rather than failing the whole cluster -- but it warns
+    loudly, because the alternative is age coverage silently differing between
+    two checkouts of the same commit.
+    """
+    try:
+        pool = pool2.load()
+    except FileNotFoundError as exc:
+        logger.warning(
+            f"{CLUSTER_KEY}: POOL2 is not extracted, so no age is backfilled "
+            f"from it and ds_26/ds_05 stay missing. {exc}"
+        )
+        return pd.Series(np.nan, index=df.index, dtype="float64")
+
+    lookup = pool.set_index([COLNAME_STUDYID, "patient_id"])["age"]
+    keys = pd.MultiIndex.from_arrays([df[COLNAME_STUDYID], df["patient_id"].astype("string")])
+    values = pd.Series(lookup.reindex(keys).to_numpy(), index=df.index, dtype="float64")
+    # POOL2 ages get the same plausibility filter as every other source.
+    return values.where(values.between(*PLAUSIBLE_AGE_RANGE))
+
+
 def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     """Harmonize the age cluster across all studies in the concatenated export."""
     harmonized_df = df[ID_COLS].copy()
@@ -251,7 +308,27 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     # Nullable Float64, not plain float64: three studies record no age at all,
     # and HARMONIZATION_CONVENTIONS section 5 asks for a nullable dtype wherever
     # a value can be missing.
-    harmonized_df["age_at_baseline"] = broadcast.where(n_distinct <= 1).astype("Float64")
+    own_age = broadcast.where(n_distinct <= 1).astype("Float64")
+
+    # POOL2 is a fallback, never an override: a study's own age always wins
+    # where it has one, so backfilling can only add coverage, never silently
+    # change a value the study itself reported.
+    pool2_age = _pool2_age_per_row(df).astype("Float64")
+    filled_from_pool2 = own_age.isna() & pool2_age.notna()
+    age = own_age.where(~filled_from_pool2, pool2_age)
+
+    if filled_from_pool2.any():
+        by_study = df.loc[filled_from_pool2].groupby(COLNAME_STUDYID)["patient_id"].nunique()
+        logger.info(
+            f"{CLUSTER_KEY}: backfilled age from POOL2 for "
+            f"{int(filled_from_pool2.sum())} row(s) across "
+            f"{len(by_study)} study/studies: {by_study.to_dict()}."
+        )
+
+    harmonized_df["age_at_baseline"] = age
+    # False = the study's own, True = POOL2, missing = no age at all. Anything
+    # that must not lean on backfilled values can filter on this column.
+    harmonized_df["is_age_from_pool2"] = filled_from_pool2.where(age.notna()).astype("boolean")
 
     return harmonized_df[ID_COLS + HARMONIZED_COLS]
 
@@ -274,13 +351,38 @@ COLUMN_PROVENANCE = {
             "2021b falls back to its screening age (age_0) where the derived AGE is "
             "implausible. ds_12 Gensichen 2009 has no age column and is derived as (first "
             "available baseline visit date) - gebdatum, coalescing PHQBeDat, Befragun and "
-            "PHQ2BDat."
+            "PHQ2BDat. Where a study supplies no age of its own, the value is backfilled "
+            "from the POOL2 participant-level export, joined on (STUDY_ID, patient_id); a "
+            "study's own age always takes precedence, so the backfill can only add coverage. "
+            "See is_age_from_pool2, and note the selection caveat on ds_05 recorded there."
         ),
         "source_columns": {
             **AGE_SOURCE_COLUMNS,
             "12_Gensichen_2009": "gebdatum + PHQBeDat/Befragun/PHQ2BDat (derived)",
+            "26_Salisbury_2016": "POOL2 Age (backfill; the study records only bands)",
+            "05_Bekelman_2015": "POOL2 Age (backfill; covers its depressed stratum only)",
         },
         "fallback_columns": AGE_FALLBACK_COLUMNS,
+    },
+    "is_age_from_pool2": {
+        "description": (
+            "True where age_at_baseline was backfilled from the POOL2 export, False where "
+            "the study supplied it, missing where age is unknown."
+        ),
+        "transformation": (
+            "Set True for rows whose own-study age was missing and whose (STUDY_ID, "
+            "patient_id) matched a POOL2 row with a plausible Age. POOL2 closes ds_26 "
+            "Salisbury 2016 completely (609/609 patients) and ds_05 Bekelman 2015 partially "
+            "(160/384). The ds_05 coverage is a selected subset, not a random one: POOL2 is "
+            "a depression pool and CASA enrolled on heart failure, so the covered patients "
+            "average PHQ-9 14.5 at baseline against 5.2 for the uncovered (GAD-7 9.2 vs "
+            "3.2), with sex and arm balanced. Complete-casing on age therefore restricts "
+            "ds_05 to its depressed patients; filter on this column to see or exclude that."
+        ),
+        "source_columns": {
+            "26_Salisbury_2016": "POOL2 Age",
+            "05_Bekelman_2015": "POOL2 Age",
+        },
     },
 }
 

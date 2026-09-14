@@ -370,18 +370,53 @@ def test_every_mapped_column_matches_its_study_exactly_by_case(raw) -> None:
 # Studies that record no age or no sex at all. Recorded rather than asserted
 # away: dropping them is a loader decision, and these tests exist to notice if
 # the list ever grows.
-STUDIES_WITHOUT_AGE = {"05_Bekelman_2015", "26_Salisbury_2016", "29_Simon_2011"}
+STUDIES_WITHOUT_AGE = {"29_Simon_2011"}
 STUDIES_WITHOUT_SEX = {"29_Simon_2011"}
 
 # Patients whose age or sex is missing inside a study that otherwise has it.
-# ds_12's are the patients whose recorded birth dates disagree, ds_04's and
-# ds_05's the single patients their own loaders flag.
-PATIENTS_WITHOUT_AGE = {"04_Bekelman_2018": 1, "12_Gensichen_2009": 7}
+# ds_12's is the patient whose recorded birth dates disagree and whom POOL2
+# cannot adjudicate either; ds_04's and ds_05's the single patients their own
+# loaders flag.
+#
+# ds_05's 224 are the patients POOL2 does not cover. POOL2 is a depression
+# pool and CASA enrolled on heart failure, so it holds only that trial's
+# depressed stratum -- the 160 it does cover average PHQ-9 14.5 at baseline
+# against 5.2 for these 224. The gap is therefore expected and selected, not
+# a coverage regression; see age.is_age_from_pool2.
+PATIENTS_WITHOUT_AGE = {
+    "04_Bekelman_2018": 1,
+    "05_Bekelman_2015": 224,
+    "12_Gensichen_2009": 1,
+}
 PATIENTS_WITHOUT_SEX = {"04_Bekelman_2018": 1, "05_Bekelman_2015": 1, "12_Gensichen_2009": 1}
 
 
 def _patients(harmonized: pd.DataFrame) -> pd.DataFrame:
     return harmonized.drop_duplicates([COLNAME_STUDYID, "patient_id"])
+
+
+POOL2_BACKFILLED_AGE = {"05_Bekelman_2015": 160, "12_Gensichen_2009": 6, "26_Salisbury_2016": 609}
+
+
+def test_age_provenance_flag_is_set_exactly_where_age_is_known(harmonized) -> None:
+    """is_age_from_pool2 says where a value came from, so it cannot outlive one.
+
+    A True flag on a missing age, or a missing flag on a known age, would make
+    the column unusable for excluding backfilled values -- which is the only
+    reason it exists.
+    """
+    patients = _patients(harmonized)
+    known_age = patients["age_at_baseline"].notna()
+    flagged = patients["is_age_from_pool2"].notna()
+    assert (known_age == flagged).all()
+
+
+def test_pool2_backfill_covers_the_expected_studies(harmonized) -> None:
+    """Only studies with no age of their own are backfilled, in known amounts."""
+    patients = _patients(harmonized)
+    backfilled = patients[patients["is_age_from_pool2"].eq(True)]
+    counts = backfilled.groupby(COLNAME_STUDYID).size().to_dict()
+    assert counts == POOL2_BACKFILLED_AGE
 
 
 def test_studies_without_age_are_the_known_ones(harmonized) -> None:
