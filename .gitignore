@@ -232,3 +232,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+# LaTeX build artifacts
+*.aux
+*.nav
+*.snm
+*.toc
+*.out
+docs/*.pdf
