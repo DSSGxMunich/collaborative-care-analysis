@@ -1,5 +1,6 @@
 import zipfile
 
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -23,13 +24,21 @@ _EXTRACT_MARKER = _STUDY_DIR / _MEMBER
 
 
 def _ensure_extracted() -> None:
-    """Extract only the CLEANED SPSS file.
+    """Make sure the CLEANED SPSS file is present.
 
-    ``27_Rollman_2009.zip`` contains an unrelated corrupt member, so a plain
-    ``extractall`` raises. Extracting just the one file we need avoids it.
+    The study folder no longer carries ``27_Rollman_2009.zip`` -- the extracted
+    ``Rollman 2009/`` directory is what is there now -- so this normally does
+    nothing. The extraction path is kept for a folder that still has the zip,
+    and pulls out the single member we need because the archive also contains
+    an unrelated corrupt one that makes ``extractall`` raise.
     """
     if _EXTRACT_MARKER.exists():
         return
+    if not _ZIP_PATH.exists():
+        raise FileNotFoundError(
+            f"{_EXTRACT_MARKER} is missing, and {_ZIP_PATH.name} is not in the study "
+            "folder to extract it from."
+        )
     with zipfile.ZipFile(_ZIP_PATH) as zf:
         zf.extract(_MEMBER, _STUDY_DIR)
 
@@ -42,8 +51,10 @@ def _ensure_extracted() -> None:
 # CONSORT figure has no assessment box past 8 months, and recruitment ran only
 # Mar 2004 - Sep 2007 with observation ending Jun 2008). The per-arm non-null
 # counts of Depres_f1 / f2 / f4 line up with the figure's 2- / 4- / 8-month
-# "assessed" boxes; Depres_0's pooled mean (12.0) and per-arm baseline means
-# match Table 1, and Depres_f4's per-arm means match the Table 2 8-month row.
+# "assessed" boxes (121/136 at 2 months and 135 usual care at 4 months are
+# exact, the rest within two patients), and the per-arm means match Table 2's
+# HRS-D rows: baseline 16.55 / 15.92 against the reported 16.6 / 16.0, and
+# Depres_f4 8.92 for the intervention arm against the reported 9.0.
 #
 # The .sav *also* carries Depres_f5 / f6 / f7 / f7.5 / f8. These are NOT part of
 # the trial: nothing in the paper accounts for them, their per-arm behaviour is
@@ -100,19 +111,37 @@ FAMILIES = {
 
 def load() -> pd.DataFrame:
     _ensure_extracted()
-    df = pd.read_spss(_EXTRACT_MARKER, convert_categoricals=False).convert_dtypes()
+    df = pd.read_spss(_EXTRACT_MARKER, convert_categoricals=False)
+    # treat blank or whitespace-only strings as missing, before dtype inference
+    with pd.option_context("future.no_silent_downcasting", True):
+        df = df.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
+    df = df.convert_dtypes()
     df = df.rename(columns={"Origpat_id": "patient_id"}, errors="raise")
 
-    assert df["patient_id"].notna().all(), "Rows with missing patient_id"
-    if df["patient_id"].duplicated().any():
-        raise ValueError("Duplicate patient IDs in wide dataset")
+    incomplete = df["patient_id"].isna() | df["Group"].isna()
+    if incomplete.any():
+        logger.warning(f"Dropped {int(incomplete.sum())} rows with missing patient_id or Group.")
+        df = df.loc[~incomplete]
 
-    # Drop the non-depressed comparison cohort (Group == 3); only
-    # only the randomised collaborative-care (1) and usual-care (2) arms are kept.
-    if "Group" in df.columns:
-        df = df[df["Group"] != 3].reset_index(drop=True)
+    duplicated_id = df["patient_id"].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(f"Dropped {int(duplicated_id.sum())} rows with duplicated patient_id.")
+        df = df.loc[~duplicated_id]
+
+    # Keep only the randomised arms: Group 1 is collaborative care and 0 usual
+    # care (the file's value labels confirm "Intervention"/"Control"), while 3
+    # is the non-depressed comparison cohort, which was never randomised.
+    comparison_cohort = df["Group"] == 3
+    if comparison_cohort.any():
+        logger.info(
+            f"Dropped {int(comparison_cohort.sum())} non-depressed comparison-cohort rows "
+            "(Group == 3), which were not randomised."
+        )
+    df = df.loc[~comparison_cohort].reset_index(drop=True)
 
     static_present = [c for c in TIME_INDEPENDENT_COLS if c in df.columns]
+    if absent := [c for c in TIME_INDEPENDENT_COLS if c not in df.columns]:
+        logger.warning(f"Declared time-independent column(s) absent from the export: {absent}")
     all_months = sorted(set(DEPRES_TO_MONTHS.values()))
 
     frames = []
