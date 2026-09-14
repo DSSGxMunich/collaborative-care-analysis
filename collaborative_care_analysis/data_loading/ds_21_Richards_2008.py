@@ -1,3 +1,4 @@
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -64,18 +65,40 @@ _METADATA_COLS = {
 
 
 def load(file_path=_STUDY_DIR / "Richards 2008 CLEANED.sav") -> pd.DataFrame:
-    df = pd.read_spss(file_path, convert_categoricals=False).convert_dtypes()
+    df = pd.read_spss(file_path, convert_categoricals=False)
+    # treat blank or whitespace-only strings as missing, before dtype inference
+    with pd.option_context("future.no_silent_downcasting", True):
+        df = df.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
     df = df.drop(columns=[c for c in _METADATA_COLS if c in df.columns])
 
+    missing_id = df["Origpat_id"].isna()
+    if missing_id.any():
+        logger.warning(f"Dropped {int(missing_id.sum())} rows with missing Origpat_id.")
+        df = df.loc[~missing_id]
+
     # The source assigns id "ROTW23009" to two clearly different patients
-    # (different age/sex/scores). Disambiguate any repeated id positionally so
-    # every patient has a unique key.
+    # (different age/sex/scores), so repeated ids are disambiguated positionally
+    # rather than dropped -- these are two people sharing a key, not one patient
+    # recorded twice.
     ids = df["Origpat_id"].astype("string")
     dup_mask = ids.duplicated(keep=False)
+    if dup_mask.any():
+        logger.warning(
+            f"Disambiguated {int(dup_mask.sum())} rows sharing "
+            f"{ids[dup_mask].nunique()} patient id(s): {sorted(ids[dup_mask].unique())}"
+        )
     ids = ids.where(~dup_mask, ids + "__" + (ids.groupby(ids).cumcount() + 1).astype("string"))
     df = df.assign(patient_id=ids).drop(columns="Origpat_id")
 
+    if absent := [c for pair in PAIRED_COLS.values() for c in pair if c not in df.columns]:
+        logger.warning(f"Declared paired column(s) absent from the export: {absent}")
+
     paired_cols = {c for pair in PAIRED_COLS.values() for c in pair}
+    # Everything else is carried on both rows. Besides the trial arm and
+    # demographics these are baseline-only measures (``Medadh_0``,
+    # ``Antidepress_dose``, ...) with no follow-up counterpart in the export;
+    # they keep their "baseline" names, so a value on the 3-month row reads as
+    # that patient's baseline figure, not a 3-month measurement.
     static_cols = [c for c in df.columns if c not in paired_cols and c != "patient_id"]
 
     frames = []
