@@ -1,0 +1,329 @@
+\documentclass[11pt, t, handout]{beamer}
+\usepackage{amsmath,amssymb,graphicx,tikz}
+\usetikzlibrary{fit,arrows.meta}
+\usecolortheme{rose}
+\useinnertheme[shadow]{rounded}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\addtobeamertemplate{frametitle}{}{\vspace{0em}}
+\setbeamertemplate{navigation symbols}{}
+\makeatletter
+\setbeamertemplate{footline}{%
+  \ifnum\insertframenumber>1
+    \begin{tikzpicture}[remember picture, overlay]
+      \node[anchor=south, inner sep=4pt, yshift=3pt] at (current page.south) {%
+        {\tiny\color{structure.fg}\insertframenumber\,/\,\inserttotalframenumber}};
+    \end{tikzpicture}
+  \fi
+}
+\makeatother
+\newcommand{\ans}[1]{\textcolor{structure.fg}{#1}}
+\newcommand{\mt}[1]{\texttt{\tiny #1}}
+
+\title{Harmonizing 30 Collaborative Care Trials \\ \large Where we were, what changed, what is left}
+\author{Alexander Richard}
+\institute{DSSGx Munich, Collaborative Care IPD}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}\titlepage\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Manual harmonization does not scale}
+  \pause
+  30 trials, each harmonized by hand, one study at a time.
+  \vspace{14pt}
+  \pause
+  \begin{center}\large
+  430 harmonized columns. \ans{31 of them existed in five studies or more.}
+  \end{center}
+  \vspace{14pt}
+  \pause
+  The work was careful. It could not add up, because each study was described
+  in its own words.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Why it could not add up}
+  \pause
+  \begin{center}\footnotesize
+  \begin{tabular}{ll}
+    \toprule
+    \multicolumn{2}{l}{\textbf{Five ways to say "this patient has heart trouble"}} \\
+    \midrule
+    ds\_23 & heart attack, yes or no \\
+    ds\_25 & heart failure, yes or no \\
+    ds\_13 & angina, yes or no \\
+    ds\_08 & coronary disease, yes or no \\
+    ds\_31 & "heart disease", yes or no \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{12pt}
+  \pause
+  Five columns, \ans{none usable on its own}. Multiply by every illness, every
+  questionnaire, every background fact.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{The loaders: what was wrong, what was fixed}
+  \pause
+  All 30 studies reviewed against their own papers and codebooks.
+  \vspace{8pt}
+  \pause
+  \begin{itemize}\footnotesize
+    \setlength{\itemsep}{5pt}
+    \item \textbf{An age that was not an age.} Taken from a two digit birth
+          year. \ans{Wrong by up to 70 years.}
+    \pause
+    \item \textbf{Two studies with swapped arms.} Intervention and control the
+          wrong way round. \ans{2{,}270 rows.}
+    \pause
+    \item \textbf{Every "no" turned into "unknown".} Blanks that meant no, read
+          as missing. \ans{A thousand healthy patients vanish.}
+    \pause
+    \item \textbf{Two studies silently dropped out.} An umlaut in an author's
+          name, rewritten by a file copy. \ans{No error message.}
+  \end{itemize}
+  \vspace{8pt}
+  \pause
+  \begin{center}\scriptsize
+  \begin{tabular}{ll}
+    \toprule
+    also reshaped & ds\_29, which returned its raw file unreshaped \\
+    made to fail loudly & missing zips, bare asserts, silent row drops \\
+    dtypes & blanks to missing \emph{before} types are inferred \\
+    documented & which cohort each export actually contains \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{6pt}
+  \pause
+  {\footnotesize 47 problems recorded with what was done about each, and each
+   study fixed on its own branch.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{The new pipeline: turn the problem sideways}
+  \vspace{2pt}
+  \centering
+  \resizebox{\textwidth}{!}{%
+  \begin{tikzpicture}[font=\small,
+    c/.style={draw, minimum width=17mm, minimum height=7mm, align=center},
+    old/.style={c, fill=black!6}, new/.style={c, fill=structure.fg!20},
+    lab/.style={font=\footnotesize}]
+    \node[lab] at (-2.0,0.9) {\textbf{before}};
+    \foreach \i/\n in {0/ds\_02,1/ds\_03,2/ds\_04,3/\dots,4/ds\_33}
+      \node[old] at (\i*1.85,0) {\n};
+    \node[lab, align=left] at (2.1,-0.95) {one script per study, its own words};
+    \node[lab] at (-2.0,-2.6) {\textbf{after}};
+    \foreach \i/\n in {0/age,1/sex,2/{question-\\naires},3/illnesses,4/\dots}
+      \node[new] at (\i*1.85,-2.6) {\n};
+    \node[lab, align=left] at (2.1,-3.7) {nine modules, each reading all 30 studies};
+  \end{tikzpicture}}
+  \vspace{8pt}
+  \pause
+  {\footnotesize Same data. The question changes from "what did this study
+   record?" to \ans{"what can all of them answer?"}}
+  \vspace{5pt}
+  \pause
+  {\footnotesize A module covers a \emph{family} of variables, not a single
+   column. Diabetes, heart disease and ten other illnesses are decided
+   together, because the studies that record one tend to record the rest.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{The rule: pool where the studies agree}
+  \pause
+  \begin{center}\footnotesize
+  \begin{tabular}{lr}
+    \toprule
+    heart attack & 6 studies \\
+    heart failure & 4 studies \\
+    angina & 2 studies \\
+    coronary disease & 3 studies \\
+    "heart disease" & 4 studies \\
+    \midrule
+    \textbf{any heart or blood vessel disease} & \ans{\textbf{13 studies}} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{10pt}
+  \pause
+  The specific columns stay. Nothing is thrown away, and no study is given an
+  answer it never gave.
+  \vspace{6pt}
+  \pause
+  {\footnotesize Where the studies genuinely disagree, we do not invent a scale:
+   two depression questionnaires on different ranges stay separate.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{What it buys}
+  \vspace{-2pt}
+  \begin{center}\footnotesize
+  \begin{tabular}{lcc}
+    \toprule
+    & before & after \\
+    \midrule
+    heart or blood vessel disease & 5, 4, 3, 3, 2 apart & \ans{13} \\
+    lung disease & 4, 3, 2 apart & \ans{10} \\
+    diabetes & 12 & \ans{14} \\
+    cancer & 7 & \ans{9} \\
+    antidepressant at entry & not harmonized & \ans{4} \\
+    death during the trial & not harmonized & \ans{2} \\
+    \midrule
+    columns usable in 5+ studies & 31 of 430 & \ans{36 of 59} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{8pt}
+  \pause
+  {\footnotesize Nine variable groups: age, sex, questionnaires, illnesses,
+   function, social circumstances, medication, service use, and deaths and
+   withdrawals.}
+  \vspace{4pt}
+  \pause
+  {\footnotesize One study reaches the pooled data for the first time. It had
+   the measurements all along and no script to read them.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Reading the paperwork pays}
+  \pause
+  Twenty columns in one study are labelled only "Ltc-1" to "Ltc-20".
+  Its own codebook calls them \ans{"unclear"}.
+  \vspace{10pt}
+  \pause
+  The paper says patients had \ans{"a mean of 6.2 (SD 3.0) long term
+  conditions other than diabetes or heart disease"}.
+  \vspace{10pt}
+  \pause
+  Counting the columns that are not zero gives 7.49. Subtracting each
+  patient's diabetes and heart disease gives \ans{6.35}.
+  \vspace{10pt}
+  \pause
+  Twenty unusable columns became one usable number, from one sentence in a
+  results section.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{How we know it is right}
+  \pause
+  Wherever a paper prints a number, we recompute it from the data and compare.
+  \vspace{10pt}
+  \pause
+  \begin{center}\footnotesize
+  \begin{tabular}{lll}
+    \toprule
+    what we counted & where & does it match the paper \\
+    \midrule
+    four illnesses & ds\_23 & \ans{yes, patient for patient} \\
+    on antidepressants & ds\_26, ds\_09, ds\_08 & \ans{yes, all three} \\
+    lives alone & ds\_11 & \ans{yes} \\
+    average age & 15 studies & 11 exact, worst off by 0.7y \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{10pt}
+  \pause
+  \ans{192 automated tests}: value ranges, encodings, types, missing keys,
+  attributes that must not change between visits, and statistical package
+  missing codes read as numbers.
+  \vspace{6pt}
+  \pause
+  {\footnotesize Where a paper reports nothing, we say the mapping is
+   unvalidated rather than implying it is checked.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Deaths: what exists, and what does not}
+  \pause
+  \begin{center}\footnotesize
+  \begin{tabular}{lr}
+    \toprule
+    died during the trial & 2 studies \\
+    withdrew from the trial & 1 study \\
+    cardiac events & 1 study \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{10pt}
+  \pause
+  One study's deaths match its paper exactly: \ans{10 on the intervention and
+  13 on usual care, 23 patients}.
+  \vspace{10pt}
+  \pause
+  For the other \ans{28 studies a missing follow-up cannot be told apart from a
+  death}. Two columns that look like death data are the questionnaire item
+  about thoughts of death.
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{What we refused to harmonize}
+  \pause
+  \begin{itemize}
+    \setlength{\itemsep}{8pt}
+    \item \textbf{Education as a ladder.} A German school certificate is not a
+          US college degree. Only "finished secondary school" survives.
+    \pause
+    \item \textbf{Ethnicity.} National category systems that do not map, and
+          the usual shortcut is meaningless for the Indian cohort.
+    \pause
+    \item \textbf{Two depression questionnaires.} Same construct, different
+          scales, and no patient ever took both.
+    \pause
+    \item \textbf{Hospital admission counts.} Counted over different periods
+          and for different reasons in each study.
+  \end{itemize}
+  \vspace{8pt}
+  \pause
+  {\footnotesize Each written down with its reason, so nobody rediscovers it.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{What is still outstanding}
+  \pause
+  \textbf{1. Who each trial let in.}
+  \vspace{4pt}
+  \begin{itemize}\footnotesize
+    \item Inclusion and exclusion criteria read from the papers, \ans{238 of
+          them, none yet verified by a human}.
+    \item They decide which patients a result can be applied to, and they
+          explain a zero: not measured, or excluded by design.
+  \end{itemize}
+  \vspace{12pt}
+  \pause
+  \textbf{2. What each trial actually did.}
+  \vspace{4pt}
+  \begin{itemize}\footnotesize
+    \item "Collaborative care" is not one intervention. Case manager,
+          supervision, medication support, psychological therapy, stepped care:
+          each trial combines them differently.
+    \item These components are \ans{only in the papers}, not in any dataset.
+    \item Without them the comparison is thirty labels reading "intervention".
+  \end{itemize}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{The summary}
+  \pause
+  \begin{center}\large
+  The dataset did not get bigger. \ans{It got answerable.}
+  \end{center}
+  \vspace{14pt}
+  \pause
+  \begin{center}\footnotesize
+  30 studies \quad 68{,}993 rows \quad 63 harmonized columns \quad 47 problems
+  recorded \quad 192 tests
+  \end{center}
+  \vspace{14pt}
+  \pause
+  {\footnotesize And where it cannot answer, it now says so out loud rather
+   than returning a number that looks fine.}
+\end{frame}
+
+\end{document}
