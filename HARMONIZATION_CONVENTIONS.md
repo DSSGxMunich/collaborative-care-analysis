@@ -87,9 +87,52 @@ dataset-specific codebooks.
 Missing or unknown values should remain missing and should not be automatically
 converted to `"no"` or another category.
 
+See section 5 for the dtype each harmonized column should end up with.
+
 ---
 
-## 5. Follow-up Time
+## 5. Column Data Types
+
+Harmonized columns carry a dtype that matches their meaning, not whatever
+pandas inferred.
+
+**Categorical.** A fixed, finite value set uses `category`, not `object`:
+
+`harmonized_df["sex"] = map_with_check(df["gender"], SEX_MAPPING).astype("category")`
+
+Declare the order where order means something (severity, age bands, NYHA class):
+
+`pd.CategoricalDtype(categories=["<40", "40-49", "50-59", "60-69", "70+"], ordered=True)`
+
+**Boolean.** A yes/no fact (named `is_` or `has_` per section 1) uses the
+nullable `"boolean"` dtype, not a category and not 0/1. Plain `bool` cannot hold
+a missing value, and `.astype(bool)` turns every `NaN` into `True`, breaking
+section 4:
+
+`harmonized_df["is_nurse_involved"] = map_with_check(df["nurse"], {0: False, 1: True}).astype("boolean")`
+
+**Numeric.** Scores and measurements stay numeric at their natural resolution.
+Do not bin a continuous scale, and do not store a number as a string. Coerce
+with `errors="raise"`, so an unparseable value fails the run instead of becoming
+`NaN`:
+
+`harmonized_df["age"] = pd.to_numeric(harmonized_df["age"], errors="raise")`
+
+A whole number that can be missing uses `"Int64"`. Plain `int` upcasts the whole
+column to `float64` on the first missing value, so `n_hospitalizations` reads
+back as `1.0, 2.0, nan` instead of `1, 2, <NA>`:
+
+`harmonized_df["n_hospitalizations"] = pd.array([1, 2, None], dtype="Int64")`
+
+Plain `bool` and `int` are fine where the column is guaranteed complete.
+
+`category`, `boolean` and `Int64` are in-memory dtypes and do not survive
+`to_csv()`. These rules describe what a harmonization function returns; code
+reading a harmonized CSV back must re-apply them.
+
+---
+
+## 6. Follow-up Time
 
 Use `follow_up_months` to represent the timing of each measurement relative
 to baseline.
@@ -112,7 +155,7 @@ If the original dataset uses another variable to represent measurement timing,
 it should be harmonized to `follow_up_months`.
 
 
-## 6. Outcome Variables
+## 7. Outcome Variables
 
 Outcome variables that measure the same construct should use consistent names across datasets.
 
