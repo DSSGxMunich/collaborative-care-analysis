@@ -32,7 +32,6 @@ def load(file_path=_STUDY_DIR / "simon2004.CLEANEDsav.sav") -> pd.DataFrame:
         value=pd.NA,
         regex=True,
     )
-
     df = df.rename(columns={"Origpat_id": "patient_id"}, errors="raise")
 
     assert df["patient_id"].notna().all(), "Rows with missing patient_id"

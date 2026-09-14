@@ -65,6 +65,7 @@ def load(file_path=RAW_DATASETS_DIR / "18_Katon_2004" / "katon2004.sav"):
         value=pd.NA,
         regex=True,
     )
+
     df = df.rename(columns={"Origpat_id": "patient_id"}, errors="raise")
 
     assert df["patient_id"].notna().all(), "Rows with missing patient_id"
