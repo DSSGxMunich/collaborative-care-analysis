@@ -26,7 +26,7 @@ PACKAGE = "collaborative_care_analysis.harmonization_column_clusters"
 
 # Approved clusters, one per line and alphabetical so appends merge cleanly.
 IMPLEMENTED_CLUSTERS = [
-    "comorbidity",
+    "functioning",
 ]
 
 # The contract every cluster module satisfies. Checked on load so a module that
