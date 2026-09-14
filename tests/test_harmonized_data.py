@@ -9,6 +9,7 @@ The properties checked here are the ones that were violated at some point
 while the clusters were written, so each is a regression test for a real bug.
 """
 
+import json
 import re
 import unicodedata
 
@@ -17,6 +18,7 @@ import pytest
 
 from collaborative_care_analysis.config import COLNAME_STUDYID, INTERIM_DATA_DIR
 from collaborative_care_analysis.harmonization_column_clusters import checks
+from collaborative_care_analysis.harmonization_column_clusters.build import load_harmonized
 from collaborative_care_analysis.harmonization_column_clusters.concat import (
     ID_COLS,
     load_concatenated_raw,
@@ -27,6 +29,7 @@ from collaborative_care_analysis.harmonization_column_clusters.registry import (
 )
 
 HARMONIZED = INTERIM_DATA_DIR / "column_clusters_harmonized" / "harmonized_data.csv"
+DTYPES_SIDECAR = INTERIM_DATA_DIR / "column_clusters_harmonized" / "dtypes.json"
 
 # The scale each harmonized column is defined on. A value outside these is a
 # coding error, not an extreme patient.
@@ -71,6 +74,43 @@ def harmonized() -> pd.DataFrame:
     if not HARMONIZED.exists():
         pytest.skip("harmonized_data.csv not built")
     return pd.read_csv(HARMONIZED, low_memory=False)
+
+
+@pytest.fixture(scope="module")
+def declared_dtypes() -> dict[str, str]:
+    if not DTYPES_SIDECAR.exists():
+        pytest.skip("dtypes.json not built")
+    return json.loads(DTYPES_SIDECAR.read_text())
+
+
+def test_load_harmonized_preserves_nullable_dtypes() -> None:
+    """Reading the CSV directly re-infers types; the helper must not."""
+    if not (HARMONIZED.exists() and DTYPES_SIDECAR.exists()):
+        pytest.skip("harmonized outputs not built")
+    frame = load_harmonized()
+    flags = [c for c in frame.columns if c.startswith(("has_", "is_", "had_", "used_"))]
+    wrong = {c: str(frame[c].dtype) for c in flags if str(frame[c].dtype) != "boolean"}
+    assert not wrong, f"helper returned non-boolean flag columns: {wrong}"
+
+
+def test_dtypes_sidecar_covers_every_column(harmonized, declared_dtypes) -> None:
+    """CSV carries no dtypes, so the sidecar is the only record of them."""
+    assert set(declared_dtypes) == set(harmonized.columns)
+
+
+def test_flag_columns_keep_their_nullable_boolean_dtype(declared_dtypes) -> None:
+    """Guards the assembly step in build().
+
+    ``Series.to_numpy()`` on a nullable boolean returns an object array, so
+    assembling the frame that way silently turned every flag column into
+    object and lost the three-valued true/false/missing distinction. The
+    columns still round-tripped and every value test still passed, which is
+    why this asserts the dtype directly.
+    """
+    flags = [c for c in declared_dtypes if c.startswith(("has_", "is_", "had_", "used_"))]
+    assert flags, "expected some boolean flag columns"
+    wrong = {c: declared_dtypes[c] for c in flags if declared_dtypes[c] != "boolean"}
+    assert not wrong, f"flag columns that are not nullable boolean: {wrong}"
 
 
 @pytest.fixture(scope="module")

@@ -103,6 +103,29 @@ def _final_audit(built: pd.DataFrame, column_mapping: dict) -> None:
     )
 
 
+def load_harmonized() -> pd.DataFrame:
+    """Read the harmonized frame back with its dtypes intact.
+
+    ``pd.read_csv`` on its own re-infers types per chunk, which turns every
+    nullable boolean into ``object`` and warns about mixed types. That loses
+    the three-valued distinction the clusters exist to preserve: ``False``
+    (the study asked and the answer was no) and ``pd.NA`` (the study never
+    asked) both become indistinguishable truthy objects.
+
+    Use this instead of reading the CSV directly.
+    """
+    frame_path = OUTPUT_DIR / "harmonized_data.csv"
+    dtypes_path = OUTPUT_DIR / "dtypes.json"
+    for path in (frame_path, dtypes_path):
+        if not path.exists():
+            raise FileNotFoundError(
+                f"{path.name} not found in {OUTPUT_DIR}. Run "
+                "'uv run collaborative_care_analysis/dataset.py ai-run' to build it."
+            )
+    dtypes = json.loads(dtypes_path.read_text())
+    return pd.read_csv(frame_path, dtype=dtypes)
+
+
 def build() -> pd.DataFrame:
     """Apply every implemented cluster and write the harmonized outputs."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -157,7 +180,10 @@ def build() -> pd.DataFrame:
             )
 
         for column in emitted:
-            built[column] = cluster_df[column].to_numpy()
+            # .array, not .to_numpy(): to_numpy() on a nullable boolean/Int64
+            # column returns an object array and silently drops the dtype. The
+            # row-count check above already guarantees positional alignment.
+            built[column] = pd.Series(cluster_df[column].array, index=built.index)
             column_mapping[column] = {
                 "cluster": cluster_key,
                 **provenance[column],
@@ -170,7 +196,14 @@ def build() -> pd.DataFrame:
 
     built.to_csv(OUTPUT_DIR / "harmonized_data.csv", index=False)
     (OUTPUT_DIR / "column_mapping.json").write_text(json.dumps(column_mapping, indent=2) + "\n")
-    logger.success(f"Wrote harmonized_data.csv ({built.shape}) and column_mapping.json.")
+    # CSV carries no dtypes, so a plain read_csv infers per chunk and warns about
+    # mixed types on every nullable boolean. Ship the dtypes alongside so readers
+    # can restore them: pd.read_csv(path, dtype=json.load(open(dtypes.json))).
+    dtypes = {column: str(dtype) for column, dtype in built.dtypes.items()}
+    (OUTPUT_DIR / "dtypes.json").write_text(json.dumps(dtypes, indent=2) + "\n")
+    logger.success(
+        f"Wrote harmonized_data.csv ({built.shape}), column_mapping.json and dtypes.json."
+    )
 
     record_unclustered(raw_df)
 
