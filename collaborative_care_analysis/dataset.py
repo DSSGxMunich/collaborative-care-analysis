@@ -603,5 +603,62 @@ def run(
     return enriched_df
 
 
+@app.command("ai-run")
+def ai_run(
+    dataset_id: Annotated[
+        str | None,
+        typer.Argument(
+            help=(
+                "Dataset ID to re-export, such as '04' or 'Bekelman_2018'. Omit to export "
+                "every dataset."
+            ),
+        ),
+    ] = None,
+    exclude_dataset_ids: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--exclude",
+            "-x",
+            help="Dataset ID to exclude. Repeat this option to exclude multiple datasets.",
+        ),
+    ] = None,
+):
+    """Run the cluster pipeline: export, then harmonize by column cluster.
+
+    This is the counterpart to ``run``. Both start from the same loaders; ``run``
+    then applies the per-study ``harmonization_*`` scripts and merges them, while
+    this applies the column-cluster modules, which read every study at once.
+
+    Note that the cluster stage always reads every file in the export directory,
+    so passing a dataset_id re-exports only that study but still rebuilds the
+    harmonized frame from all of them.
+    """
+    logger.info("=== Stage 1/2: export ===")
+    export(
+        dataset_id=dataset_id,
+        exclude_dataset_ids=exclude_dataset_ids,
+    )
+
+    logger.info("=== Stage 2/2: column-cluster harmonization ===")
+    # Imported here, not at module scope: concat.py reads _get_study_id from this
+    # module, so a top-level import would be circular.
+    from collaborative_care_analysis.harmonization_column_clusters.build import (
+        build as build_column_clusters,
+    )
+
+    harmonized_df = build_column_clusters()
+
+    logger.success("Cluster pipeline complete.")
+
+    if exclude_dataset_ids:
+        excluded_ids = ", ".join(dict.fromkeys(exclude_dataset_ids))
+        logger.opt(colors=True).warning(
+            "<red><bold>WARNING: SOME DATASETS WERE EXCLUDED: {excluded_ids}</bold></red>",
+            excluded_ids=excluded_ids,
+        )
+
+    return harmonized_df
+
+
 if __name__ == "__main__":
     app()
