@@ -11,7 +11,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df["sex"] = map_with_check(
         harmonized_df["SEX"],
         {"M": "Male", "F": "Female"},
-    ).astype("string")
+    ).astype("category")
 
     # ----------------------------------------------------
     # Race: Q5 race + Q4 Hispanic/Latino, one checkbox column per option,

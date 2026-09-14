@@ -27,9 +27,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     #
     # Per the data provider: missing values here should stay missing -
     # they should NOT be assigned a category (e.g. not treated as "no").
-    assert "medication_adherence" in harmonized_df.columns, (
-        "medication_adherence column missing from the export"
-    )
     yes_no_map = {0: "no", 1: "yes"}
     harmonized_df["is_adherent_to_medication"] = map_with_check(
         harmonized_df["medication_adherence"], yes_no_map
@@ -41,6 +38,6 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
             "STUDY_ID",
             "patient_id",
             "follow_up_months",
-            "is_adherent_to_medication",
+            "medication_adherence",
         ]
     ]

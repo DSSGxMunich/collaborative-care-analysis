@@ -48,7 +48,26 @@ uv run collaborative_care_analysis/dataset.py run 4
 uv run collaborative_care_analysis/dataset.py run Katon_2001
 ```
 
-Runs `export`, `harmonize`, and `merge` in sequence.
+Runs `export`, `harmonize`, and `merge` in sequence, then backfills missing
+baseline `age` / `sex` from the POOL2 export and applies study-level `enrich`ment.
+
+## POOL2 Demographic Backfill
+
+Some studies' own data does not carry a usable `age` or `sex`. The `enrich` and
+`run` commands fill those gaps from the POOL2 participant-level export, joining
+on study and patient id.
+
+POOL2 ships as a zip that must be extracted once before running the pipeline:
+
+```bash
+unzip data/raw/260810_POOL2.zip -d data/raw/260810_POOL2
+```
+
+This produces `data/raw/260810_POOL2/POOL2_final.csv` (and `POOL2_final_NEU.csv`).
+If the CSV is missing, the pipeline stops with an error repeating this command.
+
+POOL2 numbers studies with its own `Trial_ID`; `data/raw/annotations/dataset_id_conversions.csv`
+maps that to this project's dataset numbering.
 
 ## Run While Excluding Some Datasets
 
@@ -178,3 +197,20 @@ uvx pre-commit install
 ```
 
 This will automatically run checks, such as the linter and tests, before each commit. If any of the checks fail, the commit will be aborted.
+
+### Stripping Notebook Outputs
+
+This repo uses [nbstripout](https://github.com/kynan/nbstripout) to keep notebook outputs out of git history. Install it once per clone:
+
+```bash
+uv add nbstripout
+nbstripout --install
+```
+
+This registers a git filter that strips outputs from notebooks when they're staged for commit. Your local `.ipynb` files on disk keep their outputs — only what gets committed is stripped.
+
+Verify it's active with:
+
+```bash
+uv run nbstripout --status
+```

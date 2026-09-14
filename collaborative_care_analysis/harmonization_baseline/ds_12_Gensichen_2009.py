@@ -27,7 +27,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             1.0: "Female",
             2.0: "Male",
         },
-    ).astype("string")
+    ).astype("category")
 
     harmonized_df["height"] = pd.to_numeric(harmonized_df["Groesse"], errors="raise")
 

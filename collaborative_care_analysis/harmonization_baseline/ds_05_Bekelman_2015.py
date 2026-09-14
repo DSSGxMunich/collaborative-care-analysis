@@ -43,7 +43,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             1: "Male",
             2: "Female",
         },
-    )
+    ).astype("category")
 
     # ----------------------------------------------------
     # Race (single column)
@@ -113,8 +113,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "sex",
             "race",
             "smoking_status",
-            "has_alcohol_abuse_history",
-            "has_other_substance_abuse_history",
             "follow_up_months",
         ]
     ]

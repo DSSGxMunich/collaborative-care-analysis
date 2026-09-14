@@ -6,7 +6,7 @@ ID_COLS = [COLNAME_STUDYID, "patient_id", "follow_up_months"]
 
 RENAME_MAP = {
     "phq9_total": "phq9_total",  # Depres_* -- PHQ-9 total, primary outcome
-    "phq9_q9": "phq9_q9",  # suicidal-ideation item
+    "phq9_q9": "phq9_9",  # suicidal-ideation item
     "eq5d_total": "eq5d_total",  # stored total, not computed from items
     # gad7_total: stored total is NOT on the true 0-21 GAD-7 range for a
     # subset of rows (max 26 at baseline; see git history for the full
@@ -93,5 +93,6 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     for subscale_col, item_cols in SF36_SUBSCALE_ITEMS.items():
         harmonized_df[subscale_col] = harmonized_df[item_cols].sum(axis=1, skipna=True)
 
+    # Select the pre-rename columns first, then rename.
     output_cols = ID_COLS + list(RENAME_MAP) + list(SF36_SUBSCALE_ITEMS)
-    return harmonized_df.rename(columns=RENAME_MAP)[output_cols]
+    return harmonized_df[output_cols].rename(columns=RENAME_MAP)

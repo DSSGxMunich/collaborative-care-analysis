@@ -31,7 +31,6 @@ RENAME_MAP = {
     **{f"GAD{i:02d}": f"gad7_{i}" for i in range(1, 8)},
     # Signs and symptoms
     # **{f"SS{i:02d}": f"ss_{i}" for i in range(1, 11)},
-    "SSSCORE": "ss_total",
 }
 
 OUTCOME_COLS = ID_COLS + list(RENAME_MAP)

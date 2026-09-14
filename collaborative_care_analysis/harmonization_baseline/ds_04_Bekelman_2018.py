@@ -96,7 +96,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             harmonized_df[var] = map_with_check(
                 series=harmonized_df[var],
                 mapping=mapping,
-            ).astype("string")
+            ).astype("category")
 
     # -------------------------
     # Ensure age is numeric
@@ -181,8 +181,6 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "lives_in_facility",
             "has_telephone_access",
             "follow_up_months",
-            "has_alcohol_abuse_history",
-            "has_other_substance_abuse_history",
             "physical_activity_frequency",
             "has_health_insurance",
             "insurance_type",

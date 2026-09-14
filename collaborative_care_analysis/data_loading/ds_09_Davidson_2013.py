@@ -34,7 +34,7 @@ BASELINE_BDI_COLS = ("bdiscore_01", "bdiscore_02")
 # value in one of these is missingness, not data. This is a declared list rather
 # than a blanket rule over every numeric column on purpose: legitimately signed
 # quantities such as change scores must keep their sign.
-NON_NEGATIVE_COLS = ("charlson_comorbidity_index",)
+NON_NEGATIVE_COLS = ("charlson_",)
 
 
 def _wide_columns_for(df: pd.DataFrame, stem: str) -> list[str]:

@@ -58,8 +58,6 @@ EQ5D_COLS = [
 RENAME_MAP = {
     # PHQ-9
     **{f"PHQ9_{i}": f"phq9_{i}" for i in range(1, 10)},
-    "PHQ_Summe": "phq9_total",
-    "PHQ9_Schweregrad": "phq9_severity",
     # GAD-7
     **{f"GAD7_{i}": f"gad7_{i}" for i in range(1, 8)},
     # EQ-5D-3L
