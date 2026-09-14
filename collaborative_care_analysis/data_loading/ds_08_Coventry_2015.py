@@ -120,16 +120,19 @@ def load(
     long_df = pd.concat([base_df, fu_df], ignore_index=True, sort=False)
     long_df = long_df.rename(columns={id_col: "patient_id"})
 
-    dupes = long_df.duplicated(subset=["patient_id", "follow_up_months"]).sum()
-
-    if dupes:
-        raise ValueError(f"{dupes} duplicate (patient_id, follow_up_months) rows found.")
+    dupes = long_df.duplicated(subset=["patient_id", "follow_up_months"], keep=False)
+    if dupes.any():
+        n_patients = long_df.loc[dupes, "patient_id"].nunique()
+        logger.warning(
+            f"Dropping {dupes.sum()} row(s) sharing a duplicated (patient_id, "
+            f"follow_up_months) ({n_patients} patient(s) affected)."
+        )
+        long_df = long_df[~dupes]
 
     long_df = long_df.sort_values(["patient_id", "follow_up_months"]).reset_index(drop=True)
 
     # convert to nullable types
-    long_df = long_df.convert_dtypes(convert_integer=False, convert_floating=True)
-    long_df["follow_up_months"] = long_df["follow_up_months"].astype("Float64")
+    long_df = long_df.convert_dtypes()
 
     return long_df[
         ["patient_id", "follow_up_months"]
