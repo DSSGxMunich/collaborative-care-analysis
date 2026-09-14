@@ -1,5 +1,6 @@
 import functools
 
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -40,6 +41,9 @@ def load() -> pd.DataFrame:
 
     def prep(sheet: str) -> pd.DataFrame:
         d = book.parse(sheet)
+        # blank/whitespace-only cells are missing, before any dtype work
+        with pd.option_context("future.no_silent_downcasting", True):
+            d = d.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
         return d.drop(columns=[c for c in ("tpid",) if c in d.columns])
 
     longitudinal = [
@@ -55,9 +59,17 @@ def load() -> pd.DataFrame:
         baseline["follow_up_months"] = baseline.pop("month") if "month" in baseline.columns else 0
         merged = merged.merge(baseline, on=[_ID, "follow_up_months"], how="left")
 
-    participants = book.parse("PARTICIPANTS")
-    if participants[_ID].duplicated().any():
-        raise ValueError("PARTICIPANTS sheet is not unique on studyId")
+    participants = prep("PARTICIPANTS")
+    missing_id = participants[_ID].isna()
+    if missing_id.any():
+        logger.warning(f"PARTICIPANTS: dropped {int(missing_id.sum())} rows with no {_ID}.")
+        participants = participants.loc[~missing_id]
+    duplicated_id = participants[_ID].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(
+            f"PARTICIPANTS: dropped {int(duplicated_id.sum())} rows with a duplicated {_ID}."
+        )
+        participants = participants.loc[~duplicated_id]
     merged = merged.merge(participants, on=_ID, how="left", validate="many_to_one")
 
     comorbids = book.parse(_COMORBIDS_SHEET)
@@ -70,7 +82,8 @@ def load() -> pd.DataFrame:
     # astype(bool) on a column that still has NaN turns every NaN into True.
     comorbid_flags = comorbid_flags.reindex(participants[_ID])
     condition_cols = list(comorbid_flags.columns)
-    comorbid_flags[condition_cols] = comorbid_flags[condition_cols].fillna(False).astype(bool)
+    with pd.option_context("future.no_silent_downcasting", True):
+        comorbid_flags[condition_cols] = comorbid_flags[condition_cols].fillna(False).astype(bool)
     comorbid_flags[_COMORBID_COUNT_COL] = (
         comorbids.groupby(_ID).size().reindex(participants[_ID], fill_value=0)
     )
