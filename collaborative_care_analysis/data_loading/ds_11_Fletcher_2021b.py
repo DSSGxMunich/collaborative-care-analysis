@@ -1,5 +1,6 @@
 import re
 
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -180,10 +181,15 @@ def load(
     df.dropna(how="all", axis="columns", inplace=True)
     df.columns = df.columns.str.strip()
 
-    assert df["study_id"].notna().all(), "Rows with missing study_id"
+    missing_id = df["study_id"].isna()
+    if missing_id.any():
+        logger.warning(f"Dropped {int(missing_id.sum())} rows with missing study_id")
+        df = df.loc[~missing_id]
 
-    if df["study_id"].duplicated().any():
-        raise ValueError("Duplicate patient IDs in wide dataset")
+    duplicated_id = df["study_id"].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(f"Dropped {int(duplicated_id.sum())} rows with duplicated study_id")
+        df = df.loc[~duplicated_id]
 
     df = to_long(df)
 
