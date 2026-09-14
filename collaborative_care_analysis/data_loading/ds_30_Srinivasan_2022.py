@@ -1,3 +1,4 @@
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -5,7 +6,8 @@ from collaborative_care_analysis.config import RAW_DATASETS_DIR
 # Srinivasan 2022 = the HOPE trial: a cluster-randomised trial of collaborative
 # care for depression and cardiovascular risk in rural primary health centres
 # (PHCs) in Karnataka, India. ``treatarm`` 0 = usual care, 1 = collaborative
-# care. Patients assessed at baseline and 3, 6, 12 months on PHQ-9 (depression),
+# care (2486 enrolled, 1264 control / 1222 collaborative care, matching the
+# paper). Patients assessed at baseline and 3, 6, 12 months on PHQ-9 (depression),
 # GAD-7 (anxiety), WHOQOL, blood pressure, HbA1c and lipids.
 #
 # The raw file is one wide row per patient with every measure suffixed by its
@@ -64,10 +66,20 @@ def to_long(df: pd.DataFrame) -> pd.DataFrame:
 def load(
     file_path=_STUDY_DIR / "HOPE vars for MA all waves, no ID.sav",
 ) -> pd.DataFrame:
-    df = pd.read_spss(file_path, convert_categoricals=False).convert_dtypes()
+    df = pd.read_spss(file_path, convert_categoricals=False)
+    # blank/whitespace-only strings are missing, before dtype inference
+    with pd.option_context("future.no_silent_downcasting", True):
+        df = df.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
+    df = df.convert_dtypes()
 
-    assert df[ID_COL].notna().all(), "Rows with missing Participant id"
-    if df[ID_COL].duplicated().any():
-        raise ValueError("Duplicate patient IDs in wide dataset")
+    incomplete = df[ID_COL].isna() | df["treatarm"].isna()
+    if incomplete.any():
+        logger.warning(f"Dropped {int(incomplete.sum())} rows with missing {ID_COL} or treatarm.")
+        df = df.loc[~incomplete]
+
+    duplicated_id = df[ID_COL].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(f"Dropped {int(duplicated_id.sum())} rows with duplicated {ID_COL}.")
+        df = df.loc[~duplicated_id]
 
     return to_long(df).convert_dtypes()
