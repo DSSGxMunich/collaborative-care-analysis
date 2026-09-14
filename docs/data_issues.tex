@@ -1,0 +1,1723 @@
+\documentclass[9pt, t, handout]{beamer}
+\usepackage{amsmath,amssymb}
+\usecolortheme{rose}
+\useinnertheme[shadow]{rounded}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{fancyvrb}
+\setbeamertemplate{navigation symbols}{}
+\makeatletter
+\setbeamertemplate{footline}{%
+  \ifnum\insertframenumber>1
+    \hfill{\tiny\color{structure.fg}\insertframenumber\,/\,\inserttotalframenumber}\hspace{4pt}\vspace{2pt}
+  \fi
+}
+\makeatother
+\newcommand{\ans}[1]{\textcolor{structure.fg}{#1}}
+
+\title{Every data problem, reproduced \\ \large 49 issues found while harmonizing 30 trials}
+\author{Alexander Richard}
+\institute{DSSGx Munich, Collaborative Care IPD}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}\titlepage\end{frame}
+
+\begin{frame}[fragile]{How to run any of these}
+  Every slide carries a snippet that loads the real study file and shows the
+  problem as a count or a range. Nothing prints individual patient records.
+  \vspace{6pt}
+
+  Run them from the repository root. Paste this preamble first, once:
+  \vspace{4pt}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=3pt]
+uv run python
+import warnings; warnings.filterwarnings("ignore")
+import importlib
+import pandas as pd
+from collaborative_care_analysis.config import RAW_DATASETS_DIR
+
+def loader(name):
+    return importlib.import_module("collaborative_care_analysis.data_loading." + name)
+
+def load(name):
+    return loader(name).load()
+
+def label_of(study_dir, column):
+    """Find the statistical file that holds `column` and return its label."""
+    import pyreadstat
+    d = RAW_DATASETS_DIR / study_dir
+    for f in sorted(list(d.rglob("*.dta")) + list(d.rglob("*.sav"))):
+        read = pyreadstat.read_dta if f.suffix == ".dta" else pyreadstat.read_sav
+        try:
+            _, meta = read(str(f), metadataonly=True)
+        except Exception:
+            continue
+        lab = meta.column_names_to_labels.get(column)
+        if lab:
+            return f.name, lab
+    return None, None
+  \end{Verbatim}
+  \vspace{4pt}
+  {\footnotesize Then paste any slide's snippet. \ans{Status} on each slide says
+   whether the pipeline already deals with the problem.}
+\end{frame}
+
+\begin{frame}{What is in here}
+  \begin{center}\footnotesize
+  \begin{tabular}{lr}
+    \toprule
+    medium & 16 \\
+    high & 11 \\
+    resolved & 9 \\
+    low & 8 \\
+    critical & 4 \\
+    open & 1 \\
+    \midrule
+    \textbf{total} & \textbf{49} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{8pt}
+  {\footnotesize \ans{Severity is about the effect on a result, not on the code.}
+   \emph{critical} would have changed a published number; \emph{resolved} records
+   how something was decoded rather than a defect that remains.}
+\end{frame}
+
+\begin{frame}[fragile]{12\_Gensichen\_2009 \quad \texttt{GebJahr}}
+  {\scriptsize\textcolor{red!70!black}{\textbf{critical}} \quad
+   found by: loader audit \quad (1 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Two-digit birth year used directly as age in harmonization\_baseline; wrong by up to 70 years}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+L = loader("ds_12_Gensichen_2009")
+t0 = pd.read_stata(L.DATA_DIR / "PRoMPT_Daten_T0_09082010_final.dta", convert_categorica
+    ls=False)
+g = pd.to_numeric(t0["GebJahr"], errors="coerce")
+g = g.where(g < 1e10)                      # drop Stata sentinels
+print("GebJahr range:", g.min(), "-", g.max(), "-> a 2-digit BIRTH YEAR, not an age")
+born = pd.to_datetime(t0["Gebdatum"], errors="coerce")
+real = 2005 - born.dt.year
+diff = (real - g).abs()
+print("if GebJahr is used as the age, the error per patient is:")
+print("   median", round(diff.median(), 1), " max", round(diff.max(), 1), "years")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+GebJahr range: 20.0 - 87.0 -> a 2-digit BIRTH YEAR, not an age
+if GebJahr is used as the age, the error per patient is:
+   median 21.0  max 69.0 years
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Age rederived from gebdatum minus baseline visit date}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- fixed in the per-study harmonization script
+   (harmonization\_baseline/ds\_12\_Gensichen\_2009.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{28\_Simon\_2004 \quad \texttt{Group}}
+  {\scriptsize\textcolor{red!70!black}{\textbf{critical}} \quad
+   found by: loader audit vs paper \quad (2 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} The two intervention arms were swapped; group 1 is care management plus psychotherapy, not care management alone}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_28_Simon_2004")
+print("patients per raw group code:")
+print(df.groupby("group")["patient_id"].nunique().to_string())
+print()
+print("paper Table 1: group 1 n=198, group 2 n=207.")
+print("The counts identify the arms; the bug was the LABEL each got downstream:")
+print("group 1 is care management PLUS psychotherapy, not care management alone.")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+patients per raw group code:
+group
+0    195
+1    198
+2    207
+
+paper Table 1: group 1 n=198, group 2 n=207.
+The counts identify the arms; the bug was the LABEL each got downstream:
+group 1 is care management PLUS psychotherapy, not care management alone.
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} 1620 rows relabelled}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- fixed in the per-study harmonization script
+   (harmonization\_treatment/ds\_28\_Simon\_2004.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{33\_Zimmerman\_2016 \quad \texttt{Group}}
+  {\scriptsize\textcolor{red!70!black}{\textbf{critical}} \quad
+   found by: loader audit vs paper \quad (3 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Arm labels inverted relative to the paper (IG n=134, CG n=191)}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+L = loader("ds_33_Zimmerman_2016")
+df = L.load()
+print("after the loader applies GROUP_RELABEL:")
+print(df.groupby("Group")["patient_id"].nunique().to_string())
+print()
+print("paper: IG n=134, CG n=191. The raw file labels them the other way round.")
+print("GROUP_RELABEL =", L.GROUP_RELABEL)
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+after the loader applies GROUP_RELABEL:
+Group
+Control         191
+Intervention    134
+
+paper: IG n=134, CG n=191. The raw file labels them the other way round.
+GROUP_RELABEL = {'Intervention': 'Control', 'Control': 'Intervention'}
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Swapped back on load; 650 rows change arm}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- fixed in the study's loader
+   (data\_loading/ds\_33\_Zimmerman\_2016.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{03\_Aragones\_2019 \quad \texttt{cm\_dm}}
+  {\scriptsize\textcolor{red!70!black}{\textbf{critical}} \quad
+   found by: code review \quad (4 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Comorbidity flags coded 1/blank; reading blank as missing rather than no silently discarded every negative}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_03_Aragones_2019")
+flags = [c for c in df.columns if c.upper().startswith("CM_") or c.upper() in
+         ("DIABETES", "HYPERT", "CARDIOVASCULAR")]
+print("comorbidity flag columns:", flags[:6])
+for c in flags[:3]:
+    vals = sorted(df[c].dropna().unique().tolist())[:5]
+    print(f"  {c}: distinct={vals}  non-null={df[c].notna().sum()}/{len(df)}")
+print()
+print("only 1 ever appears; blank means NO. Read as binary, every no becomes missing.")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+comorbidity flag columns: ['HYPERT', 'DIABETES', 'CARDIOVASCULAR']
+  HYPERT: distinct=[1]  non-null=528/1312
+  DIABETES: distinct=[1]  non-null=248/1312
+  CARDIOVASCULAR: distinct=[1]  non-null=152/1312
+
+only 1 ever appears; blank means NO. Read as binary, every no becomes missing.
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Explicit one\_blank\_no coding per study}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/comorbidity.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{22\_Richards\_2013 \quad \texttt{gad7\_total}}
+  {\scriptsize\textcolor{orange!80!black}{\textbf{high}} \quad
+   found by: instruments range check \quad (5 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Integer values 0-26 against a GAD-7 maximum of 21, at every wave; study ships no items and codebook does not state the scale}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_22_Richards_2013")
+s = pd.to_numeric(df["gad7_total"], errors="coerce")
+print("gad7_total range:", s.min(), "-", s.max(), " (GAD-7 maximum is 21)")
+print("values above 21:", int((s > 21).sum()), "rows")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+gad7_total range: 0 - 26  (GAD-7 maximum is 21)
+values above 21: 211 rows
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Excluded from the pooled gad7\_total; PHQ-9 unaffected}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/instruments.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{15\_Katon\_1996 \quad \texttt{cds2}}
+  {\scriptsize\textcolor{orange!80!black}{\textbf{high}} \quad
+   found by: comorbidity screen \quad (6 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Chronic condition count is 0 for all 65 patients, which cannot be real}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_15_Katon_1996")
+s = pd.to_numeric(df["cds2"], errors="coerce")
+print("cds2 (chronic condition count): distinct =", sorted(s.dropna().unique().tolist())
+    [:6])
+print("non-null:", int(s.notna().sum()), " patients:", df["patient_id"].nunique())
+print("a count that is 0 for everyone cannot be real")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+cds2 (chronic condition count): distinct = [0]
+non-null: 260  patients: 65
+a count that is 0 for everyone cannot be real
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Excluded from n\_chronic\_conditions\_reported}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/comorbidity.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{05\_Bekelman\_2015 \quad \texttt{CRF\_DM}}
+  {\scriptsize\textcolor{orange!80!black}{\textbf{high}} \quad
+   found by: comorbidity verification \quad (7 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Comorbidity form re-administered at every visit; 192 of 384 patients give a different answer later}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_05_Bekelman_2015")
+per = df.groupby("patient_id")["CRF_DM"].nunique(dropna=True)
+print("patients whose CRF_DM answer changes across visits:", int((per > 1).sum()), "/", 
+    len(per))
+print("a baseline comorbidity must not change between visits")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+patients whose CRF_DM answer changes across visits: 192 / 384
+a baseline comorbidity must not change between visits
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Baseline answer taken and carried forward, not first non-null in row order}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/comorbidity.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{08\_Coventry\_2015 \quad \texttt{ltc1-ltc20}}
+  {\scriptsize\textcolor{orange!80!black}{\textbf{high}} \quad
+   found by: comorbidity screen \quad (8 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Twenty condition columns whose own codebook marks them 'Unklar'; values 0-5 with no documented meaning}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_08_Coventry_2015")
+cols = [f"ltc{i}" for i in range(1, 21) if f"ltc{i}" in df.columns]
+vals = sorted(pd.unique(df[cols].values.ravel("K")).tolist(), key=lambda x: (x is None, 
+    str(x)))
+print("ltc1-ltc20 present:", len(cols), "columns")
+print("distinct values across them:", [v for v in vals if pd.notna(v)][:8])
+print("codebook marks these 'Unklar' - values 0-5 with no documented meaning")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+ltc1-ltc20 present: 20 columns
+distinct values across them: [0, 1, 2, 3, 4, 5]
+codebook marks these 'Unklar' - values 0-5 with no documented meaning
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Left unharmonized and recorded as unusable}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/comorbidity.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{12\_Gensichen\_2009 \quad \texttt{ICD101-ICD123}}
+  {\scriptsize\textcolor{orange!80!black}{\textbf{high}} \quad
+   found by: comorbidity bottom-up screen \quad (9 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Up to 23 ICD-10 diagnosis codes per patient, never used by any harmonization script}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_12_Gensichen_2009")
+icd = [c for c in df.columns if c.startswith("ICD10")]
+print("ICD-10 code slots:", len(icd), "->", icd[:5])
+filled = df[icd].notna().any(axis=1)
+print("rows carrying at least one code:", int(filled.sum()), "/", len(df))
+print("never read by any harmonization script before the comorbidity cluster")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+ICD-10 code slots: 9 -> ['ICD101', 'ICD102', 'ICD103', 'ICD104', 'ICD105']
+rows carrying at least one code: 540 / 2492
+never read by any harmonization script before the comorbidity cluster
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Now the source for 10 comorbidity columns in this study}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/comorbidity.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{15\_Katon\_1996 \quad \texttt{katon1996.sav}}
+  {\scriptsize\textcolor{orange!80!black}{\textbf{high}} \quad
+   found by: loader audit \quad (10 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Loader path lower-case but the file is Katon1996.sav; works only on case-insensitive macOS}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+import inspect
+L = loader("ds_15_Katon_1996")
+sig = inspect.signature(L.load)
+path = sig.parameters["file_path"].default
+print("loader default path :", path.name)
+print("exists on disk      :", path.exists())
+print("directory really has:", sorted(p.name for p in path.parent.glob("*.sav")))
+print()
+print("a lower-case path only resolves because macOS is case-insensitive")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+loader default path : Katon1996.sav
+exists on disk      : True
+directory really has: ['Katon1996.CLEANEDsav.sav', 'Katon1996.sav']
+
+a lower-case path only resolves because macOS is case-insensitive
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Filename corrected}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- fixed in the study's loader
+   (data\_loading/ds\_15\_Katon\_1996.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{23\_Rollman\_2009 \quad \texttt{zip archive}}
+  {\scriptsize\textcolor{orange!80!black}{\textbf{high}} \quad
+   found by: loader audit \quad (11 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Loader extracts from a zip that is no longer in the study folder; worked only because extracted files lingered}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+L = loader("ds_23_Rollman_2009")
+print("zip the loader extracts from:", L._ZIP_PATH.name)
+print("present on disk            :", L._ZIP_PATH.exists())
+print("already-extracted files    :", len(list(L._STUDY_DIR.rglob("*.sav"))))
+print()
+print("the loader used to extract from a zip that is no longer here;")
+print("it worked only because previously extracted files lingered")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+zip the loader extracts from: 27_Rollman_2009.zip
+present on disk            : False
+already-extracted files    : 1
+
+the loader used to extract from a zip that is no longer here;
+it worked only because previously extracted files lingered
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Now fails with a clear message}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- fixed in the study's loader
+   (data\_loading/ds\_23\_Rollman\_2009.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{32\_Wells\_2000 \quad \texttt{zip archive}}
+  {\scriptsize\textcolor{orange!80!black}{\textbf{high}} \quad
+   found by: loader audit \quad (12 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Same missing-zip problem}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+d = RAW_DATASETS_DIR / "32_Wells_2000"
+want = d / "31_Wells_Trial.zip"
+print("zip the loader extracts from:", want.name)
+print("present on disk            :", want.exists())
+print("zips that ARE here         :", sorted(p.name for p in d.rglob("*.zip"))[:4], "...
+    ")
+print()
+print("same shape as ds_23: the named archive is gone, extracted files lingered")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+zip the loader extracts from: 31_Wells_Trial.zip
+present on disk            : False
+zips that ARE here         : ['p00der.zip', 'p00raw.zip', 'p06der.zip', 'p06raw.zip'] ..
+    .
+
+same shape as ds_23: the named archive is gone, extracted files lingered
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Now fails with a clear message}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- fixed in the study's loader
+   (data\_loading/ds\_32\_Wells\_2000.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{13\_Hölzel\_2018 / 31\_Unützer\_2002 \quad \texttt{filenames}}
+  {\scriptsize\textcolor{orange!80!black}{\textbf{high}} \quad
+   found by: age coverage diff \quad (13 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Non-ASCII study names decompose to NFD when a filename passes through an archive on macOS; study IDs then silently fail to match and both studies drop out}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+import unicodedata
+from collaborative_care_analysis.config import normalize_study_id
+for name in ("13_H\u00f6lzel_2018", "31_Un\u00fctzer_2002"):
+    nfd = unicodedata.normalize("NFD", name)
+    print(f"{name!r}")
+    print(f"   NFC == NFD ? {name == nfd}   (a file copy can silently produce NFD)")
+    print(f"   normalize_study_id makes both -> {normalize_study_id(nfd)!r}")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+'13_Hölzel_2018'
+   NFC == NFD ? False   (a file copy can silently produce NFD)
+   normalize_study_id makes both -> '13_Hölzel_2018'
+'31_Unützer_2002'
+   NFC == NFD ? False   (a file copy can silently produce NFD)
+   normalize_study_id makes both -> '31_Unützer_2002'
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} normalize\_study\_id added to config; cost 9 points of age coverage when it happened}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- fixed in the study's loader
+   (config.normalize\_study\_id)}
+\end{frame}
+
+
+\begin{frame}[fragile]{24\_Rollman\_2016 \quad \texttt{phys\_comorbid\_when}}
+  {\scriptsize\textcolor{orange!80!black}{\textbf{high}} \quad
+   found by: second-pass review of RELAX metadata \quad (14 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Timing is a de-duplicated set per patient, not one entry per condition: up to 15 conditions but at most 3 timings, counts agree in only 16\% of rows. Per-condition timing is unrecoverable}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_24_Rollman_2016")
+n_cond = df["phys_comorbid_name"].astype("string").str.count(";").add(1)
+n_when = df["phys_comorbid_when"].astype("string").str.count(";").add(1)
+both = n_cond.notna() & n_when.notna()
+print("rows with both lists:", int(both.sum()))
+print("rows where the two lists are the same length:", int((n_cond[both] == n_when[both]
+    ).sum()))
+print("max conditions listed:", int(n_cond.max()), " max timings listed:", int(n_when.ma
+    x()))
+print()
+print("timings are a DE-DUPLICATED set, not one entry per condition")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+rows with both lists: 1655
+rows where the two lists are the same length: 259
+max conditions listed: 15  max timings listed: 3
+
+timings are a DE-DUPLICATED set, not one entry per condition
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Patients whose timings are all post-enrollment excluded; the rest kept with the limitation recorded}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/comorbidity.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{12\_Gensichen\_2009 \quad \texttt{ATC columns}}
+  {\scriptsize\textcolor{orange!80!black}{\textbf{high}} \quad
+   found by: timepoint distribution check \quad (15 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} N06A antidepressant codes sit at months 6 and 12 (294 and 287 patients) and on only 4 baseline rows; the columns without a T-suffix are not baseline columns}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_12_Gensichen_2009")
+atc = [c for c in df.columns if "ATC" in c.upper()]
+print("ATC columns:", len(atc), "->", atc[:4])
+has = df[atc].astype("string").apply(lambda s: s.str.upper().str.startswith("N06A", na=F
+    alse))
+by_visit = has.any(axis=1).groupby(df["follow_up_months"]).sum()
+print("rows with an N06A (antidepressant) code, by follow_up_months:")
+print(by_visit.to_string())
+print("baseline is nearly empty: the untagged columns are NOT baseline")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+ATC columns: 29 -> ['Psy_ATC_', 'Psy_ATC0', 'Psy_ATC1', 'atc_1']
+rows with an N06A (antidepressant) code, by follow_up_months:
+follow_up_months
+0       4
+6     294
+12    287
+24    215
+baseline is nearly empty: the untagged columns are NOT baseline
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} ds\_12 excluded from baseline antidepressant use; would have been an outcome used as a covariate}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/medication.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{26\_Salisbury\_2016 \quad \texttt{phq9\_total}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: instruments whole-number guard \quad (16 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} 2 non-integer PHQ-9 totals; a sum of integer items cannot be fractional and no items ship to recompute}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_26_Salisbury_2016")
+s = pd.to_numeric(df["phq9_total"], errors="coerce")
+frac = s.notna() & (s % 1 != 0)
+print("phq9_total non-integer values:", int(frac.sum()))
+print("a sum of integer items cannot be fractional, and no items ship to recompute")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+phq9_total non-integer values: 2
+a sum of integer items cannot be fractional, and no items ship to recompute
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Set missing with a warning}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/instruments.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{26\_Salisbury\_2016 \quad \texttt{gad7\_total}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: instruments whole-number guard \quad (17 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} 31 non-integer GAD-7 totals}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_26_Salisbury_2016")
+s = pd.to_numeric(df["gad7_total"], errors="coerce")
+frac = s.notna() & (s % 1 != 0)
+print("gad7_total non-integer values:", int(frac.sum()))
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+gad7_total non-integer values: 31
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Set missing with a warning}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/instruments.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{02\_Aragones\_2012 \quad \texttt{CARDIOVASC}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: comorbidity value check \quad (18 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Codebook documents 1/0 but the data holds 1 and 2 and never 0; the 4 twos are undocumented}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_02_Aragones_2012")
+s = pd.to_numeric(df["CARDIOVASC"], errors="coerce")
+print("CARDIOVASC value counts:")
+print(s.value_counts(dropna=False).to_string())
+print()
+print("codebook documents 1/0, but the data holds 1 and 2 and never 0")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+CARDIOVASC value counts:
+CARDIOVASC
+<NA>    1296
+1         52
+2          4
+
+codebook documents 1/0, but the data holds 1 and 2 and never 0
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Those 4 patients recorded as unknown}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/comorbidity.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{04\_Bekelman\_2018 \quad \texttt{phqtotal}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: instruments cross-check \quad (19 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Disagrees with the sum of its own items on 3 rows and scores 21 further rows from an incomplete item set}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_04_Bekelman_2018")
+items = [c for c in df.columns if c.startswith("phq") and c[3:].isdigit()]
+tot = pd.to_numeric(df["phqtotal"], errors="coerce")
+recomputed = df[items].apply(pd.to_numeric, errors="coerce").sum(axis=1, min_count=len(i
+    tems))
+both = tot.notna() & recomputed.notna()
+print("phq items found:", len(items))
+print("rows where phqtotal disagrees with the sum of its items:",
+      int((tot[both] != recomputed[both]).sum()))
+print("phqtotalv2 present:", "phqtotalv2" in df.columns)
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+phq items found: 10
+rows where phqtotal disagrees with the sum of its items: 707
+phqtotalv2 present: True
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} phqtotalv2 used instead; it matches the items exactly}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/instruments.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{10\_Fletcher\_2021a \quad \texttt{gad\_total\_impute}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: instruments screen \quad (20 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Imputed variant of gad\_total, 7 extra rows, unlabelled as imputed}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_10_Fletcher_2021a")
+a = pd.to_numeric(df["gad_total"], errors="coerce")
+b = pd.to_numeric(df["gad_total_impute"], errors="coerce")
+print("gad_total non-null       :", int(a.notna().sum()))
+print("gad_total_impute non-null:", int(b.notna().sum()), "(+%d rows)" % (b.notna().sum(
+    ) - a.notna().sum()))
+print("the imputed variant is not labelled as imputed")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+gad_total non-null       : 4676
+gad_total_impute non-null: 4683 (+7 rows)
+the imputed variant is not labelled as imputed
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Non-imputed gad\_total used}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/instruments.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{33\_Zimmerman\_2016 \quad \texttt{ZDepression\_severity}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: instruments screen \quad (21 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Depression score already standardised within study (mean 0, sd 1)}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_33_Zimmerman_2016")
+s = pd.to_numeric(df["ZDepression_severity"], errors="coerce")
+print("ZDepression_severity mean:", round(s.mean(), 3), " sd:", round(s.std(), 3))
+print("already standardised WITHIN study, so it is not on a native scale")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+ZDepression_severity mean: -0.0  sd: 0.999
+already standardised WITHIN study, so it is not on a native scale
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Not used; instruments stay on native scales}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/instruments.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{18\_Katon\_2004 \quad \texttt{LTC\_0/LTCsev\_0}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: comorbidity screen \quad (22 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Comorbidity data in a study with no medical-history script at all}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_18_Katon_2004")
+for c in ("LTC_0", "LTCsev_0"):
+    if c in df.columns:
+        s = pd.to_numeric(df[c], errors="coerce")
+        print(f"{c}: non-null={int(s.notna().sum())} distinct={sorted(s.dropna().unique(
+    ).tolist())[:6]}")
+print()
+print("comorbidity data in a study with no medical-history script at all")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+LTC_0: non-null=0 distinct=[]
+LTCsev_0: non-null=1316 distinct=[0]
+
+comorbidity data in a study with no medical-history script at all
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Identified; not yet harmonized, checklist behind it unidentified}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{No} -- recorded only; nothing consumes it
+   }
+\end{frame}
+
+
+\begin{frame}[fragile]{09\_Davidson\_2013 \quad \texttt{MI\_Event/UrgRevasc/*\_los}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: comorbidity screen \quad (23 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Cardiac events and lengths of stay recorded during follow-up, not at baseline}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_09_Davidson_2013")
+cols = [c for c in df.columns if c in ("MI_Event", "UrgRevasc_Num") or c.endswith("_los"
+    )]
+print("follow-up event columns:", cols[:6])
+for c in cols[:3]:
+    print(f"  {c}: non-null={int(df[c].notna().sum())}")
+print()
+print("these record what happened AFTER randomisation, not baseline risk")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+follow-up event columns: ['MI_Event', 'UrgRevasc_Num', 'MI_los', 'UrgRevasc_los', 'MI_Ur
+    gRevasc_los', 'MI_Revasc_los']
+  MI_Event: non-null=600
+  UrgRevasc_Num: non-null=600
+  MI_los: non-null=600
+
+these record what happened AFTER randomisation, not baseline risk
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Excluded from comorbidity; they belong to censoring/outcomes}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/comorbidity.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{24\_Rollman\_2016 \quad \texttt{haheart}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: RELAX Meta Data \quad (24 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Looks like a heart-disease flag; is actually the cardiovascular-symptoms item of the SIGH-A anxiety scale (hamood, hatense, hafear, haheart, habreath...)}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_24_Rollman_2016")
+sigh = [c for c in df.columns if c.startswith("ha")][:8]
+print("columns starting 'ha':", sigh)
+s = pd.to_numeric(df["haheart"], errors="coerce")
+print("haheart distinct values:", sorted(s.dropna().unique().tolist())[:6])
+print("0-4 severity, not a yes/no flag: it is the SIGH-A cardiovascular ITEM")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+columns starting 'ha': ['hamood', 'hatense', 'hafear', 'hasleep', 'haconcen', 'hadep', '
+    haaches', 'haring']
+haheart distinct values: [0, 1, 2, 3, 4]
+0-4 severity, not a yes/no flag: it is the SIGH-A cardiovascular ITEM
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Not used as a comorbidity; trap avoided}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/comorbidity.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{10\_Fletcher\_2021a \quad \texttt{ad\_rec}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: codebook log \quad (25 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Reads as antidepressant; the Stata codebook says Anxiety/Depression (EQ-5D-5L yesno). Trusting the name would have invented an 81.6\% antidepressant rate}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_10_Fletcher_2021a")
+for c in ("mo", "sc", "ua", "pd", "ad", "mo_rec", "sc_rec", "ua_rec", "pd_rec", "ad_rec"
+    ):
+    s = pd.to_numeric(df[c], errors="coerce")
+    print(f"  {c:<7} range {s.min()}-{s.max()}")
+print()
+print("ad_rec is not an antidepressant flag: it sits in the *_rec family, the 0/1")
+print("recodes of the EQ-5D dimensions mo/sc/ua/pd/ad. 'ad' = anxiety/depression.")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+mo      range 1-5
+  sc      range 1-5
+  ua      range 1-5
+  pd      range 1-5
+  ad      range 1-5
+  mo_rec  range 0-1
+  sc_rec  range 0-1
+  ua_rec  range 0-1
+  pd_rec  range 0-1
+... (4 more lines)
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Used as the EQ-5D anxiety dimension instead}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/medication.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{21\_Richards\_2008 \quad \texttt{Antidepress\_dose}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: value labels \quad (26 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Reads as antidepressant dose; labelled Knowledge of dose of antidepressants baseline, i.e. what the patient knows}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+f, lab = label_of("21_Richards_2008", "Antidepress_dose")
+print("found in file:", f)
+print("Antidepress_dose label ->", lab)
+print("it is what the patient KNOWS about the dose, not the dose itself")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+found in file: Richards 2008 CLEANED.sav
+Antidepress_dose label -> Knowledge of dose of antidepressants baseline
+it is what the patient KNOWS about the dose, not the dose itself
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Not used as medication use}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/medication.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{11\_Fletcher\_2021b \quad \texttt{live\_spouse\_0}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: self-audit \quad (27 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Asks whether a spouse lives in the household while ds\_32 asks whether the patient is married; the two are not the same question}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+f, lab = label_of("11_Fletcher_2021b", "live_spouse_0")
+print("ds_11 live_spouse_0 ->", lab, f"   (in {f})")
+print("ds_32 MARRIED asks whether the patient is married - not the same question")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+ds_11 live_spouse_0 -> Husband or wife    (in TargetD_ForAnalysis.dta)
+ds_32 MARRIED asks whether the patient is married - not the same question
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Column renamed has\_spouse\_or\_partner and both wordings recorded}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/sociodemographic.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{24\_Rollman\_2016 \quad \texttt{roster conditions}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: diagnostics \quad (28 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} A roster answers only the conditions it lists; ds\_24 has no renal category, so has\_renal\_disease was False for all 1860 rows, claiming the study asked and found nothing}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_24_Rollman_2016")
+listed = df["phys_comorbid_name"].dropna().astype(str)
+vocab = sorted({p.strip() for e in listed for p in e.split(";") if p.strip()})
+print("distinct condition names the roster offers:", len(vocab))
+print("any renal category?", [v for v in vocab if "renal" in v.lower() or "kidney" in v.
+    lower()] or "NONE")
+print()
+print("a roster answers only the conditions it lists")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+distinct condition names the roster offers: 49
+any renal category? NONE
+
+a roster answers only the conditions it lists
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} ds\_24 now contributes no value; column drops from 5 studies to 4}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/comorbidity.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{12\_Gensichen\_2009 \quad \texttt{ICD101-ICD123}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: diagnostics \quad (29 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} The diagnosis list is recorded once on the baseline row; follow-up rows are empty by design and were reading as negative findings}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_12_Gensichen_2009")
+icd = [c for c in df.columns if c.startswith("ICD10")]
+filled = df[icd].notna().any(axis=1)
+print("rows with any ICD code, by follow_up_months:")
+print(filled.groupby(df["follow_up_months"]).sum().to_string())
+print()
+print("the list is recorded once, on the baseline row; empty rows are NOT negatives")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+rows with any ICD code, by follow_up_months:
+follow_up_months
+0     540
+6       0
+12      0
+24      0
+
+the list is recorded once, on the baseline row; empty rows are NOT negatives
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Rows with no codes are now missing rather than negative}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/comorbidity.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{10\_Fletcher\_2021a \quad \texttt{withdraw}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: large-number scan \quad (30 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Unix timestamps (2018-07-05 to 2019-03-27) for 78 patients: this is the withdrawal DATE, while withdrawal is the 0/1 flag. Listed as a censoring candidate on the wrong assumption}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_10_Fletcher_2021a")
+s = pd.to_numeric(df["withdraw"], errors="coerce")
+print("withdraw min/max:", s.min(), "/", s.max())
+print("as unix seconds ->", pd.to_datetime(s.min(), unit="s"), "..", pd.to_datetime(s.ma
+    x(), unit="s"))
+print("this is the withdrawal DATE; 'withdrawal' is the 0/1 flag")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+withdraw min/max: 1530751921.0 / 1553655291.0
+as unix seconds -> 2018-07-05 00:52:01 .. 2019-03-27 02:54:51
+this is the withdrawal DATE; 'withdrawal' is the 0/1 flag
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Corrected in the candidate notes; a magnitude guard now flags any consumed column above 1e6}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/clinical\_events.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{11\_Fletcher\_2021b \quad \texttt{death\_t / phq2wk\_dead\_di\_t}}
+  {\scriptsize\textcolor{blue!55!black}{\textbf{medium}} \quad
+   found by: clinical-events screen \quad (31 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Named as death but labelled Thought-of-death(Priorities) and Thoughts that you would be better off dead: PHQ-9 suicidal-ideation items, not vital status. Previously listed as a death study}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+for c in ("death_t", "phq2wk_dead_di_t"):
+    f, lab = label_of("11_Fletcher_2021b", c)
+    print(f"{c} -> {lab}")
+print()
+print("named as death, but these are PHQ-9 item 9 thoughts-of-death questions")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+death_t -> Thought-of-death(Priorities)
+phq2wk_dead_di_t -> Thoughts that you would be better off dead...
+
+named as death, but these are PHQ-9 item 9 thoughts-of-death questions
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Excluded; death coverage is 2 studies not 3}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/clinical\_events.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{13\_Hölzel\_2018 \quad \texttt{GAD7\_1}}
+  {\scriptsize\textcolor{black!55}{\textbf{low}} \quad
+   found by: instruments range check \quad (32 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} 2 responses coded 9, outside the 0-3 response range}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_13_H\u00f6lzel_2018")
+s = pd.to_numeric(df["GAD7_1"], errors="coerce")
+print("GAD7_1 value counts (valid range is 0-3):")
+print(s.value_counts().sort_index().to_string())
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+GAD7_1 value counts (valid range is 0-3):
+GAD7_1
+0     96
+1    395
+2    114
+3     59
+9      2
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Set missing with a warning}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/instruments.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{12\_Gensichen\_2009 \quad \texttt{DatBefT1}}
+  {\scriptsize\textcolor{black!55}{\textbf{low}} \quad
+   found by: visit-schedule check \quad (33 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} 2 survey dates land in 2050 and 2066; DDMMYY typos whose two-digit year pivots into the future}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+L = loader("ds_12_Gensichen_2009")
+t1 = pd.read_stata(L.DATA_DIR / "PRoMPT_Daten_T1_09082010_final.dta", convert_categorica
+    ls=False)
+n = pd.to_numeric(t1["DatBefT1"], errors="coerce")
+z = n.where(n.notna()).astype("Float64").round(0).astype("Int64").astype("string").str.z
+    fill(6)
+dt = pd.to_datetime(z, format="%d%m%y", errors="coerce")
+bad = dt.notna() & ((dt.dt.year < 2005) | (dt.dt.year > 2009))
+print("DatBefT1 parsed dates:", int(dt.notna().sum()))
+print("dates outside the trial window:", int(bad.sum()), "->", sorted(dt[bad].dt.year.un
+    ique().tolist()))
+print("DDMMYY typos whose 2-digit year pivots into the future")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+DatBefT1 parsed dates: 529
+dates outside the trial window: 2 -> [2050, 2066]
+DDMMYY typos whose 2-digit year pivots into the future
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Not consumed; noted for anyone parsing visit dates}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{No} -- recorded only; nothing consumes it
+   }
+\end{frame}
+
+
+\begin{frame}[fragile]{12\_Gensichen\_2009 \quad \texttt{DatBefT2}}
+  {\scriptsize\textcolor{black!55}{\textbf{low}} \quad
+   found by: visit-schedule check \quad (34 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} The raw file stores 100 blank strings, so it reads as 626 non-null while holding 526 real dates}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+L = loader("ds_12_Gensichen_2009")
+p = L.DATA_DIR / "PRoMPT_Daten_T2_09082010_final.dta"
+raw = pd.read_stata(p, convert_categoricals=False)
+blanks = raw["DatBefT2"].astype("string").str.strip().eq("").sum()
+print("RAW   DatBefT2 non-null:", int(raw["DatBefT2"].notna().sum()), "of", len(raw))
+print("   of which blank strings:", int(blanks))
+clean = L.read_and_clean(p)
+print("AFTER read_and_clean    :", int(clean["DatBefT2"].notna().sum()), "- blanks becam
+    e NA")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+RAW   DatBefT2 non-null: 626 of 626
+   of which blank strings: 100
+AFTER read_and_clean    : 526 - blanks became NA
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Already correct: read\_and\_clean converts blanks to NA before the numeric cast, giving 526. Recorded because reading the raw file directly miscounts}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- fixed in the study's loader
+   (data\_loading/ds\_12\_Gensichen\_2009.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{30\_Srinivasan\_2022 \quad \texttt{HbA1c}}
+  {\scriptsize\textcolor{black!55}{\textbf{low}} \quad
+   found by: comorbidity screen \quad (35 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Lab value present but no diabetes diagnosis column}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_30_Srinivasan_2022")
+s = pd.to_numeric(df["HbA1c"], errors="coerce")
+print("HbA1c non-null:", int(s.notna().sum()), " range:", round(s.min(), 1), "-", round(
+    s.max(), 1))
+print("diabetes diagnosis column present:",
+      [c for c in df.columns if "diab" in c.lower()] or "NONE")
+print("thresholding a lab value into a diagnosis is a clinical judgment")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+HbA1c non-null: 7156  range: 3.5 - 16.1
+diabetes diagnosis column present: NONE
+thresholding a lab value into a diagnosis is a clinical judgment
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Not thresholded; ds\_30 contributes no diabetes flag}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/comorbidity.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{12\_Gensichen\_2009 \quad \texttt{GHZ\_T2}}
+  {\scriptsize\textcolor{black!55}{\textbf{low}} \quad
+   found by: timepoint check \quad (36 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} EQ-5D VAS recorded only at month 12 despite an untagged name}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_12_Gensichen_2009")
+s = pd.to_numeric(df["GHZ_T2"], errors="coerce")
+print("GHZ_T2 non-null by follow_up_months:")
+print(s.notna().groupby(df["follow_up_months"]).sum().to_string())
+print("the name carries no timepoint tag, but it exists only at month 12")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+GHZ_T2 non-null by follow_up_months:
+follow_up_months
+0       0
+6       0
+12    490
+24      0
+the name carries no timepoint tag, but it exists only at month 12
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Kept as a row-level VAS value}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/functioning.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{32\_Wells\_2000 \quad \texttt{MARRIED}}
+  {\scriptsize\textcolor{black!55}{\textbf{low}} \quad
+   found by: self-audit \quad (37 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Unlabelled 0/1. Direction corroborated by the variable label SCREENER NOW MARRIED, the codebook frequency table (739 vs 617) and the repo existing baseline script mapping 1 to Married; no publication reports a marital breakdown so it stays unvalidated}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+import pyreadstat
+df = load("ds_32_Wells_2000")
+s = pd.to_numeric(df["MARRIED"], errors="coerce")
+print("MARRIED value counts:")
+print(s.value_counts().sort_index().to_string())
+print("unlabelled 0/1; direction corroborated by the codebook frequency table")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+MARRIED value counts:
+MARRIED
+0    4319
+1    5173
+unlabelled 0/1; direction corroborated by the codebook frequency table
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Direction kept; column renamed has\_spouse\_or\_partner}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/sociodemographic.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{13\_Hölzel\_2018 \quad \texttt{FIMA\_Med*\_PZN}}
+  {\scriptsize\textcolor{black!55}{\textbf{low}} \quad
+   found by: large-number scan \quad (38 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Values up to 9e9 that look like missing encodings but are German drug identifiers (Pharmazentralnummer)}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_13_H\u00f6lzel_2018")
+pzn = [c for c in df.columns if "PZN" in c.upper()]
+print("PZN columns:", len(pzn), "->", pzn[:3])
+s = pd.to_numeric(df[pzn[0]], errors="coerce")
+print(f"{pzn[0]} max:", s.max(), "- looks like a missing-value sentinel")
+print("but it is a German drug identifier (Pharmazentralnummer), a real code")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+PZN columns: 16 -> ['FIMA_Med1_PZN', 'FIMA_Med2_PZN', 'FIMA_Med3_PZN']
+FIMA_Med1_PZN max: 820010000.0 - looks like a missing-value sentinel
+but it is a German drug identifier (Pharmazentralnummer), a real code
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Not consumed by any cluster; recorded so the magnitudes are not re-investigated}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{No} -- recorded only; nothing consumes it
+   }
+\end{frame}
+
+
+\begin{frame}[fragile]{20\_Patel\_2010 \quad \texttt{h9/h9a/h9b/das\_h14}}
+  {\scriptsize\textcolor{black!55}{\textbf{low}} \quad
+   found by: large-number scan \quad (39 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Carry 9999 as a missing code; CISRTot, the only column consumed from this study, is clean (0-48)}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_20_Patel_2010")
+for c in ("h9", "h9a", "h9b"):
+    if c in df.columns:
+        s = pd.to_numeric(df[c], errors="coerce")
+        print(f"{c}: max={s.max()}  rows at 9999={int((s == 9999).sum())}")
+s = pd.to_numeric(df["CISRTot"], errors="coerce")
+print("CISRTot (the only column consumed): range", s.min(), "-", s.max(), "- clean")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+h9: max=9999  rows at 9999=1
+h9a: max=9999  rows at 9999=1
+h9b: max=9999  rows at 9999=1
+CISRTot (the only column consumed): range 0 - 48 - clean
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} No action; consumed columns verified free of out-of-distribution codes}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{No} -- recorded only; nothing consumes it
+   }
+\end{frame}
+
+
+\begin{frame}[fragile]{08\_Coventry\_2015 \quad \texttt{ltc1-ltc20}}
+  {\scriptsize\textcolor{green!45!black}{\textbf{resolved}} \quad
+   found by: paper \quad (40 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Decoded from the paper: Bayliss burden ratings for up to 20 long-term conditions, 0 meaning absent. Counting above zero gives 7.49, and 6.35 after subtracting each patient's diabetes and heart-disease index conditions, reproducing the published 6.2 (SD 3.0)}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_08_Coventry_2015")
+cols = [f"ltc{i}" for i in range(1, 21) if f"ltc{i}" in df.columns]
+r = df[cols].apply(pd.to_numeric, errors="coerce")
+count = (r > 0).sum(axis=1).where(r.notna().any(axis=1))
+base = df["follow_up_months"] == 0            # one value per patient, at baseline
+per_patient = count[base].groupby(df.loc[base, "patient_id"]).first()
+print("decoded as Bayliss burden ratings, 0 = absent")
+print("counting ratings above zero      :", round(per_patient.mean(), 2))
+# COINCIDE recruited patients who already had diabetes and/or heart disease,
+# so those index conditions are inside the 20 and the paper excludes them.
+# these are the strings "TRUE"/"FALSE", not 0/1
+idx = df.loc[base].groupby("patient_id")[["diabetes", "chd"]].first()
+idx = idx.apply(lambda s: s.astype("string").str.upper().eq("TRUE").astype(int))
+... (4 more lines)
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+decoded as Bayliss burden ratings, 0 = absent
+counting ratings above zero      : 7.49
+minus each patient's index conditions: 6.36  (n = 387 )
+paper reports mean 6.2 (SD 3.0)
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} ds\_08 now contributes a validated condition count}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/comorbidity.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{04\_Bekelman\_2018 \quad \texttt{dem\_smoke}}
+  {\scriptsize\textcolor{green!45!black}{\textbf{resolved}} \quad
+   found by: study codebook \quad (41 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Unlabelled 0-3 code; the study codebook gives 1=Current, 0=Never, 2=Quit <1yr, 3=Quit >=1yr}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_04_Bekelman_2018")
+s = pd.to_numeric(df["dem_smoke"], errors="coerce")
+print("dem_smoke value counts (unlabelled 0-3):")
+print(s.value_counts().sort_index().to_string())
+print("codebook: 1=Current, 0=Never, 2=Quit <1yr, 3=Quit >=1yr")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+dem_smoke value counts (unlabelled 0-3):
+dem_smoke
+0    303
+1    159
+2     92
+3    461
+codebook: 1=Current, 0=Never, 2=Quit <1yr, 3=Quit >=1yr
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Smoking harmonized}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/sociodemographic.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{05\_Bekelman\_2015 \quad \texttt{CRF\_SMOKE}}
+  {\scriptsize\textcolor{green!45!black}{\textbf{resolved}} \quad
+   found by: PCDM data dictionary PDF \quad (42 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Unlabelled 1-4 code; the compiled data dictionary gives 1=Current, 2=Quit <1yr, 3=Quit >=1yr, 4=Never}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_05_Bekelman_2015")
+s = pd.to_numeric(df["CRF_SMOKE"], errors="coerce")
+print("CRF_SMOKE value counts (unlabelled 1-4):")
+print(s.value_counts().sort_index().to_string())
+print("data dictionary: 1=Current, 2=Quit <1yr, 3=Quit >=1yr, 4=Never")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+CRF_SMOKE value counts (unlabelled 1-4):
+CRF_SMOKE
+1     83
+2     14
+3    292
+4     86
+data dictionary: 1=Current, 2=Quit <1yr, 3=Quit >=1yr, 4=Never
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Smoking harmonized}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/sociodemographic.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{30\_Srinivasan\_2022 \quad \texttt{educ/educ\_NPS}}
+  {\scriptsize\textcolor{green!45!black}{\textbf{resolved}} \quad
+   found by: Hope Codebook \quad (43 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Unlabelled; the Hope codebook gives educ = years of schooling and educ\_NPS = 0 none / 1 primary (1-7) / 2 secondary or higher (>7)}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_30_Srinivasan_2022")
+for c in ("educ", "educ_NPS"):
+    s = pd.to_numeric(df[c], errors="coerce")
+    print(f"{c}: range {s.min()}-{s.max()}  distinct={len(s.dropna().unique())}")
+print("Hope codebook: educ = YEARS of schooling; educ_NPS = 0 none / 1 primary / 2 secon
+    dary ...")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+educ: range 0-15  distinct=16
+educ_NPS: range 0-2  distinct=3
+Hope codebook: educ = YEARS of schooling; educ_NPS = 0 none / 1 primary / 2 secondary ..
+    .
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Fixes the threshold used for cross-country education}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/sociodemographic.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{10\_Fletcher\_2021a \quad \texttt{mo/sc/ua/pd/ad}}
+  {\scriptsize\textcolor{green!45!black}{\textbf{resolved}} \quad
+   found by: codebook log \quad (44 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} A complete EQ-5D-5L hidden under two-letter names, missed on the first pass}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_10_Fletcher_2021a")
+dims = [c for c in ("mo", "sc", "ua", "pd", "ad") if c in df.columns]
+print("EQ-5D-5L dimensions hidden under two-letter names:", dims)
+for c in dims:
+    s = pd.to_numeric(df[c], errors="coerce")
+    print(f"  {c}: range {s.min()}-{s.max()}  non-null={int(s.notna().sum())}")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+EQ-5D-5L dimensions hidden under two-letter names: ['mo', 'sc', 'ua', 'pd', 'ad']
+  mo: range 1-5  non-null=4689
+  sc: range 1-5  non-null=4684
+  ua: range 1-5  non-null=4687
+  pd: range 1-5  non-null=4692
+  ad: range 1-5  non-null=4688
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} EQ-5D dimensions extended from 4 studies to 5}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/functioning.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{11\_Fletcher\_2021b \quad \texttt{live\_alone\_0}}
+  {\scriptsize\textcolor{green!45!black}{\textbf{resolved}} \quad
+   found by: paper validation \quad (45 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Paper reports Live alone 130 (13.9) and 109 (11.7) by arm}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_11_Fletcher_2021b")
+s = pd.to_numeric(df["live_alone_0"], errors="coerce")
+base = df[df["follow_up_months"] == 0]
+b = pd.to_numeric(base["live_alone_0"], errors="coerce")
+print("live_alone_0 at baseline: yes =", int((b == 1).sum()), "of", int(b.notna().sum())
+    ,
+      "->", round(100 * (b == 1).sum() / b.notna().sum(), 1), "%")
+print("paper reports 130 (13.9%) and 109 (11.7%) by arm")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+live_alone_0 at baseline: yes = 239 of 1868 -> 12.8 %
+paper reports 130 (13.9%) and 109 (11.7%) by arm
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Harmonized column gives 12.8\%, an exact match}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/sociodemographic.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{09\_Davidson\_2013 \quad \texttt{ACM\_Event}}
+  {\scriptsize\textcolor{green!45!black}{\textbf{resolved}} \quad
+   found by: clinical-events screen \quad (46 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} All-cause mortality adjudicated as yes/no; missed by the first censoring screen}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_09_Davidson_2013")
+s = pd.to_numeric(df["ACM_Event"], errors="coerce")
+print("ACM_Event (all-cause mortality, adjudicated):")
+print(s.value_counts(dropna=False).sort_index().to_string())
+print("missed by the first censoring screen; now a second death study")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+ACM_Event (all-cause mortality, adjudicated):
+ACM_Event
+0    596
+1      4
+missed by the first censoring screen; now a second death study
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Now a second death study alongside ds\_04}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/clinical\_events.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{04\_Bekelman\_2018 \quad \texttt{days\_until\_death}}
+  {\scriptsize\textcolor{green!45!black}{\textbf{resolved}} \quad
+   found by: paper validation \quad (47 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} Paper reports 10 patients died on CASA and 13 on usual care; the column records a death time for exactly 23 patients}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_04_Bekelman_2018")
+s = pd.to_numeric(df["days_until_death"], errors="coerce")
+n = df.loc[s.notna(), "patient_id"].nunique()
+print("patients with a death time recorded:", n)
+print("paper: 10 died on CASA and 13 on usual care = 23")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+patients with a death time recorded: 23
+paper: 10 died on CASA and 13 on usual care = 23
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Validated exactly}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/clinical\_events.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{10\_Fletcher\_2021a \quad \texttt{withdrawal}}
+  {\scriptsize\textcolor{green!45!black}{\textbf{resolved}} \quad
+   found by: clinical-events screen \quad (48 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} 0/1 withdrawal flag recorded at months 6, 12 and 18 over 3107 rows; empty on the baseline row, which hid it from a patient-level check}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_10_Fletcher_2021a")
+s = pd.to_numeric(df["withdrawal"], errors="coerce")
+print("withdrawal flag non-null by follow_up_months:")
+print(s.notna().groupby(df["follow_up_months"]).sum().to_string())
+print("empty at baseline, which hid it from a baseline-only screen")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+withdrawal flag non-null by follow_up_months:
+follow_up_months
+0        0
+6     1422
+12    1265
+18     420
+empty at baseline, which hid it from a baseline-only screen
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Harmonized as withdrew\_from\_study, 68 patients}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{Yes} -- handled in the column-cluster harmonization
+   (harmonization\_column\_clusters/clinical\_events.py)}
+\end{frame}
+
+
+\begin{frame}[fragile]{24\_Rollman\_2016 \quad \texttt{SIGH-A items}}
+  {\scriptsize\textcolor{purple!70!black}{\textbf{open}} \quad
+   found by: RELAX Meta Data \quad (49 of 49)}
+  \vspace{3pt}
+
+  {\footnotesize \textbf{Problem.} A 14-item Hamilton Anxiety scale present in this study and not harmonized by any cluster}
+  \vspace{4pt}
+
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny reproduce]
+df = load("ds_24_Rollman_2016")
+items = [c for c in df.columns if c.startswith("ha") and c != "haheart"]
+print("SIGH-A item columns present:", len(items), "->", items[:6])
+print("sigha_total present:", "sigha_total" in df.columns)
+print("a 14-item Hamilton Anxiety scale no cluster harmonizes yet")
+  \end{Verbatim}
+  \begin{Verbatim}[fontsize=\tiny, frame=single, framesep=2pt, label=\tiny output]
+SIGH-A item columns present: 13 -> ['hamood', 'hatense', 'hafear', 'hasleep', 'haconcen'
+    , 'hadep']
+sigha_total present: True
+a 14-item Hamilton Anxiety scale no cluster harmonizes yet
+  \end{Verbatim}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Fix.} Recorded as a further instrument family}
+  \vspace{2pt}
+
+  {\footnotesize \textbf{Already handled?} \ans{No} -- recorded only; nothing consumes it
+   }
+\end{frame}
+
+\end{document}

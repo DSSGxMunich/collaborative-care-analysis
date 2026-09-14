@@ -237,5 +237,7 @@ cython_debug/
 *.nav
 *.snm
 *.toc
+*.vrb
 *.out
 docs/*.pdf
+risk_score_model/output/

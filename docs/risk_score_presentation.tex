@@ -1,0 +1,181 @@
+\documentclass[11pt, t, handout]{beamer}
+\usepackage{amsmath,amssymb,graphicx,tikz}
+\usecolortheme{rose}
+\useinnertheme[shadow]{rounded}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\addtobeamertemplate{frametitle}{}{\vspace{0em}}
+\setbeamertemplate{navigation symbols}{}
+\makeatletter
+\setbeamertemplate{footline}{%
+  \ifnum\insertframenumber>1
+    \begin{tikzpicture}[remember picture, overlay]
+      \node[anchor=south, inner sep=4pt, yshift=3pt] at (current page.south) {%
+        {\tiny\color{structure.fg}\insertframenumber\,/\,\inserttotalframenumber}};
+    \end{tikzpicture}
+  \fi
+}
+\makeatother
+\newcommand{\ans}[1]{\textcolor{structure.fg}{#1}}
+\newcommand{\todo}[1]{\textcolor{red!70!black}{\textbf{TODO:} #1}}
+
+\title{A Risk Score for Depression Outcomes \\ \large Stage 1 of a PATH-guided two-stage IPD model}
+\author{Alexander Richard}
+\institute{DSSGx Munich, Collaborative Care IPD}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}\titlepage\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Where this fits}
+  \pause
+  \begin{center}\footnotesize
+  \begin{tabular}{p{3.6cm}p{6.5cm}}
+    \toprule
+    \textbf{Stage 1 (this deck)} & Predict outcome risk from baseline
+    characteristics only, no treatment information. \ans{The subject of
+    everything that follows.} \\
+    \midrule
+    \textbf{Stage 2 (future work)} & Ask whether the risk score modifies
+    the treatment effect; likely combined with a component network
+    meta-regression across the collaborative-care building blocks. \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{10pt}
+  \pause
+  {\footnotesize Kent, Paulus, van Klaveren et al., \emph{The PATH
+   Statement}, Ann Intern Med 2020: predict risk first, on data that
+   cannot leak treatment assignment; only then examine effect
+   modification.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Why a two-stage IPD design, not one pooled regression}
+  \pause
+  \todo{State the between-study heterogeneity we actually observe (visit
+  schedules, instrument families, predictor coverage) once the cohort for
+  the chosen scenario is finalised.}
+  \vspace{8pt}
+  \pause
+  {\footnotesize Debray, Moons, Ahmed, Koffijberg \& Riley, \emph{A
+   framework for developing, implementing and evaluating clinical
+   prediction models in an IPD meta-analysis}, Stat Med 2013; Riley,
+   Tierney \& Stewart (eds), \emph{IPD Meta-Analysis: A Handbook for
+   Healthcare Research}, Wiley 2021.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Cohort definition: the scenario in force}
+  \pause
+  \todo{One table per finalised scenario: instrument, baseline/follow-up
+  target times and tolerance, predictor list, missing-data policy,
+  studies retained, N. Generated directly from cohort\$flow -- do not
+  retype these numbers by hand.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Assumptions this analysis makes}
+  \pause
+  \todo{Enumerate explicitly, e.g.: visits within the tolerance window are
+  exchangeable with the nominal target time; a predictor missing for an
+  entire study is missing at random across studies conditional on
+  observed study-level characteristics (or: state why this is doubtful);
+  complete-case analysis at Stage 1 does not introduce differential
+  selection bias by outcome.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Sample size}
+  \pause
+  \todo{Report the pmsampsize calculation once outcome type and target
+  performance (shrinkage, expected $C$/$R^2$) are decided, against the
+  realised N per scenario.}
+  \vspace{8pt}
+  \pause
+  {\footnotesize Riley, Ensor, Snell et al., \emph{Calculating the sample
+   size required for developing a clinical prediction model}, BMJ 2020;
+   Riley, Snell, Ensor et al., \emph{Minimum sample size for developing a
+   multivariable prediction model, Part II}, Stat Med 2019.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Missing data}
+  \pause
+  \todo{State the Stage-1 policy (complete-case, per
+  enforce\_non\_missingness) and its cost in dropped studies/patients;
+  outline the Stage-2 plan if predictors turn out to be only
+  sporadically missing rather than systematically absent.}
+  \vspace{8pt}
+  \pause
+  {\footnotesize Jolani, Debray, Koffijberg \& Moons, \emph{Imputation of
+   systematically missing predictors in an IPD meta-analysis}, Stat Med
+   2015; Resche-Rigon \& White, \emph{MICE for systematically and
+   sporadically missing multilevel data}, Stat Methods Med Res 2018.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Model}
+  \pause
+  \todo{Specify the fitted model once the outcome definition is settled:
+  multilevel structure (random intercept/slope by study), prior choices
+  if Bayesian, shrinkage method if frequentist.}
+  \vspace{8pt}
+  \pause
+  {\footnotesize Steyerberg, \emph{Clinical Prediction Models}, 2nd ed.,
+   Springer 2019; B\"urkner, \emph{brms: An R Package for Bayesian
+   Multilevel Models}, JSS 2017.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Validation}
+  \pause
+  \todo{Report internal-external cross-validation (leave-one-study-out):
+  per-study calibration and discrimination, then their meta-analytic
+  summary and prediction interval.}
+  \vspace{8pt}
+  \pause
+  {\footnotesize Steyerberg \& Harrell, \emph{Prediction models need
+   appropriate internal, internal-external, and external validation},
+   J Clin Epidemiol 2016; Riley et al., \emph{External validation of
+   clinical prediction models using big datasets from e-health records or
+   IPD meta-analysis}, BMJ 2016.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Results}
+  \pause
+  \todo{Fill in once a scenario is fitted: coefficients/shrunk estimates,
+  calibration plot, discrimination, IECV forest plot across studies.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Limitations}
+  \pause
+  \todo{At minimum: unequal and partly continuous follow-up timing across
+  trials; complete-case analysis under uneven predictor coverage;
+  observational risk factors from RCT control-arm-heavy data; scale
+  non-comparability across depression instruments left deliberately
+  unbridged.}
+\end{frame}
+
+% ─────────────────────────────────────────────────────────────────────────────
+\begin{frame}{Roadmap}
+  \pause
+  \begin{center}\footnotesize
+  \begin{tabular}{ll}
+    \toprule
+    now & finalise outcome definition and candidate predictor set \\
+    next & sample size target, then fit \\
+    then & IECV, calibration, report \\
+    stage 2 & risk-based effect modification + component NMA \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+\end{frame}
+
+\end{document}
