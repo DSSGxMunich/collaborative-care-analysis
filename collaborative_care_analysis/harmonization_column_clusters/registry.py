@@ -26,6 +26,14 @@ PACKAGE = "collaborative_care_analysis.harmonization_column_clusters"
 
 # Approved clusters, one per line and alphabetical so appends merge cleanly.
 IMPLEMENTED_CLUSTERS = [
+    "age",
+    "clinical_events",
+    "comorbidity",
+    "functioning",
+    "instruments",
+    "medication",
+    "service_use",
+    "sex",
     "sociodemographic",
 ]
 

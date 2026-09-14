@@ -31,23 +31,10 @@
 
 \begin{frame}\titlepage\end{frame}
 
-% ─────────────────────────────────────────────────────────────────────────────
-\begin{frame}{Manual harmonization does not scale}
-  \pause
-  30 trials, each harmonized by hand, one study at a time.
-  \vspace{14pt}
-  \pause
-  \begin{center}\large
-  430 harmonized columns. \ans{31 of them existed in five studies or more.}
-  \end{center}
-  \vspace{14pt}
-  \pause
-  The work was careful. It could not add up, because each study was described
-  in its own words.
-\end{frame}
+% 
 
 % ─────────────────────────────────────────────────────────────────────────────
-\begin{frame}{Why it could not add up}
+\begin{frame}{Manual harmonization does not scale}
   \pause
   \begin{center}\footnotesize
   \begin{tabular}{ll}
@@ -76,24 +63,24 @@
   \pause
   \begin{itemize}\footnotesize
     \setlength{\itemsep}{5pt}
-    \item \textbf{An age that was not an age.} Taken from a two digit birth
-          year. \ans{Wrong by up to 70 years.}
+    \item \textbf{An age that was not an age.} One study's age came from a two
+          digit birth year used directly. \ans{Wrong by up to 70 years.}
     \pause
-    \item \textbf{Two studies with swapped arms.} Intervention and control the
-          wrong way round. \ans{2{,}270 rows.}
+    \item \textbf{Two studies with swapped treatment arms.} Intervention and
+          control the wrong way round. \ans{2{,}270 rows.}
     \pause
-    \item \textbf{Every "no" turned into "unknown".} Blanks that meant no, read
-          as missing. \ans{A thousand healthy patients vanish.}
+    \item \textbf{Every "no" turned into "unknown".} Comorbidity flags where a
+          blank means no. Read wrong, \ans{a thousand healthy patients vanish.}
     \pause
-    \item \textbf{Two studies silently dropped out.} An umlaut in an author's
-          name, rewritten by a file copy. \ans{No error message.}
+    \item \textbf{Two studies silently dropped out.} Two authors' names contain
+          an umlaut. A file copy rewrote it invisibly. \ans{No error message.}
   \end{itemize}
   \vspace{8pt}
   \pause
   \begin{center}\scriptsize
   \begin{tabular}{ll}
     \toprule
-    also reshaped & ds\_29, which returned its raw file unreshaped \\
+    reshaped & ds\_29, which was returning its raw file unreshaped \\
     made to fail loudly & missing zips, bare asserts, silent row drops \\
     dtypes & blanks to missing \emph{before} types are inferred \\
     documented & which cohort each export actually contains \\
@@ -102,8 +89,8 @@
   \end{center}
   \vspace{6pt}
   \pause
-  {\footnotesize 47 problems recorded with what was done about each, and each
-   study fixed on its own branch.}
+  {\footnotesize 47 problems recorded with what was done about each, each on
+   its own branch so each can be reviewed on its own.}
 \end{frame}
 
 % ─────────────────────────────────────────────────────────────────────────────
@@ -130,9 +117,9 @@
    record?" to \ans{"what can all of them answer?"}}
   \vspace{5pt}
   \pause
-  {\footnotesize A module covers a \emph{family} of variables, not a single
-   column. Diabetes, heart disease and ten other illnesses are decided
-   together, because the studies that record one tend to record the rest.}
+  {\footnotesize A module covers a \emph{family} of variables, not one column.
+   Diabetes, heart disease and ten other illnesses are decided together, because
+   the studies that record one tend to record the rest.}
 \end{frame}
 
 % ─────────────────────────────────────────────────────────────────────────────
@@ -153,8 +140,8 @@
   \end{center}
   \vspace{10pt}
   \pause
-  The specific columns stay. Nothing is thrown away, and no study is given an
-  answer it never gave.
+  The narrower columns stay. The new one also picks up the studies that only
+  ever asked the broad question, and no study is given an answer it never gave.
   \vspace{6pt}
   \pause
   {\footnotesize Where the studies genuinely disagree, we do not invent a scale:
@@ -213,13 +200,13 @@
 % ─────────────────────────────────────────────────────────────────────────────
 \begin{frame}{How we know it is right}
   \pause
-  Wherever a paper prints a number, we recompute it from the data and compare.
+  Wherever a paper prints a number, we recompute it from our data and compare.
   \vspace{10pt}
   \pause
   \begin{center}\footnotesize
   \begin{tabular}{lll}
     \toprule
-    what we counted & where & does it match the paper \\
+    what we counted & in which study & does it match the paper \\
     \midrule
     four illnesses & ds\_23 & \ans{yes, patient for patient} \\
     on antidepressants & ds\_26, ds\_09, ds\_08 & \ans{yes, all three} \\
