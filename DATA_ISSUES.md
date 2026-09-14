@@ -60,7 +60,7 @@ keep data files out of version control, and this is documentation.
 |---|---|---|---|---|
 | 13_Hölzel_2018 | `GAD7_1` | 2 responses coded 9, outside the 0-3 response range | Set missing with a warning | instruments range check |
 | 12_Gensichen_2009 | `DatBefT1` | 2 survey dates land in 2050 and 2066; DDMMYY typos whose two-digit year pivots into the future | Not consumed; noted for anyone parsing visit dates | visit-schedule check |
-| 12_Gensichen_2009 | `DatBefT2` | Reports 626 non-null but 100 are empty strings, so it holds 526 real dates | Blanks read as missing, not as values | visit-schedule check |
+| 12_Gensichen_2009 | `DatBefT2` | The raw file stores 100 blank strings, so it reads as 626 non-null while holding 526 real dates | Already correct: read_and_clean converts blanks to NA before the numeric cast, giving 526. Recorded because reading the raw file directly miscounts | visit-schedule check |
 | 30_Srinivasan_2022 | `HbA1c` | Lab value present but no diabetes diagnosis column | Not thresholded; ds_30 contributes no diabetes flag | comorbidity screen |
 | 12_Gensichen_2009 | `GHZ_T2` | EQ-5D VAS recorded only at month 12 despite an untagged name | Kept as a row-level VAS value | timepoint check |
 | 32_Wells_2000 | `MARRIED` | Unlabelled 0/1. Direction corroborated by the variable label SCREENER NOW MARRIED, the codebook frequency table (739 vs 617) and the repo existing baseline script mapping 1 to Married; no publication reports a marital breakdown so it stays unvalidated | Direction kept; column renamed has_spouse_or_partner | self-audit |
