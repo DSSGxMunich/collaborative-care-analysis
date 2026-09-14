@@ -18,6 +18,7 @@ PROMPT_column_harmonization.md. Auto-discovery would pull a half-finished
 module into the build the moment it was saved.
 """
 
+from collections.abc import Iterator
 import importlib
 from types import ModuleType
 
@@ -25,7 +26,7 @@ PACKAGE = "collaborative_care_analysis.harmonization_column_clusters"
 
 # Approved clusters, one per line and alphabetical so appends merge cleanly.
 IMPLEMENTED_CLUSTERS = [
-    "age",
+    "clinical_events",
 ]
 
 # The contract every cluster module satisfies. Checked on load so a module that
@@ -52,3 +53,20 @@ def cluster_modules() -> list[ModuleType]:
             )
         modules.append(module)
     return modules
+
+
+def source_pairs(consumption: dict, *keys: str) -> Iterator[tuple[str, str]]:
+    """Yield every (study_id, raw column) pair a cluster declares under ``keys``.
+
+    A cluster's ``sources``/``fallback_sources`` map a study to the raw column
+    it reads. Single-variable clusters read one column per study (age reads
+    ``Alter`` from ds_13), but an instrument cluster reads twenty from the same
+    study, so the value may be either a column name or a list of them. This
+    flattens both shapes so callers never have to care which a cluster used.
+    """
+    for key in keys or ("sources", "fallback_sources"):
+        for study_id, columns in consumption.get(key, {}).items():
+            if isinstance(columns, str):
+                columns = [columns]
+            for column in columns:
+                yield study_id, column
