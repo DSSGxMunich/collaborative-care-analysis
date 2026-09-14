@@ -127,8 +127,17 @@ MANUAL_CROSSWALK = [
     (("t0", "TelSeel"), ("t1", "TelSeeT1")),
 ]
 
-# The follow-up month each visit represents. Corrected from 3/6/12 to match
-# the paper's actual baseline/6/12/24-month schedule (survey dates confirm).
+# The follow-up month each visit represents. Corrected from 3/6/12.
+#
+# The paper covers t0/t1/t2 only: its primary analysis uses "all observed
+# PHQ-9 score data at the baseline, 6-month, and 12-month assessments; 626
+# patients at 74 practices", and 626 matches each wave file's row count.
+#
+# t3 is a later wave the 2009 paper does not report, so it rests on the survey
+# dates alone. Median months from baseline, computed from "Datum der Befragung"
+# (t0 Befragung, t1 DatBefT1, t2 DatBefT2, t3 DatumBefT3) joined on Pat_ID:
+# 6.3 (n=527), 12.5 (n=523) and 25.5 (n=439), each with an interquartile range
+# of about one month.
 VISIT_MONTHS = {"t0": 0, "t1": 6, "t2": 12, "t3": 24}
 
 GRAIN = ["patient_id", "follow_up_months"]

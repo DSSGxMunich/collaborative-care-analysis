@@ -1,6 +1,6 @@
 # Data problems found while auditing the loaders and harmonizing the columns
 
-47 entries. Severity is about the effect on a result, not on the code:
+49 entries. Severity is about the effect on a result, not on the code:
 `critical` would have changed a published number, `resolved` means the entry
 records how something was decoded rather than a defect that remains.
 
@@ -59,6 +59,8 @@ keep data files out of version control, and this is documentation.
 | study | column | problem | what was done | found by |
 |---|---|---|---|---|
 | 13_Hölzel_2018 | `GAD7_1` | 2 responses coded 9, outside the 0-3 response range | Set missing with a warning | instruments range check |
+| 12_Gensichen_2009 | `DatBefT1` | 2 survey dates land in 2050 and 2066; DDMMYY typos whose two-digit year pivots into the future | Not consumed; noted for anyone parsing visit dates | visit-schedule check |
+| 12_Gensichen_2009 | `DatBefT2` | Reports 626 non-null but 100 are empty strings, so it holds 526 real dates | Blanks read as missing, not as values | visit-schedule check |
 | 30_Srinivasan_2022 | `HbA1c` | Lab value present but no diabetes diagnosis column | Not thresholded; ds_30 contributes no diabetes flag | comorbidity screen |
 | 12_Gensichen_2009 | `GHZ_T2` | EQ-5D VAS recorded only at month 12 despite an untagged name | Kept as a row-level VAS value | timepoint check |
 | 32_Wells_2000 | `MARRIED` | Unlabelled 0/1. Direction corroborated by the variable label SCREENER NOW MARRIED, the codebook frequency table (739 vs 617) and the repo existing baseline script mapping 1 to Married; no publication reports a marital breakdown so it stays unvalidated | Direction kept; column renamed has_spouse_or_partner | self-audit |
