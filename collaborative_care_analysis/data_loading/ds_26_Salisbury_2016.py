@@ -75,5 +75,11 @@ def load() -> pd.DataFrame:
     if long.duplicated(["patient_id", "follow_up_months"]).any():
         raise ValueError("Duplicate patient/time-point combinations")
 
+    # Drop rows with non-integer PHQ-9/GAD-7 totals (e.g. 5.7, 14.625 —
+    # not valid Likert-summed scores).
+    for col in ["phq9_total", "gad7_total"]:
+        if col in long.columns:
+            long = long[pd.to_numeric(long[col], errors="raise") % 1 == 0]
+
     head = ["patient_id", "follow_up_months"]
     return long[head + [c for c in long.columns if c not in head]].convert_dtypes()
