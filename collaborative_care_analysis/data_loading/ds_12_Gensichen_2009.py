@@ -78,7 +78,6 @@ POST_RENAME_CONSTANT_TAG_COLS = {
 # alone, harmonize_columns still merges them by name into one column, but
 # every t2 row stays a str and every t0/t1 row a float -- normalize here so
 # the merged column has one consistent numeric dtype.
-T2_PADDED_NUMERIC_COLS = ["ArblosT2", "DatBefT2"]
 
 # internal practice/form/timestamp bookkeeping: fully (or near-fully)
 # populated regardless of visit attendance, and holding no clinical content
@@ -523,8 +522,6 @@ def build():
     t0 = read_and_clean(DATA_DIR / "PRoMPT_Daten_T0_09082010_final.dta")
     t1 = read_and_clean(DATA_DIR / "PRoMPT_Daten_T1_09082010_final.dta")
     t2 = read_and_clean(DATA_DIR / "PRoMPT_Daten_T2_09082010_final.dta")
-    for col in T2_PADDED_NUMERIC_COLS:
-        t2[col] = pd.to_numeric(t2[col].astype("string").str.strip(), errors="raise")
     t3 = read_and_clean(DATA_DIR / "PRoMPT_T3_2010_08_09.dta")
     meds = read_and_clean(DATA_DIR / "PRoMPT_T3_Medikamente_2009_03_17.dta")
 
