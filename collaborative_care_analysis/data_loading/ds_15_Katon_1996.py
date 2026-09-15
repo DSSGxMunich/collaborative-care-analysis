@@ -4,15 +4,22 @@ import pandas as pd
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
 from collaborative_care_analysis.utils import map_with_check
 
+# Katon 1996 randomised 153 patients; the paper reports "65 patients with major
+# depression and 88 patients with minor depression". This export is the 65
+# major-depression patients (31 intervention / 34 usual care); the minor
+# depression arm is not in the data we were given.
+# ``Katon1996.CLEANEDsav.sav`` alongside it is the same 65 patients restated in
+# the meta-analysis schema (plus empty padding rows), so it adds no cases.
+# Despite the near-identical shape, this is a different trial from ds_14
+# (Katon 1995, 217 randomised) -- it is the follow-on study, delivered by
+# psychologists rather than a consulting psychiatrist.
 
-def load(file_path=RAW_DATASETS_DIR / "15_Katon_1996" / "katon1996.sav"):
-    df = pd.read_spss(file_path).convert_dtypes()
-    # Treat blank or whitespace-only strings as missing values.
-    df = df.replace(
-        to_replace=r"^\s*$",
-        value=pd.NA,
-        regex=True,
-    )
+
+def load(file_path=RAW_DATASETS_DIR / "15_Katon_1996" / "Katon1996.sav"):
+    df = pd.read_spss(file_path)
+    # treat blank or whitespace-only strings as missing
+    with pd.option_context("future.no_silent_downcasting", True):
+        df = df.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
     df = df.rename(
         columns={
             "studyno": "patient_id",
@@ -20,15 +27,15 @@ def load(file_path=RAW_DATASETS_DIR / "15_Katon_1996" / "katon1996.sav"):
         errors="raise",
     )
 
-    # drop rows with missing patient_id or randgrp
-    with_missing_info: int = len(df)
-    df = df[
-        df["patient_id"].notna()
-        & (df["patient_id"] != "")
-        & df["randgrp"].notna()
-        & (df["randgrp"] != "")
-    ]
-    logger.trace(f"Dropped {with_missing_info - len(df)} rows with missing patient_id or randgrp.")
+    incomplete = df["patient_id"].isna() | df["randgrp"].isna()
+    if incomplete.any():
+        logger.warning(f"Dropped {int(incomplete.sum())} rows with missing patient_id or randgrp.")
+        df = df.loc[~incomplete]
+
+    duplicated_id = df["patient_id"].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(f"Dropped {int(duplicated_id.sum())} rows with duplicated patient_id.")
+        df = df.loc[~duplicated_id]
 
     # unpivot df to long format
     # note what is actually recorded: the average of the scores for 20 depression items

@@ -7,9 +7,9 @@ no printing, logging, `head()`, `sample()`, `display()`, or notebook cell output
 of individual records, and never include actual values in commit messages, PR
 descriptions, or error messages.
 
-**Allowed:** schema/metadata (column names, types, row/column counts) and
-aggregates (counts, means, quantiles, null-rates, distributions). Processing
-the data (transforms, joins, training) is fine as long as values are never
+**Allowed:** schema/metadata (column names, types, row/column counts),
+aggregates (counts, means, quantiles, null-rates, distributions) and unique values per column. 
+Processing the data (transforms, joins, training) is fine as long as values are never
 printed or logged.
 
 **Not allowed:** `SELECT *` on unreviewed tables, writing raw data or samples
