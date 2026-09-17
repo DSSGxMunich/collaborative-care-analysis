@@ -1,3 +1,4 @@
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import COLNAME_STUDYID
@@ -47,6 +48,14 @@ PHQ9_COLS = [f"PHQ9_{item}" for item in range(1, 10)]
 
 GAD7_COLS = [f"GAD7_{item}" for item in range(1, 8)]
 
+# The PHQ-9 items arrive as German response labels and are decoded through
+# PHQ_MAPPING, which rejects anything undocumented. The GAD-7 items arrive
+# already numeric, so nothing was checking their range: two GAD7_1 responses
+# are coded 9, well outside the 0-3 the scale allows. 9 is not a documented
+# code in this export and cannot be decoded, so it is dropped rather than
+# summed into the total.
+GAD7_VALID_RESPONSES = {0, 1, 2, 3}
+
 EQ5D_COLS = [
     "EQ5D_Beweglichkeit",
     "EQ5D_Selbstversorgung",
@@ -95,8 +104,18 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
         )
         .astype("Int64")
     )
-    # Two rows have gad7_1 == 9, outside the valid 0-3 range; treated as missing.
-    harmonized_df.loc[harmonized_df["GAD7_1"] == 9, "GAD7_1"] = pd.NA
+
+    # Keep GAD-7 item responses on the 0-3 range the scale defines.
+    for column in GAD7_COLS:
+        responses = pd.to_numeric(harmonized_df[column], errors="raise")
+        out_of_range = responses.notna() & ~responses.isin(GAD7_VALID_RESPONSES)
+        if out_of_range.any():
+            logger.warning(
+                f"13_Hölzel_2018 {column}: {int(out_of_range.sum())} response(s) "
+                f"outside 0-3 set missing."
+            )
+        harmonized_df[column] = responses.where(~out_of_range).astype("Int64")
+
     # Calculate GAD-7 total only when all seven items are available.
     harmonized_df["gad7_total"] = (
         harmonized_df[GAD7_COLS]
