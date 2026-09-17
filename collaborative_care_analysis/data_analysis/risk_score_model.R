@@ -9,13 +9,15 @@
 library(splines)
 
 script_path <- function() {
-  from_rscript <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
-  if (length(from_rscript))
-    return(normalizePath(sub("^--file=", "", from_rscript[1]), mustWork = FALSE))
+  # source() sets ofile; check it first, or sourcing this from another Rscript
+  # would pick up that script's --file= instead of this one
   for (i in seq_len(sys.nframe())) {
     ofile <- sys.frame(i)$ofile
     if (!is.null(ofile)) return(normalizePath(ofile, mustWork = FALSE))
   }
+  from_rscript <- grep("^--file=", commandArgs(trailingOnly = FALSE), value = TRUE)
+  if (length(from_rscript))
+    return(normalizePath(sub("^--file=", "", from_rscript[1]), mustWork = FALSE))
   NA_character_
 }
 
@@ -176,7 +178,8 @@ fit_and_export <- function(data_path = DATA_PATH, out_model = OUT_MODEL) {
   saveRDS(model, out_model)
   cat("wrote", out_model, "\n")
 
-  # a broken export fails here rather than silently downstream
+  # try fitted model on three examples
+  print("Predictions for three example patients:")
   reloaded <- readRDS(out_model)
   demo <- data.frame(y0  = c(5, 12, 20),
                      age = c(35, 55, 70),
