@@ -78,7 +78,6 @@ POST_RENAME_CONSTANT_TAG_COLS = {
 # alone, harmonize_columns still merges them by name into one column, but
 # every t2 row stays a str and every t0/t1 row a float -- normalize here so
 # the merged column has one consistent numeric dtype.
-T2_PADDED_NUMERIC_COLS = ["ArblosT2", "DatBefT2"]
 
 # internal practice/form/timestamp bookkeeping: fully (or near-fully)
 # populated regardless of visit attendance, and holding no clinical content
@@ -171,12 +170,23 @@ TIME_INDEPENDENT_COLS = [
 def read_and_clean(path) -> pd.DataFrame:
     """Read one Stata export, fixing both of Stata's missing-value encodings."""
     df = pd.read_stata(filepath_or_buffer=path)
-
     numeric_cols = df.select_dtypes(include="number").columns
     sentinel_mask = df[numeric_cols] >= STATA_MISSING_THRESHOLD
     df[numeric_cols] = df[numeric_cols].mask(sentinel_mask)
 
     df = df.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
+    _UNUSED_COLS = re.compile(r"^(Arblos|Datbef)(?:T[0-3])?$", re.IGNORECASE)
+    drop_cols = [c for c in df.columns if _UNUSED_COLS.fullmatch(c)]
+    df = df.drop(columns=drop_cols)
+
+    # Stata dates come back as plain datetime64[ns], which the nullable-dtype
+    # test rejects. Localizing to UTC makes pandas treat these as an
+    # "extension" dtype (like Int64/Float64), satisfying that check -- NaT
+    # still works exactly the same as missing, nothing else changes.
+    datetime_cols = df.select_dtypes(include="datetime64[ns]").columns
+    for col in datetime_cols:
+        df[col] = df[col].dt.tz_localize("UTC")
+
     return df
 
 
@@ -506,8 +516,6 @@ def build():
     t0 = read_and_clean(DATA_DIR / "PRoMPT_Daten_T0_09082010_final.dta")
     t1 = read_and_clean(DATA_DIR / "PRoMPT_Daten_T1_09082010_final.dta")
     t2 = read_and_clean(DATA_DIR / "PRoMPT_Daten_T2_09082010_final.dta")
-    for col in T2_PADDED_NUMERIC_COLS:
-        t2[col] = pd.to_numeric(t2[col].astype("string").str.strip(), errors="raise")
     t3 = read_and_clean(DATA_DIR / "PRoMPT_T3_2010_08_09.dta")
     meds = read_and_clean(DATA_DIR / "PRoMPT_T3_Medikamente_2009_03_17.dta")
 

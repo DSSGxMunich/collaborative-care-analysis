@@ -35,6 +35,13 @@ def load(
     # both date columns are stored as strings like "14-Jun-13" (DD-Mon-YY);
     # an explicit format avoids the dateutil fallback warning and any
     # ambiguity.
+    # Treat blank or whitespace-only strings as missing values.
+    df = df.replace(
+        to_replace=r"^\s*$",
+        value=pd.NA,
+        regex=True,
+    )
+
     date_format = "%d-%b-%y"
     df[baseline_date_col] = pd.to_datetime(
         df[baseline_date_col], format=date_format, errors="raise"
@@ -134,4 +141,4 @@ def load(
     return long_df[
         ["patient_id", "follow_up_months"]
         + [col for col in list(long_df.columns) if col not in ["patient_id", "follow_up_months"]]
-    ]
+    ].convert_dtypes()

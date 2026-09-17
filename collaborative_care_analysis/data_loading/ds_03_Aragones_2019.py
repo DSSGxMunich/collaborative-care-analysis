@@ -124,4 +124,9 @@ def load(
 
     df = to_long(df)
 
-    return df.convert_dtypes()
+    df["HSCLTOT"] = pd.to_numeric(df["HSCLTOT"], errors="raise").astype("Float64")
+
+    df["HSCL_2"] = pd.to_numeric(df["HSCL_2"], errors="raise").astype("Float64")
+    df = df.convert_dtypes()
+
+    return df

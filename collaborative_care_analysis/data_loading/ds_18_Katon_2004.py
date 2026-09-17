@@ -59,6 +59,12 @@ TIME_INDEPENDENT_COLS = ["Group", "Age", "Sex", "LTC_0", "LTCsev_0"]
 
 def load(file_path=RAW_DATASETS_DIR / "18_Katon_2004" / "katon2004.sav"):
     df = pd.read_spss(file_path).convert_dtypes()
+    # Treat blank or whitespace-only strings as missing values.
+    df = df.replace(
+        to_replace=r"^\s*$",
+        value=pd.NA,
+        regex=True,
+    )
 
     df = df.rename(columns={"Origpat_id": "patient_id"}, errors="raise")
 
@@ -83,4 +89,4 @@ def load(file_path=RAW_DATASETS_DIR / "18_Katon_2004" / "katon2004.sav"):
 
     long_df = long_df.sort_values(["patient_id", "follow_up_months"]).reset_index(drop=True)
     head = ["patient_id", "follow_up_months"]
-    return long_df[head + [c for c in long_df.columns if c not in head]]
+    return long_df[head + [c for c in long_df.columns if c not in head]].convert_dtypes()
