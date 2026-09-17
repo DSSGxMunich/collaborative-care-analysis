@@ -5,8 +5,10 @@ from collaborative_care_analysis.utils import map_with_check
 # Baseline-only ICD-10-chapter comorbidity checklist (from the T0 chart
 # review). The codebook documents these as "0/1 (nein/ja)", but the raw
 # export never actually contains an explicit 0 - only 1 or blank (e.g.
-# Endokrin: {NA: 396, 1: 227}). Checkbox-style: blank means "not present",
-# not "unknown".
+# Endokrin: {NA: 396, 1: 227} across the 623 baseline rows). Checkbox-style:
+# a baseline blank means "not present", not "unknown". These columns exist
+# only in the T0 file, so the other three waves are blank for a different
+# reason -- see harmonize().
 _ICD_CHAPTER_FLAG_COLS = {
     "Endokrin": "has_endocrine_or_metabolic_condition",  # ICD Gruppe E
     "Kreislau": "has_circulatory_condition",  # ICD Gruppe I
@@ -44,8 +46,15 @@ _HISTORY_FLAG_COLS = {
 def harmonize(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
 
+    # The checklist is filled in once, at the T0 chart review, and the loader
+    # does not broadcast it, so every follow-up row is blank by design. Only a
+    # blank at baseline means "not present"; filling the follow-up blanks as
+    # well would record a negative finding for a visit that never asked.
+    is_baseline = harmonized_df["follow_up_months"] == 0
+
     for raw, harmonized in _ICD_CHAPTER_FLAG_COLS.items():
-        harmonized_df[harmonized] = map_with_check(harmonized_df[raw], _YES_NO).fillna("no")
+        flag = map_with_check(harmonized_df[raw], _YES_NO)
+        harmonized_df[harmonized] = flag.mask(is_baseline, flag.fillna("no"))
 
     for raw, harmonized in _HISTORY_FLAG_COLS.items():
         harmonized_df[harmonized] = map_with_check(

@@ -170,12 +170,6 @@ TIME_INDEPENDENT_COLS = [
 def read_and_clean(path) -> pd.DataFrame:
     """Read one Stata export, fixing both of Stata's missing-value encodings."""
     df = pd.read_stata(filepath_or_buffer=path)
-    # Treat blank or whitespace-only strings as missing values.
-    df = df.replace(
-        to_replace=r"^\s*$",
-        value=pd.NA,
-        regex=True,
-    )
     numeric_cols = df.select_dtypes(include="number").columns
     sentinel_mask = df[numeric_cols] >= STATA_MISSING_THRESHOLD
     df[numeric_cols] = df[numeric_cols].mask(sentinel_mask)

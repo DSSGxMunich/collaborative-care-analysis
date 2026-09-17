@@ -12,7 +12,6 @@ RENAME_MAP = {
     # subset of rows (max 26 at baseline; see git history for the full
     # derivation). Caller is responsible for excluding/flagging rows > 21
     # before treating this as a standard GAD-7 score.
-    "gad7_total": "gad7_total",
 }
 
 # SF-36 items grouped into the 8 standard RAND-36/SF-36 subscales.

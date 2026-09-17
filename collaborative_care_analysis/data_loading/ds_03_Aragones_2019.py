@@ -130,4 +130,3 @@ def load(
     df = df.convert_dtypes()
 
     return df
-    return df.convert_dtypes()

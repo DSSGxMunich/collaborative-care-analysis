@@ -491,7 +491,6 @@ def load(
 
     # Normalize the time axis. follow_up_months is a NEW column, not a rename,
     # so it's introduced directly rather than routed through RENAME_MAP.
-    df = df[df["age"].notna() & df["gender"].notna()]
     df["follow_up_months"] = df["timept"].map(TIMEPT_TO_MONTHS)
     unmapped = df.loc[df["follow_up_months"].isna(), "timept"].unique()
     assert len(unmapped) == 0, f"Unmapped timept codes: {unmapped}"
