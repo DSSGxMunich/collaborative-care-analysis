@@ -103,14 +103,16 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     if "follow_up_months" not in harmonized_df.columns:
         raise ValueError("follow_up_months is missing from the loaded dataset.")
 
-    # ----------------------------------------------------
+    harmonized_df["country"] = "USA"
+
     # Final output
-    # ----------------------------------------------------
+
     return harmonized_df[
         [
             "STUDY_ID",
             "patient_id",
             "sex",
+            "country",
             "race",
             "smoking_status",
             "follow_up_months",

@@ -86,12 +86,14 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         },
     ).astype("string")
 
+    harmonized_df["country"] = "UK"
     return harmonized_df[
         [
             "STUDY_ID",
             "patient_id",
             "follow_up_months",
             "age",
+            "country",
             "sex",
             "race",
             "accommodation",

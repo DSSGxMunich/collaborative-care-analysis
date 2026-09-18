@@ -46,7 +46,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         return pd.NA
 
     harmonized_df["race"] = harmonized_df.apply(compute_race, axis=1).astype("string")
-
+    harmonized_df["country"] = "USA"
     return harmonized_df[
         [
             "STUDY_ID",
@@ -54,6 +54,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "follow_up_months",
             "age",
             "sex",
+            "country",
             "race",
         ]
     ]

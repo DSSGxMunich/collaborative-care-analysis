@@ -19,4 +19,5 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         {1: "Male", 2: "Female"},
     ).astype("category")
 
-    return harmonized_df[["STUDY_ID", "patient_id", "follow_up_months", "sex"]]
+    harmonized_df["country"] = "UK"
+    return harmonized_df[["STUDY_ID", "patient_id", "follow_up_months", "sex", "country"]]

@@ -24,6 +24,7 @@ def harmonize_baseline(df: pd.DataFrame):
     if "age" in harmonized_df.columns:
         harmonized_df["age"] = pd.to_numeric(harmonized_df["age"], errors="raise")
 
+    harmonized_df["country"] = "Spain"
     # final output
     return harmonized_df[
         [
@@ -31,6 +32,7 @@ def harmonize_baseline(df: pd.DataFrame):
             "patient_id",
             "age",
             "sex",
+            "country",
             "follow_up_months",
         ]
     ]

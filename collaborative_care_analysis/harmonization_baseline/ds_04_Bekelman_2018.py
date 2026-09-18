@@ -160,9 +160,10 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
 
     # 4. Optional: drop raw column
     harmonized_df = harmonized_df.drop(columns=["marital_status_raw"])
-    # -------------------------
+
+    harmonized_df["country"] = "USA"
     # Final output
-    # -------------------------
+
     return harmonized_df[
         [
             "STUDY_ID",
@@ -170,6 +171,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "age",
             "sex",
             "race",
+            "country",
             "smoking_status",
             "education_level",
             "employment_status",

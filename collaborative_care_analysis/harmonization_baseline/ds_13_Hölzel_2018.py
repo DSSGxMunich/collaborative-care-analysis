@@ -169,12 +169,14 @@ def harmonize(df: pd.DataFrame) -> pd.DataFrame:
         },
     ).astype("category")
 
+    harmonized_df["country"] = "Germany"
     return harmonized_df[
         [
             "STUDY_ID",
             "patient_id",
             "follow_up_months",
             "age",
+            "country",
             "sex",
             "education_level",
             "employment_status",

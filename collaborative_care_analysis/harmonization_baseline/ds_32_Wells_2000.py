@@ -28,6 +28,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
         {1: "Employed", 0: "Unemployed"},
     ).astype("string")
 
+    harmonized_df["country"] = "USA"
     return harmonized_df[
         [
             "STUDY_ID",
@@ -35,6 +36,7 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
             "follow_up_months",
             "age",
             "sex",
+            "country",
             "marital_status",
             "race",
             "employment_status",

@@ -34,5 +34,5 @@ def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
 
     # numeric age
     harmonized_df["age"] = pd.to_numeric(harmonized_df["age"], errors="raise")
-
+    harmonized_df["country"] = "USA"
     return harmonized_df
