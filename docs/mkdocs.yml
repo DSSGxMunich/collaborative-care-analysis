@@ -1,4 +1,56 @@
 site_name: Collaborative Care Analysis
-# 
+site_description: Depression Treatment Navigator for Primary Care
 site_author: DSSGx Munich 2026 team
-# 
+
+# Pages live in docs/docs/; the built site goes to docs/site/ (git-ignored).
+docs_dir: docs
+site_dir: site
+
+# Plain .html links, so the built site also works when opened straight from
+# disk (file://) without running `mkdocs serve`.
+use_directory_urls: false
+
+# Built-in theme only: no extra packages and no CDN assets, so the docs build
+# and render fully offline.
+theme:
+  name: readthedocs
+  highlightjs: false
+  navigation_depth: 3
+  collapse_navigation: false
+
+plugins:
+  - search
+
+markdown_extensions:
+  - toc:
+      permalink: true
+  - admonition
+  - attr_list
+  - def_list
+  - tables
+  - fenced_code
+
+nav:
+  - Home: index.md
+  - Getting started: getting-started.md
+  - Data privacy rules: data-privacy.md
+  - Data pipeline:
+      - Overview: pipeline/overview.md
+      - Command-line reference: pipeline/cli.md
+      - Data loading: pipeline/loading.md
+      - Harmonization: pipeline/harmonization.md
+      - Merge, POOL2 backfill and enrichment: pipeline/merge-and-enrich.md
+      - Adding a new study: pipeline/adding-a-study.md
+  - Datasets: datasets.md
+  - Harmonization conventions: harmonization-conventions.md
+  - Analysis:
+      - Analysis dataset: analysis/analysis-dataset.md
+      - Risk score model (Step 1): analysis/risk-score-model.md
+      - Component network model (Step 2): analysis/cnma.md
+  - Metadata tools: tools.md
+  - Testing & quality checks: testing.md
+  - Development: development.md
+  - Reference:
+      - Configuration & paths: reference/configuration.md
+      - Project layout: reference/project-layout.md
+      - Known issues: reference/known-issues.md
