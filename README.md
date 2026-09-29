@@ -31,13 +31,13 @@ The goal of this project is to support personalized collaborative care for depre
 
 ## A Note on the Data 🔒
 
-The trial data is confidential participant-level data. It is shared with the team separately and is never committed to this repository. Before working with it, please read [AGENTS.md](AGENTS.md): in short, look only at schemas and aggregates, never at individual records.
+The trial data is confidential participant-level data. It was shared with the team separately and is never committed to this repository. 
 
 ## How to Use the Code 🛠️
 
 ### Set up the environment
 
-We use [uv](https://docs.astral.sh/uv/getting-started/installation/) to manage Python and dependencies. Once it is installed:
+We use [uv](https://docs.astral.sh/uv/getting-started/installation/) to manage Python and dependencies. Once it is installed, run the following command to install any Python dependencies
 
 ```bash
 git clone https://github.com/DSSGxMunich/collaborative-care-analysis.git
@@ -61,15 +61,47 @@ One command takes every trial from its raw files to a single harmonized dataset:
 uv run collaborative_care_analysis/dataset.py run
 ```
 
-The result lands in `data/interim/enriched_dataset/`. You can also run a single study (`run 17`) or leave some out (`run -x 04`). The individual steps (`export`, `harmonize`, `merge`, `enrich`) are covered in the docs.
+The result lands in `data/interim/enriched_dataset/enriched_dataset.csv`.
 
-### Run the tests
+#### How the pipeline works
+
+```mermaid
+flowchart LR
+    raw[("Raw trial files<br/>data/raw/")] --> export["1. Export<br/>one loader per trial"]
+    export --> harmonize["2. Harmonize<br/>baseline · medical history<br/>outcomes · treatment"]
+    harmonize --> merge["3. Merge<br/>join clusters, stack trials"]
+    merge --> backfill["4. Backfill<br/>age and sex from POOL2"]
+    pool2[("POOL2 export")] --> backfill
+    backfill --> enrich["5. Enrich<br/>study-arm characteristics"]
+    sheet[("Study-level<br/>annotation sheet")] --> enrich
+    enrich --> out[("enriched_dataset.csv")]
+```
+
+`run` goes through these steps in order. You can also run each step on its own:
+
+1. **Export** (`export`). Each trial has its own loader in `data_loading/`. The loader reads the raw SPSS, Stata, CSV or Excel file, renames the ID column to `patient_id`, and reshapes the data to long format, with one row per patient per visit and `follow_up_months` giving the time since baseline. The output goes to `data/interim/exported_datasets/`.
+2. **Harmonize** (`harmonize`). The trials are mapped onto shared variable names and codings, following [HARMONIZATION_CONVENTIONS.md](HARMONIZATION_CONVENTIONS.md). This is split into four clusters, each in its own `harmonization_*` folder: baseline (age, sex), medical history, outcomes (PHQ-9, GAD-7, SCL-20, …) and treatment (control or intervention arm). Each trial and cluster gives one file in `data/interim/harmonized_datasets/`.
+3. **Merge** (`merge`). For each trial, the clusters are joined on `STUDY_ID`, `patient_id` and `follow_up_months`. Then all trials are stacked into one table, and a column that a trial doesn't have is left empty. The merge stops if a join key is missing or duplicated, or if two clusters produce the same column. It warns loudly if the join drops rows. The output is `data/interim/merged_dataset/merged_dataset.csv`.
+4. **Backfill** (part of `enrich`). Some trials don't include a usable age or sex. These gaps are filled from the POOL2 export, matched on study and patient ID. Only missing values are filled; existing values are never overwritten.
+5. **Enrich** (`enrich`). Each patient is given the characteristics of their study arm from the study-level annotation sheet, for example whether relapse prevention was part of the intervention. These are the `treatment_*` columns. Control arms get "no" for every component.
+
+Some other ways to run it:
+
+```bash
+uv run collaborative_care_analysis/dataset.py run 17          # regenerate one trial (by number or name, e.g. Katon_2001)
+uv run collaborative_care_analysis/dataset.py run -x 04 -x 17 # rebuild everything except trials 04 and 17
+uv run collaborative_care_analysis/dataset.py harmonize 17    # run a single step for a single trial
+```
+
+A full run, or a run with `-x`, first clears the old output files, so nothing stale is left behind. The raw data is never modified.
+
+### Running the tests
 
 ```bash
 uv run pytest
 ```
 
-Most tests check the pipeline output, so run the pipeline first. Otherwise they are skipped.
+Most tests check the pipeline output, so run the pipeline first. Otherwise these tests are skipped.
 
 ### Run the notebooks
 
@@ -90,25 +122,14 @@ collaborative-care-analysis/
 └── pyproject.toml                 # Dependencies and tool configuration
 ```
 
-## Technical Documentation 📚
-
-The documentation goes into much more detail on the pipeline, the datasets, the models and how to add a new study. To browse it locally, run:
-
-```bash
-uv run mkdocs serve -f docs/mkdocs.yml
-```
-
-Then open http://127.0.0.1:8000. The pages live in `docs/docs/`. Any change you save shows up in the browser straight away.
-
 ## How to Contribute 🤝
 
 1. Create a branch with a descriptive name.
-2. Make your changes, following the [harmonization conventions](HARMONIZATION_CONVENTIONS.md).
-3. Lint and test: `uv run ruff check . --fix && uv run ruff format && uv run pytest`
-4. Open a pull request against `main`.
+2. Lint and test: `uv run ruff check . --fix && uv run ruff format && uv run pytest`
+3. Open a pull request against `main`.
 
 Optionally, `uvx pre-commit install` runs these checks for you on every commit, and `nbstripout --install` keeps notebook outputs out of git.
 
 ## Requesting Features or Reporting Bugs 🐞
 
-Found a bug or have an idea? Please open an issue. Remember not to include any data values in it.
+Found a bug or have an idea? Please open an issue. 
