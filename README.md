@@ -172,6 +172,31 @@ Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if it is n
 uv sync
 ```
 
+### R and Quarto
+
+`risk_score_model.R` is written in R, the reports under `reports/` are Quarto documents
+with embedded R chunks.
+
+Install [R](https://cran.r-project.org/) 4.6 or later and
+[Quarto](https://quarto.org/docs/get-started/), which is not an R package and
+so is not covered by `renv`. Then restore the pinned packages:
+
+```r
+install.packages("renv")
+renv::restore()
+```
+
+Either fit the model directly, or render the report, which fits it the same way:
+
+```bash
+Rscript collaborative_care_analysis/data_analysis/risk_score_model.R fit
+quarto render reports/risk-model.qmd
+```
+
+Both read `data/interim/analysis_datasets/phq9_12mo_core/wide.csv`, built by
+`uv run collaborative_care_analysis/dataset.py analysis-data phq9_12mo_core`,
+and both write `models/risk_score_model.rds`.
+
 ### Linting and Formatting
 
 Run the following command to check the code and apply formatting fixes:

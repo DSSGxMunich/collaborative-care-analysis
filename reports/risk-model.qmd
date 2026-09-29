@@ -1,7 +1,8 @@
 ---
 title: "The Two-Stage Prediction Model for Individualized Treatment Benefit Behind the *Collaborative Care Compass*"
+subtitle: "Stage 1: The Risk Model"
 author:
-  - name: DSSGx Munich 2026
+  - name: DSSGx Munich 2026 Fellows
     url: https://www.dssgxmunich.org/project-2026
     affiliations:
       - name: Social Data Science and AI Lab, LMU Munich
@@ -22,6 +23,8 @@ The [<i>Collaborative Care Compass</i>](https://dssgxmunich.github.io/collaborat
 
 The model consists of two parts: The first part is a risk model, predicting depressive symptom severity at 12 months from baseline characteristics. The output of the model is a risk score, used as input to the second part which estimates how the effects of collaborative care components vary by baseline risk, following the [PATH framework by Kent et al. (2020)](https://pubmed.ncbi.nlm.nih.gov/31711134/).
 
+**This report covers stage 1, the risk model.** Stage 2, the component network meta-analysis, is documented separately.
+
 
 # Risk Model
 
@@ -41,24 +44,15 @@ library(rms)
 library(metafor)
 
 
+# Sourcing risk_score_model.R brings in the model definition and the cohort
+# path it reads, DATA_PATH.
 REPO_ROOT <- rprojroot::find_root(rprojroot::has_file("pyproject.toml"))
-DATA_PATH <- file.path(REPO_ROOT, "data", "interim", "analysis_datasets",
-                       "phq9_12mo_core", "wide.csv")
+source(file.path(REPO_ROOT, "collaborative_care_analysis", "data_analysis",
+                 "risk_score_model.R"))
 
-df <- fread(DATA_PATH, na.strings = c("", "NA"))
-
-# keep only randomized patients and selected set of covariates
-df <- df[study_arm %in% c("control", "intervention"), 
-         .(study_id = factor(STUDY_ID),
-             patient_id,
-             phq9_at_12mo = phq9_total_outcome,
-             phq9_at_baseline = phq9_total_baseline,
-             age,
-             sex = factor(sex),
-             arm = factor(study_arm))]
-
-# complete case analysis
-df <- df[complete.cases(phq9_at_12mo, phq9_at_baseline, age, sex, arm)]
+# The cohort is built from the harmonised IPD by
+#   uv run collaborative_care_analysis/dataset.py analysis-data phq9_12mo_core
+df <- load_model_data(DATA_PATH)
 
 html(describe(df), which = "categorical", scroll = TRUE)
 
@@ -114,19 +108,15 @@ All models below use baseline PHQ-9 and age centered and scaled by their sample 
 
 ```{r}
 #| label: model-data
-df[, phq9_at_baseline_c := (phq9_at_baseline - mean(phq9_at_baseline)) / sd(phq9_at_baseline)]
-df[, age_c := (age - mean(age)) / sd(age)]
+prepared <- add_centred_terms(df)
+df <- prepared$data
+knots_c <- age_spline_knots(df)
 
-knots_c <- as.numeric(quantile(df$age_c, c(0.1, 0.5, 0.9)))
-
-# fixed part only, used for the design matrix and for predictions
-fixed_form <- ~ phq9_at_baseline_c +
-  ns(age_c, knots = knots_c[2], Boundary.knots = knots_c[c(1, 3)]) + sex
-
-# the full model
-model_formula <- ordered(phq9_at_12mo) ~ phq9_at_baseline_c +
-  ns(age_c, knots = knots_c[2], Boundary.knots = knots_c[c(1, 3)]) + sex +
-  (1 | study_id) + (0 + phq9_at_baseline_c | study_id)
+# fixed part is used for the design matrix and for predictions, full part adds
+# the study random effects
+forms <- model_formulas(knots_c)
+fixed_form <- forms$fixed
+model_formula <- forms$full
 ```
 
 ## Sample Size Calculation
@@ -348,8 +338,15 @@ Across the twelve studies, the model discriminates moderately between patients w
 ```{r}
 #| label: final-model
 #| cache: true
-final_fit <- clmm(model_formula, data = df, link = "logit")
+final_fit <- fit_risk_model(df, forms)
 summary(final_fit)
 ```
 
-The fitted model is exported for use in the second stage by `risk_score_model.R`.
+Fitting takes around 30 seconds. `export_risk_model()` writes the coefficients,
+thresholds, knots and centering constants to `models/risk_score_model.rds`. Stage 2 then
+reads it through `predict_phq9()`.
+
+```{r}
+#| label: export
+export_risk_model(final_fit, df, prepared$scaling, knots_c, forms)
+```
