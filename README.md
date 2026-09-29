@@ -1,216 +1,114 @@
-# Collaborative Care Analysis
+# Collaborative Care Compass 🧭
 
-Depression Treatment Navigator for Primary Care
+![Python](https://img.shields.io/badge/python-3.10-blue) ![uv](https://img.shields.io/badge/managed%20with-uv-purple) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
-## Exporting Datasets
+This repository contains the code and documentation for the project "Collaborative Care Compass", developed during the [Data Science for Social Good (DSSG) Summer Fellowship Munich 2026](https://www.dssgxmunich.org/call-for-fellows).
 
-Export datasets to the interim data directory by running the following command. You can optionally specify a dataset id to export a specific dataset. If no dataset id is specified, all datasets will be exported.
+## Project Overview 🌍
+ 
+The project aims to optimise the implementation of Collaborative Care for Depression in German primary care by identifying the most effective combinations of intervention components for specific patient profiles. Leveraging a dataset from the LMU University Hospital, the team analyses how individual treatment elements affect outcomes, to support the effective use of resources and improve patient recovery. The ultimate goal is an intuitive, patient-focused prediction tool, designed in collaboration with general practitioners, that provides data-driven decision support that is both clinically effective and practically sustainable.
+ 
+### Context 📜
+ 
+Depression is one of the most common conditions general practitioners see, and many patients are treated in primary care rather than by specialists. Collaborative care is a well-evidenced way of improving that care: the GP works together with a care manager and a mental health specialist, with structured follow-up of the patient's symptoms. Its effectiveness has been shown in many randomised controlled trials (RCTs).
+ 
+Collaborative care is not a single intervention but a package of components, such as care management, symptom monitoring, specialist supervision, psychological support and medication management. Delivering the full package takes staff time and resources that many practices do not have.
+ 
+### The Challenge 🧩
+ 
+The existing evidence shows that collaborative care works **on average**, but it does not tell a GP which components drive the effect, or which combination is best for the patient in front of them. This project therefore asks which components, alone and in combination, lead to better depression outcomes, and how these effects differ between patients with different profiles, such as baseline severity, age, sex or medical history.
+ 
+Answering these questions requires analysing participant-level data from many trials together. Each trial, however, recorded its data differently, with its own variable names, depression instruments, follow-up schedules and codings, so the data first has to be harmonised into one consistent, pooled dataset. On this basis, the project explores whether an individual patient's likely response to different combinations of components can be predicted, and how such predictions can be presented in a tool that GPs find intuitive and can use within their time and resource constraints.
+
+### Project Goal and Contributions 🚀
+
+The goal of this project is to support personalized collaborative care for depression in German general practice. We contribute in the following ways:
+
+- **Harmonized pooled dataset:** a reproducible pipeline that exports, harmonizes, merges and enriches participant-level data from multiple collaborative care RCTs into one analysis-ready dataset.
+- **Clinical prediction model:** a component network meta-analysis (CNMA) and risk-score modelling on the pooled data, to estimate how collaborative care components affect outcomes for different patients.
+- **Web prototype:** a prototype tool showing how these insights could be brought into general practice.
+- **Documentation:** technical documentation of the data pipeline, modelling approach and suggestions for future work.
+
+## A Note on the Data 🔒
+
+The trial data is confidential participant-level data. It is shared with the team separately and is never committed to this repository. Before working with it, please read [AGENTS.md](AGENTS.md): in short, look only at schemas and aggregates, never at individual records.
+
+## How to Use the Code 🛠️
+
+### Set up the environment
+
+We use [uv](https://docs.astral.sh/uv/getting-started/installation/) to manage Python and dependencies. Once it is installed:
 
 ```bash
-uv run collaborative_care_analysis/dataset.py export
-
-uv run collaborative_care_analysis/dataset.py export 04
-
-uv run collaborative_care_analysis/dataset.py export Bekelman_2018
+git clone https://github.com/DSSGxMunich/collaborative-care-analysis.git
+cd collaborative-care-analysis
+uv sync
 ```
 
-## Harmonizing Datasets
+### Add the data
 
-Harmonize datasets by running the following command. This will load each dataset and apply any harmonization scripts found in `harmonization_*` folders, saving the results to the interim harmonized datasets directory. You can optionally specify a dataset id to harmonize a specific dataset.
-
-```bash
-uv run collaborative_care_analysis/dataset.py harmonize
-
-uv run collaborative_care_analysis/dataset.py harmonize 17
-
-uv run collaborative_care_analysis/dataset.py harmonize Katon_2001
-```
-
-## Merging Harmonized Datasets
-
-Join each study's harmonized clusters, then stack all studies into one dataset.
-
-```bash
-uv run collaborative_care_analysis/dataset.py merge
-```
-
-Clusters are joined on `STUDY_ID`, `patient_id`, and `follow_up_months` (inner join), then concatenated vertically. Columns missing from a study are filled with `NaN`. The command also returns a mapping of cluster name to the columns it contributed across all studies.
-
-The merge raises on a missing join key, duplicate keys, or a column name claimed by two clusters, and warns loudly if the join drops rows.
-
-## Running the Full Pipeline
-
-```bash
-uv run collaborative_care_analysis/dataset.py run
-
-uv run collaborative_care_analysis/dataset.py run 4
-
-uv run collaborative_care_analysis/dataset.py run Katon_2001
-```
-
-Runs `export`, `harmonize`, and `merge` in sequence, then backfills missing
-baseline `age` / `sex` from the POOL2 export and applies study-level `enrich`ment.
-
-## POOL2 Demographic Backfill
-
-Some studies' own data does not carry a usable `age` or `sex`. The `enrich` and
-`run` commands fill those gaps from the POOL2 participant-level export, joining
-on study and patient id.
-
-POOL2 ships as a zip that must be extracted once before running the pipeline:
+Place the raw trial folders in `data/raw/Individual Datasets/` and extract the POOL2 export once:
 
 ```bash
 unzip data/raw/260810_POOL2.zip -d data/raw/260810_POOL2
 ```
 
-This produces `data/raw/260810_POOL2/POOL2_final.csv` (and `POOL2_final_NEU.csv`).
-If the CSV is missing, the pipeline stops with an error repeating this command.
+### Run the pipeline
 
-POOL2 numbers studies with its own `Trial_ID`; `data/raw/annotations/dataset_id_conversions.csv`
-maps that to this project's dataset numbering.
-
-## Run While Excluding Some Datasets
-
-Use `--exclude` to run the full pipeline while excluding a dataset:
+One command takes every trial from its raw files to a single harmonized dataset:
 
 ```bash
-uv run collaborative_care_analysis/dataset.py run --exclude 04
+uv run collaborative_care_analysis/dataset.py run
 ```
 
-The shorter `-x` option does the same thing:
+The result lands in `data/interim/enriched_dataset/`. You can also run a single study (`run 17`) or leave some out (`run -x 04`). The individual steps (`export`, `harmonize`, `merge`, `enrich`) are covered in the docs.
 
-```bash
-uv run collaborative_care_analysis/dataset.py run -x 04
-```
-
-Repeat either option to exclude multiple datasets:
-
-```bash
-uv run collaborative_care_analysis/dataset.py run -x 04 -x 17
-```
-
-Alternatively:
-
-```bash
-uv run collaborative_care_analysis/dataset.py run --exclude 04 --exclude 17
-```
-
-An exclusion run regenerates the exported, harmonized, merged, and enriched datasets without the excluded datasets. Raw datasets are not modified.
-
-After the pipeline completes successfully, a bold red warning lists the excluded dataset identifiers.
-
-
-## Generating Codebooks
-
-If a dataset does not include a codebook, generate one from the metadata embedded in its SPSS or Stata files by specifying the numeric dataset ID: 
-
-```bash
-uv run python -m collaborative_care_analysis.codebook 13
-```
-
-Generated codebooks are saved under `data/interim/generated_codebooks/`. Each Excel workbook contains three sheets: `Dataset Metadata`, `Variable Labels`, and `Value Labels`.
-
-## Project Organization
-
-```
-├── LICENSE            <- Open-source license if one is chosen
-├── AGENTS.md          <- Data privacy rules for AI coding agents.
-├── README.md          <- The top-level README for developers using this project.
-├── data
-│   ├── external       <- Data from third party sources.
-│   ├── interim        <- Intermediate data that has been transformed.
-│   ├── processed      <- The final, canonical data sets for modeling.
-│   └── raw            <- The original, immutable data dump.
-│
-├── docs               <- A default mkdocs project; see www.mkdocs.org for details
-│
-├── models             <- Trained and serialized models, model predictions, or model summaries
-│
-├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-│                         the creator's initials, and a short `-` delimited description, e.g.
-│                         `1.0-jqp-initial-data-exploration`.
-│
-├── pyproject.toml     <- Project configuration file with package metadata for 
-│                         collaborative_care_analysis and configuration for tools like black
-│
-├── references         <- Data dictionaries, manuals, and all other explanatory materials.
-│
-├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-│   └── figures        <- Generated graphics and figures to be used in reporting
-│
-├── setup.cfg          <- Configuration file for flake8
-│
-└── collaborative_care_analysis   <- Source code for use in this project.
-    │
-    ├── __init__.py             <- Makes collaborative_care_analysis a Python module
-    │
-    ├── config.py               <- Store useful variables and configuration
-    │
-    ├── dataset.py              <- Scripts to download or generate data
-    │
-    ├── codebook.py             <- Generate codebooks from embedded SPSS and Stata metadata
-    │
-    ├── features.py             <- Code to create features for modeling
-    │
-    ├── modeling                
-    │   ├── __init__.py 
-    │   ├── predict.py          <- Code to run model inference with trained models          
-    │   └── train.py            <- Code to train models
-    │
-    └── plots.py                <- Code to create visualizations
-```
-
---------
-
-## Development
-
-### Setup
-
-Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if it is not already available, then create the project environment and install its dependencies:
-
-```bash
-uv sync
-```
-
-### Linting and Formatting
-
-Run the following command to check the code and apply formatting fixes:
-
-```bash
-uv run ruff check . --fix && uv run ruff format
-```
-
-### Tests
-
-Run the test suite with:
+### Run the tests
 
 ```bash
 uv run pytest
 ```
 
-### Pre-commit Hooks (optional)
+Most tests check the pipeline output, so run the pipeline first. Otherwise they are skipped.
 
-Register the repository hooks to run checks automatically before each commit:
+### Run the notebooks
 
-```bash
-uvx pre-commit install
+The notebooks in `notebooks/` cover the cohort filtering and the CNMA model. Open them in Jupyter (`uv run jupyter lab`) or in VS Code with the `.venv` kernel selected.
+
+## Structure of the Repository 📁
+
+```
+collaborative-care-analysis/
+├── collaborative_care_analysis/   # Source code: data loaders, harmonization, pipeline, analysis
+├── data/                          # Raw and processed data (not tracked by git)
+├── docs/                          # Technical documentation (MkDocs)
+├── models/                        # Fitted models
+├── notebooks/                     # Exploration and modelling notebooks
+├── tests/                         # Checks on the pipeline output
+├── AGENTS.md                      # Data privacy rules
+├── HARMONIZATION_CONVENTIONS.md   # How harmonized variables are named and coded
+└── pyproject.toml                 # Dependencies and tool configuration
 ```
 
-This will automatically run checks, such as the linter and tests, before each commit. If any of the checks fail, the commit will be aborted.
+## Technical Documentation 📚
 
-### Stripping Notebook Outputs
-
-This repo uses [nbstripout](https://github.com/kynan/nbstripout) to keep notebook outputs out of git history. Install it once per clone:
+The documentation goes into much more detail on the pipeline, the datasets, the models and how to add a new study. To browse it locally, run:
 
 ```bash
-uv add nbstripout
-nbstripout --install
+uv run mkdocs serve -f docs/mkdocs.yml
 ```
 
-This registers a git filter that strips outputs from notebooks when they're staged for commit. Your local `.ipynb` files on disk keep their outputs — only what gets committed is stripped.
+Then open http://127.0.0.1:8000. The pages live in `docs/docs/`. Any change you save shows up in the browser straight away.
 
-Verify it's active with:
+## How to Contribute 🤝
 
-```bash
-uv run nbstripout --status
-```
+1. Create a branch with a descriptive name.
+2. Make your changes, following the [harmonization conventions](HARMONIZATION_CONVENTIONS.md).
+3. Lint and test: `uv run ruff check . --fix && uv run ruff format && uv run pytest`
+4. Open a pull request against `main`.
+
+Optionally, `uvx pre-commit install` runs these checks for you on every commit, and `nbstripout --install` keeps notebook outputs out of git.
+
+## Requesting Features or Reporting Bugs 🐞
+
+Found a bug or have an idea? Please open an issue. Remember not to include any data values in it.
