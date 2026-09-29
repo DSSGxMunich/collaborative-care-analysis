@@ -30,6 +30,11 @@ class CohortSpec:
     genuinely time-invariant column belongs in ``broadcast``: filling a
     time-varying one within the patient would carry a follow-up measurement
     back onto the baseline row and silently invent a baseline value.
+
+    ``exclude_arms`` names arms to drop rather than the arms to keep. Several
+    trials label their intervention arms individually (``intervention_CCBT``
+    and so on), so a keep-list would silently discard randomised patients as
+    soon as such a trial entered a cohort.
     """
 
     name: str
@@ -39,6 +44,7 @@ class CohortSpec:
     broadcast: tuple[str, ...] = ("age", "sex", "study_arm")
     require_complete: tuple[str, ...] = ("age", "sex", "study_arm")
     drop_sex_other: bool = True
+    exclude_arms: tuple[str, ...] = ("usual_care_notrandomized",)
     min_patients_per_study: int = 10
 
     @property
@@ -153,6 +159,12 @@ def _clean(spec: CohortSpec) -> tuple[pd.DataFrame, pd.DataFrame]:
         df = _keep_patients_with_any(df, df["sex"].ne("Other"))
         df = df.loc[df["sex"].ne("Other")]
         attrition.append(_tally(df, "sex is not 'Other'"))
+
+    if spec.exclude_arms:
+        # Effect estimates only carry over to a randomised comparison, so a
+        # patient in a non-randomised arm does not belong in the cohort.
+        df = df.loc[~df["study_arm"].isin(spec.exclude_arms)]
+        attrition.append(_tally(df, f"arm not in {list(spec.exclude_arms)}"))
 
     if "sex" in df.columns:
         df["sex"] = df["sex"].astype("category")
