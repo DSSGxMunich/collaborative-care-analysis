@@ -81,8 +81,10 @@ def load() -> pd.DataFrame:
         .reset_index(drop=True)
     )
 
-    # Drop patients missing age and gender entirely
-    long = long[long["age"].notna() & long["gender"].notna()]
+    # Drop patients with no age or gender at any wave. Both are recorded only
+    # at screening, so filtering rows would discard every follow-up visit.
+    recorded = long.groupby("patient_id")[["age", "gender"]].transform("count").gt(0)
+    long = long[recorded.all(axis=1)]
 
     if long.duplicated(["patient_id", "follow_up_months"]).any():
         raise ValueError("Duplicate patient/time-point combinations")
