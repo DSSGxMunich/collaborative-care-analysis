@@ -15,6 +15,13 @@ from collaborative_care_analysis.config import (
     MERGED_DATASET_DIR,
     normalize_study_id,
 )
+from collaborative_care_analysis.data_analysis.dataset_creation import (
+    DEFAULT_PRESET,
+    PRESETS,
+)
+from collaborative_care_analysis.data_analysis.dataset_creation import (
+    build as build_cohort,
+)
 from collaborative_care_analysis.enrichment import enrich
 from collaborative_care_analysis.pool2 import backfill_baseline_demographics
 
@@ -539,6 +546,19 @@ def enrich_command():
     enriched_df = enrich(merged_df)
     _save_enriched(enriched_df)
     return enriched_df
+
+
+@app.command(name="analysis-data")
+def analysis_data_command(
+    preset: Annotated[
+        str,
+        typer.Argument(help=f"Cohort preset to build. One of: {', '.join(PRESETS)}."),
+    ] = DEFAULT_PRESET,
+):
+    """Build one analysis cohort from the enriched dataset into its own folder."""
+    if preset not in PRESETS:
+        raise typer.BadParameter(f"unknown preset {preset!r}; available: {', '.join(PRESETS)}")
+    return build_cohort(PRESETS[preset])
 
 
 @app.command()
