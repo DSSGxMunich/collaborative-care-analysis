@@ -2,6 +2,35 @@
 
 Depression Treatment Navigator for Primary Care
 
+This repository contains the code and documentation for the project "Collaborative Care Compass", developed during the Data Science for Social Good (DSSG) Summer Fellowship Munich 2026.
+
+## Project Overview 🌍
+
+The project aims to optimise the implementation of Collaborative Care for Depression in German primary care by identifying the most effective combinations of intervention components for specific patient profiles. Leveraging a dataset from the LMU University Hospital, the team analyses how individual treatment elements impact outcomes, to support the effective use of resources and improve patient recovery. The ultimate goal is an intuitive, patient-focused prediction tool, designed in collaboration with general practitioners, that provides data-driven decision support that is both clinically effective and practically sustainable.
+
+## Background and Problem Statement 🎯
+
+Collaborative care, in which the general practitioner works with a care manager and a mental health specialist, is an established approach to treating depression in primary care. But trials combine different components, patients benefit to different degrees, and each trial recorded its data differently. To learn which components work, and for whom, the trials must first be brought into one consistent, pooled dataset.
+
+## Project Goal and Contributions 🚀
+
+The goal of this project is to support personalized collaborative care for depression in German general practice. We contribute in the following ways:
+
+- **Harmonized pooled dataset:** a reproducible pipeline that exports, harmonizes, merges and enriches participant-level data from multiple collaborative care RCTs into one analysis-ready dataset.
+- **Clinical prediction model:** a component network meta-analysis (CNMA) and risk-score modelling on the pooled data, to estimate how collaborative care components affect outcomes for different patients.
+- **Web prototype:** a prototype tool showing how these insights could be brought into general practice.
+- **Documentation:** technical documentation of the data pipeline, modelling approach and suggestions for future work.
+
+## Documentation
+
+The full technical documentation is an MkDocs site in `docs/`. Preview it locally with:
+
+```bash
+uv run mkdocs serve -f docs/mkdocs.yml
+```
+
+Then open http://127.0.0.1:8000.
+
 ## Exporting Datasets
 
 Export datasets to the interim data directory by running the following command. You can optionally specify a dataset id to export a specific dataset. If no dataset id is specified, all datasets will be exported.
