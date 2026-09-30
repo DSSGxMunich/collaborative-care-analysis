@@ -1,5 +1,7 @@
 # Collaborative Care Compass 🧭
 
+<a href="https://www.lmu-klinikum.de/"><img src="assets/lmu-klinikum.svg" alt="LMU Klinikum logo" width="180"></a>
+
 ![Python](https://img.shields.io/badge/python-3.10-blue) ![uv](https://img.shields.io/badge/managed%20with-uv-purple) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
 This repository contains the code and documentation for the project "Collaborative Care Compass", developed during the [Data Science for Social Good (DSSG) Summer Fellowship Munich 2026](https://www.dssgxmunich.org/call-for-fellows).
@@ -26,7 +28,7 @@ The goal of this project is to support personalized collaborative care for depre
 
 - **Harmonized pooled dataset:** a reproducible pipeline that loads, harmonizes, merges and enriches participant-level data from multiple collaborative care RCTs into one analysis-ready dataset.
 - **Clinical prediction model:** a component network meta-analysis (CNMA) and risk-score modelling on the pooled data, to estimate how collaborative care components affect outcomes for different patients.
-- **Web prototype:** a prototype tool showing how these insights could be brought into general practice.
+- **Web prototype:** a prototype tool showing how these insights could be brought into general practice ([live web app](https://dssgxmunich.github.io/collaborative-care-webapp/), [repository](https://github.com/DSSGxMunich/collaborative-care-webapp)).
 - **Documentation:** technical documentation of the data pipeline, modelling approach and suggestions for future work.
 
 ## A Note on the Data 🔒
