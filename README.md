@@ -1,6 +1,8 @@
-# Collaborative Care Compass 🧭
+<p align="right">
+  <a href="https://www.lmu-klinikum.de/"><img src="assets/lmu-klinikum.svg" alt="LMU Klinikum logo" width="180"></a>
+</p>
 
-<a href="https://www.lmu-klinikum.de/"><img src="assets/lmu-klinikum.svg" alt="LMU Klinikum logo" width="180"></a>
+# Collaborative Care Compass 🧭
 
 ![Python](https://img.shields.io/badge/python-3.10-blue) ![uv](https://img.shields.io/badge/managed%20with-uv-purple) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
