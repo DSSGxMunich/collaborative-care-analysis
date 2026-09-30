@@ -61,7 +61,7 @@ One command takes every trial from its raw files to a single harmonized dataset 
 uv run collaborative_care_analysis/dataset.py run
 ```
 
-The final result lands in `data/interim/analysis_datasets/phq9_12mo_core/` with several intermediate datasets accessible in `data/interim/`.
+The final result lands in `data/processed/analysis_datasets/phq9_12mo_core/` with several intermediate datasets accessible in `data/interim/`.
 
 #### How the pipeline works
 
@@ -86,7 +86,7 @@ flowchart LR
 3. **Merge** (`merge`). For each trial, the clusters are joined on `STUDY_ID`, `patient_id` and `follow_up_months`. Then all trials are stacked into one table, and a column that a trial doesn't have is left empty. The merge stops if a join key is missing or duplicated, or if two clusters produce the same column. It warns loudly if the join drops rows. The output is `data/interim/merged_dataset/merged_dataset.csv`.
 4. **Backfill** (part of `enrich`). Some trials don't include a usable age or sex. These gaps are filled from the POOL2 export, matched on study and patient ID. Only missing values are filled; existing values are never overwritten.
 5. **Enrich** (`enrich`). Each patient is given the characteristics of their study arm from the study-level annotation sheet, for example whether relapse prevention was part of the intervention. These are the `treatment_*` columns. Control arms get "no" for every component.
-6. **Analysis data** (`analysis-data`). The enriched dataset is filtered into an analysis-ready cohort, defined by a preset in `data_analysis/dataset_creation.py`. The cohort gets its own folder under `data/interim/analysis_datasets/` with the long and wide data, the spec that produced it and an attrition table.
+6. **Analysis data** (`analysis-data`). The enriched dataset is filtered into an analysis-ready cohort, defined by a preset in `data_analysis/dataset_creation.py`. The cohort gets its own folder under `data/processed/analysis_datasets/` with the long and wide data, the spec that produced it and an attrition table.
 
 Some other ways to run it:
 

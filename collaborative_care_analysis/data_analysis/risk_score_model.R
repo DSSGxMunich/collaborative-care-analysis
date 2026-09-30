@@ -34,7 +34,7 @@ repo_root <- function() {
 }
 
 REPO_ROOT <- repo_root()
-DATA_PATH <- file.path(REPO_ROOT, "data", "interim", "analysis_datasets", "phq9_12mo_core", "wide.csv")
+DATA_PATH <- file.path(REPO_ROOT, "data", "processed", "analysis_datasets", "phq9_12mo_core", "wide.csv")
 OUT_MODEL <- file.path(REPO_ROOT, "models", "risk_score_model.rds")
 
 

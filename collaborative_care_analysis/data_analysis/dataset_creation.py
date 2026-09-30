@@ -1,7 +1,7 @@
 """Analysis-ready cohorts derived from the enriched dataset.
 
 A cohort is described by a ``CohortSpec`` and written to its own folder under
-``data/interim/analysis_datasets/<name>/``, next to the spec that produced it
+``data/processed/analysis_datasets/<name>/``, next to the spec that produced it
 and the attrition table recording what each filter cost. Two cohorts can
 therefore be compared, and any result traced back to the rule set behind it.
 
@@ -15,9 +15,9 @@ import json
 from loguru import logger
 import pandas as pd
 
-from collaborative_care_analysis.config import DATA_DIR
+from collaborative_care_analysis.config import DATA_DIR, PROCESSED_DATA_DIR
 
-ANALYSIS_DIR = DATA_DIR / "interim" / "analysis_datasets"
+ANALYSIS_DIR = PROCESSED_DATA_DIR / "analysis_datasets"
 
 GRAIN = ["STUDY_ID", "patient_id"]
 
