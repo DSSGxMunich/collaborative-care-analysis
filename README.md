@@ -24,7 +24,7 @@ Answering these questions requires analysing participant-level data from many tr
 
 The goal of this project is to support personalized collaborative care for depression in German general practice. We contribute in the following ways:
 
-- **Harmonized pooled dataset:** a reproducible pipeline that exports, harmonizes, merges and enriches participant-level data from multiple collaborative care RCTs into one analysis-ready dataset.
+- **Harmonized pooled dataset:** a reproducible pipeline that loads, harmonizes, merges and enriches participant-level data from multiple collaborative care RCTs into one analysis-ready dataset.
 - **Clinical prediction model:** a component network meta-analysis (CNMA) and risk-score modelling on the pooled data, to estimate how collaborative care components affect outcomes for different patients.
 - **Web prototype:** a prototype tool showing how these insights could be brought into general practice.
 - **Documentation:** technical documentation of the data pipeline, modelling approach and suggestions for future work.
@@ -55,35 +55,38 @@ unzip data/raw/260810_POOL2.zip -d data/raw/260810_POOL2
 
 ### Run the pipeline
 
-One command takes every trial from its raw files to a single harmonized dataset:
+One command takes every trial from its raw files to a single harmonized dataset and the analysis cohort built from it:
 
 ```bash
 uv run collaborative_care_analysis/dataset.py run
 ```
 
-The result lands in `data/interim/enriched_dataset/enriched_dataset.csv`.
+The final result lands in `data/processed/analysis_datasets/phq9_12mo_core/` with several intermediate datasets accessible in `data/interim/`.
 
 #### How the pipeline works
 
 ```mermaid
 flowchart LR
-    raw[("Raw trial files<br/>data/raw/")] --> export["1. Export<br/>one loader per trial"]
-    export --> harmonize["2. Harmonize<br/>baseline · medical history<br/>outcomes · treatment"]
+    raw[("Raw trial files<br/>data/raw/")] --> load["1. Load<br/>one loader per trial"]
+    load --> harmonize["2. Harmonize<br/>baseline · medical history<br/>outcomes · treatment"]
     harmonize --> merge["3. Merge<br/>join clusters, stack trials"]
     merge --> backfill["4. Backfill<br/>age and sex from POOL2"]
     pool2[("POOL2 export")] --> backfill
     backfill --> enrich["5. Enrich<br/>study-arm characteristics"]
     sheet[("Study-level<br/>annotation sheet")] --> enrich
     enrich --> out[("enriched_dataset.csv")]
+    out --> cohort["6. Analysis data<br/>analysis cohort"]
+    cohort --> cohorts[("analysis_datasets/")]
 ```
 
 `run` goes through these steps in order. You can also run each step on its own:
 
-1. **Export** (`export`). Each trial has its own loader in `data_loading/`. The loader reads the raw SPSS, Stata, CSV or Excel file, renames the ID column to `patient_id`, and reshapes the data to long format, with one row per patient per visit and `follow_up_months` giving the time since baseline. The output goes to `data/interim/exported_datasets/`.
+1. **Load** (`load`). Each trial has its own loader in `data_loading/`. The loader reads the raw SPSS, Stata, CSV or Excel file, renames the ID column to `patient_id`, and reshapes the data to long format, with one row per patient per visit and `follow_up_months` giving the time since baseline. The output goes to `data/interim/loaded_datasets/`.
 2. **Harmonize** (`harmonize`). The trials are mapped onto shared variable names and codings, following [HARMONIZATION_CONVENTIONS.md](HARMONIZATION_CONVENTIONS.md). This is split into four clusters, each in its own `harmonization_*` folder: baseline (age, sex), medical history, outcomes (PHQ-9, GAD-7, SCL-20, …) and treatment (control or intervention arm). Each trial and cluster gives one file in `data/interim/harmonized_datasets/`.
 3. **Merge** (`merge`). For each trial, the clusters are joined on `STUDY_ID`, `patient_id` and `follow_up_months`. Then all trials are stacked into one table, and a column that a trial doesn't have is left empty. The merge stops if a join key is missing or duplicated, or if two clusters produce the same column. It warns loudly if the join drops rows. The output is `data/interim/merged_dataset/merged_dataset.csv`.
 4. **Backfill** (part of `enrich`). Some trials don't include a usable age or sex. These gaps are filled from the POOL2 export, matched on study and patient ID. Only missing values are filled; existing values are never overwritten.
 5. **Enrich** (`enrich`). Each patient is given the characteristics of their study arm from the study-level annotation sheet, for example whether relapse prevention was part of the intervention. These are the `treatment_*` columns. Control arms get "no" for every component.
+6. **Analysis data** (`analysis-data`). The enriched dataset is filtered into an analysis-ready cohort, defined by a preset in `data_analysis/dataset_creation.py`. The cohort gets its own folder under `data/processed/analysis_datasets/` with the long and wide data, the spec that produced it and an attrition table.
 
 Some other ways to run it:
 

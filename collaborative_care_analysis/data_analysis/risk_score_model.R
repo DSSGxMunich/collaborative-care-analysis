@@ -44,8 +44,7 @@ repo_root <- function() {
 }
 
 REPO_ROOT <- repo_root()
-COHORT    <- "phq9_12mo_core"
-DATA_PATH <- file.path(REPO_ROOT, "data", "interim", "analysis_datasets", COHORT, "wide.csv")
+DATA_PATH <- file.path(REPO_ROOT, "data", "processed", "analysis_datasets", "phq9_12mo_core", "wide.csv")
 OUT_MODEL <- file.path(REPO_ROOT, "models", "risk_score_model.rds")
 
 # Age spline knot percentiles. Cohort selection is not done here: which
