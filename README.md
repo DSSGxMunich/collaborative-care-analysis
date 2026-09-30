@@ -1,12 +1,11 @@
 
-
-https://github.com/user-attachments/assets/79f20885-5ade-46e3-9cee-7c49d4877a86
-
 # Collaborative Care Compass 🧭
 
 ![Python](https://img.shields.io/badge/python-3.10-blue) ![uv](https://img.shields.io/badge/managed%20with-uv-purple) ![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen)
 
 This repository contains the code and documentation for the project "Collaborative Care Compass", developed during the [Data Science for Social Good (DSSG) Summer Fellowship Munich 2026](https://www.dssgxmunich.org/call-for-fellows).
+
+https://github.com/user-attachments/assets/79f20885-5ade-46e3-9cee-7c49d4877a86
 
 ## Project Overview 🌍
  
