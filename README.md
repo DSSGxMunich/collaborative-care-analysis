@@ -24,7 +24,7 @@ Answering these questions requires analysing participant-level data from many tr
 
 The goal of this project is to support personalized collaborative care for depression in German general practice. We contribute in the following ways:
 
-- **Harmonized pooled dataset:** a reproducible pipeline that exports, harmonizes, merges and enriches participant-level data from multiple collaborative care RCTs into one analysis-ready dataset.
+- **Harmonized pooled dataset:** a reproducible pipeline that loads, harmonizes, merges and enriches participant-level data from multiple collaborative care RCTs into one analysis-ready dataset.
 - **Clinical prediction model:** a component network meta-analysis (CNMA) and risk-score modelling on the pooled data, to estimate how collaborative care components affect outcomes for different patients.
 - **Web prototype:** a prototype tool showing how these insights could be brought into general practice.
 - **Documentation:** technical documentation of the data pipeline, modelling approach and suggestions for future work.
@@ -67,8 +67,8 @@ The result lands in `data/interim/enriched_dataset/enriched_dataset.csv`.
 
 ```mermaid
 flowchart LR
-    raw[("Raw trial files<br/>data/raw/")] --> export["1. Export<br/>one loader per trial"]
-    export --> harmonize["2. Harmonize<br/>baseline · medical history<br/>outcomes · treatment"]
+    raw[("Raw trial files<br/>data/raw/")] --> load["1. Load<br/>one loader per trial"]
+    load --> harmonize["2. Harmonize<br/>baseline · medical history<br/>outcomes · treatment"]
     harmonize --> merge["3. Merge<br/>join clusters, stack trials"]
     merge --> backfill["4. Backfill<br/>age and sex from POOL2"]
     pool2[("POOL2 export")] --> backfill
@@ -79,7 +79,7 @@ flowchart LR
 
 `run` goes through these steps in order. You can also run each step on its own:
 
-1. **Export** (`export`). Each trial has its own loader in `data_loading/`. The loader reads the raw SPSS, Stata, CSV or Excel file, renames the ID column to `patient_id`, and reshapes the data to long format, with one row per patient per visit and `follow_up_months` giving the time since baseline. The output goes to `data/interim/exported_datasets/`.
+1. **Load** (`load`). Each trial has its own loader in `data_loading/`. The loader reads the raw SPSS, Stata, CSV or Excel file, renames the ID column to `patient_id`, and reshapes the data to long format, with one row per patient per visit and `follow_up_months` giving the time since baseline. The output goes to `data/interim/loaded_datasets/`.
 2. **Harmonize** (`harmonize`). The trials are mapped onto shared variable names and codings, following [HARMONIZATION_CONVENTIONS.md](HARMONIZATION_CONVENTIONS.md). This is split into four clusters, each in its own `harmonization_*` folder: baseline (age, sex), medical history, outcomes (PHQ-9, GAD-7, SCL-20, …) and treatment (control or intervention arm). Each trial and cluster gives one file in `data/interim/harmonized_datasets/`.
 3. **Merge** (`merge`). For each trial, the clusters are joined on `STUDY_ID`, `patient_id` and `follow_up_months`. Then all trials are stacked into one table, and a column that a trial doesn't have is left empty. The merge stops if a join key is missing or duplicated, or if two clusters produce the same column. It warns loudly if the join drops rows. The output is `data/interim/merged_dataset/merged_dataset.csv`.
 4. **Backfill** (part of `enrich`). Some trials don't include a usable age or sex. These gaps are filled from the POOL2 export, matched on study and patient ID. Only missing values are filled; existing values are never overwritten.
