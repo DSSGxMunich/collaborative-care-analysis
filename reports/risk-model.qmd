@@ -1,0 +1,352 @@
+---
+title: "The Two-Stage Prediction Model for Individualized Treatment Benefit Behind the *Collaborative Care Compass*"
+subtitle: "Stage 1: The Risk Model"
+author:
+  - name: DSSGx Munich 2026 Fellows
+    url: https://www.dssgxmunich.org/project-2026
+    affiliations:
+      - name: Social Data Science and AI Lab, LMU Munich
+        url: https://www.stat.lmu.de/soda/en/
+      - name: Munich Center for Machine Learning
+        url: https://mcml.ai/
+date: 2026-10-02
+format:
+  html:
+    code-fold: true
+    code-summary: "Code"
+    code-tools: true
+---
+
+# Overview
+
+The [<i>Collaborative Care Compass</i>](https://dssgxmunich.github.io/collaborative-care-webapp/) is a research prototype to predict how collaborative care treatment components influence the PHQ-9 score for a person with depression one year from treatment start. It is developed based on individual patient data (IPD) from randomized controlled trials comparing collaborative care as intervention and usual care as control.<br>
+
+The model consists of two parts: The first part is a risk model, predicting depressive symptom severity at 12 months from baseline characteristics. The output of the model is a risk score, used as input to the second part which estimates how the effects of collaborative care components vary by baseline risk, following the [PATH framework by Kent et al. (2020)](https://pubmed.ncbi.nlm.nih.gov/31711134/).
+
+**This report covers stage 1, the risk model.** Stage 2, the component network meta-analysis, is documented separately.
+
+
+# Risk Model
+
+We believe the PATH consensus criteria on the effectiveness of risk modeling to RCT (meta-) analysis are fulfilled. There is, to our knowledge, no compatible, externally-developed risk model available to stratify trial results. We therefore develop a risk model based on the multi-trial population we carefully extracted out of IPD from 29 RCTs.<br>
+
+```{r}
+#| label: setup
+#| message: false
+#| out-width: "100%"
+
+library(data.table)
+library(Hmisc)
+library(ggplot2)
+library(splines)
+library(ordinal)
+library(rms)
+library(metafor)
+
+
+# Sourcing risk_score_model.R brings in the model definition and the cohort
+# path it reads, DATA_PATH.
+REPO_ROOT <- rprojroot::find_root(rprojroot::has_file("pyproject.toml"))
+source(file.path(REPO_ROOT, "collaborative_care_analysis", "data_analysis",
+                 "risk_score_model.R"))
+
+# The cohort is built from the harmonised IPD by
+#   uv run collaborative_care_analysis/dataset.py analysis-data phq9_12mo_core
+df <- load_model_data(DATA_PATH)
+
+html(describe(df), which = "categorical", scroll = TRUE)
+
+# inspect marginal distributions for covariates and baseline
+tab <- table(df$arm, df$study_id)
+tab <- tab[, order(-colSums(tab))]
+par(mar = c(9, 4, 2, 1)) 
+barplot(tab, col = c("#9AA4AA", "#195A7D"), las = 2, ylab = "Patients",
+        legend.text = TRUE, args.legend = list(x = "topright", bty = "n"))
+par(mar = c(5, 4, 4, 2) + 0.1)
+hist(df$age, main = "Age at baseline",  xlab = "age")
+barplot(table(df$sex), main = "Sex", xlab = "sex")
+hist(df$phq9_at_baseline, main = "PHQ-9 at baseline",  xlab = "score")
+hist(df$phq9_at_12mo, main = "PHQ-9 at 12 months", xlab = "score")
+```
+
+## Initial Model Specification
+Let $Y^{(12)}_{ij} \in \{0, 1, \dots, 27\}$ denote the total PHQ-9 score of individual $i = 1, \dots, n_j$ in study $j = 1, \dots, 12$ at 12 months post-randomization, and $y^{(0)}_{ij}$ the known PHQ-9 score at baseline. We specify the semiparametric ordinal logistic mixed model
+
+$$
+P\left(Y^{(12)}_{ij} \leq k \mid \mathbf{x}_{ij}, y^{(0)}_{ij}, \alpha_j, \gamma_j\right)
+= \sigma\left(\theta_k - \eta_{ij}\right), \qquad k = 0, 1, \dots, 26,
+$$
+
+with linear predictor
+
+$$
+\eta_{ij} = \beta_{\text{sex}}\, \text{sex}_{ij}
++ \sum_{m=1}^{2} \beta_{\text{age},m}\, s_m(\text{age}_{ij})
++ \left(\beta_{0} + \gamma_j\right) y^{(0)}_{ij}
++ \alpha_j,
+$$
+
+where
+
+- $\theta_0 < \theta_1 < \dots < \theta_{26}$ are threshold intercepts between adjacent PHQ-9 scores,
+- $\text{sex}_{ij}$ is an indicator for male sex,
+- $s_1(\text{age})$ and $s_2(\text{age})$ are basis functions of a restricted cubic spline with three knots at the 10th, 50th and 90th age percentiles,
+- $\text{age}_{ij}$ and $y^{(0)}_{ij}$ enter centred and scaled by their sample mean and standard deviation,
+- $\gamma_j$ is a random study slope on baseline PHQ-9,
+- $\alpha_j$ is a random study intercept,
+
+and the study-level random effects are independent,
+
+$$
+\alpha_j \sim \mathcal{N}\left(0, \tau_\alpha^2\right), \qquad
+\gamma_j \sim \mathcal{N}\left(0, \tau_\gamma^2\right).
+$$
+
+## Model Data
+
+All models below use baseline PHQ-9 and age centered and scaled by their sample mean and standard deviation, and a spline for age with knots at the 10th, 50th and 90th percentiles.
+
+```{r}
+#| label: model-data
+prepared <- add_centred_terms(df)
+df <- prepared$data
+knots_c <- age_spline_knots(df)
+
+# fixed part is used for the design matrix and for predictions, full part adds
+# the study random effects
+forms <- model_formulas(knots_c)
+fixed_form <- forms$fixed
+model_formula <- forms$full
+```
+
+## Sample Size Calculation
+We conduct a sample size calculation according to [Pate et al. (2023)](https://journals.sagepub.com/doi/10.1177/09622802231151220). 
+```{r}
+# Step 1
+# calculating Q, the number of predictor parameters
+X <- model.matrix(fixed_form, data = df)
+Q <- (ncol(X) - 1) + 1  # baseline (1) + age spline (2) + sex (1), plus the random slope
+
+# calculating outcome proportions
+counts <- df[order(phq9_at_12mo), .N, by = phq9_at_12mo]
+n_obs <- sum(counts$N)
+pk <- counts$N / n_obs
+
+pairs <- CJ(r = counts$phq9_at_12mo, k = counts$phq9_at_12mo)[k > r]
+pairs[counts, E_r := i.N, on = .(r = phq9_at_12mo)]
+pairs[counts, E_k := i.N, on = .(k = phq9_at_12mo)]
+pairs[, p_kr := (E_k + E_r) / n_obs]  # p_{k,r}
+
+# max(R2_CS_app) for the overall multinomial model
+max_r2_overall <- 1 - prod(pk^pk)^2
+# fallback to R2_Nagelkerke = 0.15
+R2_adj_overall <- 0.15 * max_r2_overall
+
+# max(R2_CS_app,k,r) per one vs one sub-model
+pairs[, phi_kr := E_k / (E_k + E_r)]
+pairs[, max_r2 := 1 - (phi_kr^phi_kr * (1 - phi_kr)^(1 - phi_kr))^2]
+pairs[, R2_adj := 0.15 * max_r2]
+
+# Step 3: criterion (i)
+S <- 0.9
+crit_i_m <- function(Q, R2adj, S = 0.9) {
+  Q / ((S - 1) * log(1 - R2adj / S))
+}
+
+pairs[, m_kr := crit_i_m(Q, R2_adj, S)] 
+pairs[, n_kr := m_kr / p_kr]
+crit_i <- max(pairs$n_kr)
+
+# Step 4: criterion (ii)
+delta  <- 0.05
+K <- nrow(counts)
+crit_ii <- (K - 1) * Q /
+  ((R2_adj_overall / (R2_adj_overall + delta * max_r2_overall) - 1) *
+     log(1 - R2_adj_overall - delta * max_r2_overall))
+
+# Step 5: criterion (iii) 
+alpha <- 0.05
+chi <- qchisq(1 - alpha / K, df = 1)
+crit_iii <- max(chi * pk * (1 - pk) / delta^2)
+
+# Step 6: the requirement is the maximum
+c(Q = Q, K = K, n_obs = n_obs,
+  crit_i = crit_i, crit_ii = crit_ii, crit_iii = crit_iii,
+  required = max(crit_i, crit_ii, crit_iii))
+```
+We treat the required sample size as a conservative upper bound. Our ordinal model under the proportional odds assumption likely requires a smaller sample size, since less parameters are to be estimated than for a multinomial model (see the discussion section in Pate et al.). Since two out of three criteria in the sample size calculation are fulfilled, we deem the sample size sufficient for the model we aim to fit, without risking serious overfitting.
+
+## Ordinality and PO Assumption
+Under the assumption that a predictor $X$ is linearly related to the cumulative log-odds of $\{Y^{(12)}_{ij} \leq k\}$, the ordinality assumption underlying an ordinal regression model can be checked by plotting the mean of $X$ against levels of $Y$. The stratified means should then show a consistent trend. Note that the ordinality assumption may appear to be violated due to non-linear effects of $X$ on $Y$ (see chapter 13 in Frank Harrell's [Regression Modeling Strategies](https://link.springer.com/book/10.1007/978-3-319-19425-7)). 
+```{r}
+#| fig-width: 12
+#| fig-height: 4
+#| out-width: "100%"
+
+x_cont <- c("phq9_at_baseline", "age")
+x_all  <- c(x_cont, "sex")
+
+# mean of X by level of Y, with 95% CIs; for a factor, the proportion in its second level
+means_by_y <- function(x) {
+  v     <- df[[x]]
+  label <- paste("mean", x)
+  if (is.factor(v)) {
+    label <- paste0("P(", x, " = ", levels(v)[2], ")")
+    v     <- as.numeric(v == levels(v)[2])
+  }
+  s <- data.table(y = df$phq9_at_12mo, v = v)[
+    , .(m = mean(v), se = sd(v) / sqrt(.N)), by = y][order(y)]
+  s[, `:=`(lo = m - 1.96 * se, hi = m + 1.96 * se)]
+  list(means = s, label = label)
+}
+
+op <- par(mfrow = c(1, length(x_all)), mar = c(4, 4, 2, 1))
+for (x in x_all) {
+  r <- means_by_y(x)
+  s <- r$means
+  plot(s$y, s$m, type = "b", pch = 19, cex = 0.6, ylim = range(s$lo, s$hi, na.rm = TRUE),
+       xlab = "phq9_at_12mo", ylab = r$label, main = x)
+  arrows(s$y, s$lo, s$y, s$hi, angle = 90, code = 3, length = 0.02, col = "grey50")
+}
+par(op)
+```
+
+Under the proportional odds assumption, the cumulative log-odds for different cut-points, plotted against individual predictors, should be parallel.
+```{r}
+#| fig-width: 12
+#| fig-height: 4
+#| out-width: "100%"
+
+cuts <- c(5, 10, 15, 20, 25) 
+
+plot_parallelism <- function(x) {
+  plot(NA, xlim = range(df[[x]]), ylim = c(-6, 4),
+       xlab = x, ylab = "logit P(Y >= j)", main = x)
+  for (i in seq_along(cuts))
+    suppressWarnings(plsmo(df[[x]], df$phq9_at_12mo >= cuts[i], fun = qlogis,
+                           add = TRUE, col = i, lwd = 2))
+  legend("bottomright", paste("Y >=", cuts), col = seq_along(cuts),
+         lwd = 2, bty = "n", cex = 0.8)
+}
+
+op <- par(mfrow = c(1, length(x_cont)), mar = c(4, 4, 2, 1))
+for (x in x_cont) plot_parallelism(x)
+par(op)
+```
+
+Compare the goodness of fit between the full PO model and letting one predictor's coefficient vary across thresholds (partial PO).
+```{r}
+# since clmm does not support nominal_test, the random intercept and slope
+# are approximated by fixed study effects and a study * baseline interaction
+m_po <- clm(update(fixed_form, ordered(phq9_at_12mo) ~ . + study_id +
+                     phq9_at_baseline_c:study_id),
+            data = df)
+
+# test the predictors only; the study terms are there to adjust
+predictors <- grep("study_id", attr(terms(m_po), "term.labels"),
+                   value = TRUE, invert = TRUE)
+
+nt <- nominal_test(m_po, scope = predictors)
+nt$LRT_per_df <- round(nt$LRT / nt$Df, 2)
+nt[, c("Df", "LRT", "LRT_per_df")]
+```
+
+Especially, centered baseline PHQ-9 departs from the PO assumption. We nevertheless retain the more parsimonious PO model and assess whether this affects predictive performance, the core utility for of the risk model, using internal-external cross-validation.
+
+## Internal-External Cross-Validation
+
+Following [Steyerberg and Harrell (2016)](https://doi.org/10.1016/j.jclinepi.2015.04.005), we assess how the model performs in a setting it has not seen by internal-external cross-validation (IECV). Each study is left out once, the model is fitted to the remaining eleven, and its predictions are evaluated in the left-out study. We report 
+
+* Somers' $D_{xy}$ between the linear predictor and the observed PHQ-9 score (full scale)
+* c-statistic
+* calibration slope
+* calibration-in-the-large (all for PHQ-9 $\geq 5$, $\geq 10$ and $\geq 15$)
+
+The estimates of each metric are pooled by random-effects meta-analysis, giving the average performance, its between-study standard deviation $\tau$, and a 95% prediction interval for a new study.
+
+
+```{r}
+#| label: iecv-functions
+#|
+predict_new_study <- function(fit, newdata) {
+  cf <- coef(fit)
+  theta <- cf[grepl("\\|", names(cf))]     # thresholds
+  beta<-  cf[!grepl("\\|", names(cf))]
+  X <- model.matrix(fixed_form, data = newdata)[, -1, drop = FALSE]
+  stopifnot(identical(colnames(X), names(beta)))
+  eta <- as.vector(X %*% beta)
+  cum <- sapply(theta, function(t) plogis(t - eta))
+  list(eta = eta, cum = matrix(cum, nrow = length(eta)))   # P(Y <= j - 1) column
+}
+
+evaluate_study <- function(pred, y) {
+  rc  <- rcorr.cens(pred$eta, y)
+  res <- data.table(metric = "Dxy (full scale)", est = rc[["Dxy"]], se = rc[["S.D."]])
+
+  for (cut in c(5, 10, 15)) {
+    obs <- as.integer(y >= cut)
+    if (sum(obs) < 10 || sum(1 - obs) < 10) next    # too few patients on one side
+
+    p <- 1 - pred$cum[, cut]                 # P(Y >= cut) = 1 - P(Y <= cut - 1)
+    lp <- qlogis(pmin(pmax(p, 1e-6), 1 - 1e-6))
+
+    rc <- rcorr.cens(lp, obs)
+    slope <- coef(summary(glm(obs ~ lp, family = binomial)))["lp", ]
+    citl <- coef(summary(glm(obs ~ offset(lp), family = binomial)))["(Intercept)", ]
+
+    res <- rbind(res, data.table(
+      metric = paste(c("c-statistic", "calibration slope", "CITL"), "at Y >=", cut),
+      est = c(rc[["C Index"]],   slope[["Estimate"]],   citl[["Estimate"]]),
+      se = c(rc[["S.D."]] / 2,  slope[["Std. Error"]], citl[["Std. Error"]])))
+  }
+  res
+}
+
+leave_one_out <- function(s) {
+  train <- droplevels(df[study_id != s])
+  test  <- df[study_id == s]
+  fit   <- clmm(model_formula, data = train, link = "logit")
+  res   <- evaluate_study(predict_new_study(fit, test), test$phq9_at_12mo)
+  res[, study := s]
+}
+```
+
+```{r}
+#| label: iecv
+#| cache: true
+# independent cv-folds can run in parallel
+iecv <- rbindlist(parallel::mclapply(levels(df$study_id), leave_one_out,
+                                     mc.cores = max(1, parallel::detectCores() - 1)))
+```
+
+```{r}
+#| label: random-effect-meta-analysis 
+pool <- function(est, se) {
+  m <- rma(yi = est, sei = se, method = "REML")
+  p <- predict(m)
+  data.table(k = m$k, pooled = m$beta[1], tau = sqrt(m$tau2),
+             pi_lb = p$pi.lb, pi_ub = p$pi.ub)
+}
+
+iecv_table <- iecv[, pool(est, se), by = metric]
+iecv_table[, (3:6) := lapply(.SD, round, 3), .SDcols = 3:6][]
+```
+Across the twelve studies, the model discriminates moderately between patients with a better and a worse prognosis (Somers' D). The model's discriminative ability increases for higher thresholds as indicated by the c-statistics (more interpretation of the results needed here).
+
+## Final Model
+
+```{r}
+#| label: final-model
+#| cache: true
+final_fit <- fit_risk_model(df, forms)
+summary(final_fit)
+```
+
+Fitting takes around 30 seconds. `export_risk_model()` writes the coefficients,
+thresholds, knots and centering constants to `models/risk_score_model.rds`. Stage 2 then
+reads it through `predict_phq9()`.
+
+```{r}
+#| label: export
+export_risk_model(final_fit, df, prepared$scaling, knots_c, forms)
+```
