@@ -580,7 +580,7 @@ def run(
         ),
     ] = None,
 ):
-    """Run the full pipeline: load, harmonize, merge, backfill demographics, then enrich.
+    """Run the full pipeline: load, harmonize, merge, backfill demographics, enrich, then build the analysis cohort.
 
     Omitting dataset_id performs a clean regeneration. Supplying --exclude
     also performs a clean regeneration, but skips the matching datasets.
@@ -589,27 +589,30 @@ def run(
     dataset is regenerated during load and harmonization, while other
     existing harmonized outputs remain available to the merge stage.
     """
-    logger.info("=== Stage 1/5: load ===")
+    logger.info("=== Stage 1/6: load ===")
     load(
         dataset_id=dataset_id,
         exclude_dataset_ids=exclude_dataset_ids,
     )
 
-    logger.info("=== Stage 2/5: harmonize ===")
+    logger.info("=== Stage 2/6: harmonize ===")
     harmonize(
         dataset_id=dataset_id,
         exclude_dataset_ids=exclude_dataset_ids,
     )
 
-    logger.info("=== Stage 3/5: merge ===")
+    logger.info("=== Stage 3/6: merge ===")
     merged_df, _cluster_columns = merge()
 
-    logger.info("=== Stage 4/5: POOL2 demographic backfill ===")
+    logger.info("=== Stage 4/6: POOL2 demographic backfill ===")
     merged_df = backfill_baseline_demographics(merged_df)
 
-    logger.info("=== Stage 5/5: enrichment ===")
+    logger.info("=== Stage 5/6: enrichment ===")
     enriched_df = enrich(merged_df)
     _save_enriched(enriched_df)
+
+    logger.info("=== Stage 6/6: analysis cohort ===")
+    analysis_data_command()
 
     logger.success("Full pipeline complete.")
 
