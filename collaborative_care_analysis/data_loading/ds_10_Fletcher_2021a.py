@@ -88,7 +88,6 @@ def load() -> pd.DataFrame:
     if long.groupby("patient_id")[demographics].nunique().gt(1).any().any():
         raise ValueError("Patients with conflicting age/gender across waves")
     long[demographics] = long.groupby("patient_id")[demographics].transform("first")
-    long = long.dropna(subset=demographics)
 
     if long.duplicated(["patient_id", "follow_up_months"]).any():
         raise ValueError("Duplicate patient/time-point combinations")
