@@ -11,9 +11,16 @@ from collaborative_care_analysis.config import (
     COLNAME_STUDYID,
     ENRICHED_DATASET_DIR,
     HARMONIZED_DATASETS_DIR,
-    INTERIM_DATASETS_EXPORT_DIR,
+    INTERIM_DATASETS_LOAD_DIR,
     MERGED_DATASET_DIR,
     normalize_study_id,
+)
+from collaborative_care_analysis.data_analysis.dataset_creation import (
+    DEFAULT_PRESET,
+    PRESETS,
+)
+from collaborative_care_analysis.data_analysis.dataset_creation import (
+    build as build_cohort,
 )
 from collaborative_care_analysis.enrichment import enrich
 from collaborative_care_analysis.pool2 import backfill_baseline_demographics
@@ -204,11 +211,11 @@ def main():
 
 
 @app.command()
-def export(
+def load(
     dataset_id: Annotated[
         str | None,
         typer.Argument(
-            help="Dataset ID to export, such as '04' or 'Bekelman_2018'.",
+            help="Dataset ID to load, such as '04' or 'Bekelman_2018'.",
         ),
     ] = None,
     exclude_dataset_ids: Annotated[
@@ -221,7 +228,7 @@ def export(
     ] = None,
 ):
     """Load selected datasets and save each result to the interim data directory."""
-    INTERIM_DATASETS_EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+    INTERIM_DATASETS_LOAD_DIR.mkdir(parents=True, exist_ok=True)
 
     loader_scripts = _select_loader_scripts(
         dataset_id=dataset_id,
@@ -231,7 +238,7 @@ def export(
     # An all-dataset or exclusion run is a clean regeneration, so files left
     # over from renamed, deleted, or newly excluded loaders cannot linger.
     if dataset_id is None:
-        _clear_directory(INTERIM_DATASETS_EXPORT_DIR, "exported dataset")
+        _clear_directory(INTERIM_DATASETS_LOAD_DIR, "loaded dataset")
 
     for script_path in loader_scripts:
         module_path = ".".join(
@@ -241,7 +248,7 @@ def export(
             )
         )
         loader = importlib.import_module(module_path)
-        output_path = INTERIM_DATASETS_EXPORT_DIR / f"{script_path.stem}.csv"
+        output_path = INTERIM_DATASETS_LOAD_DIR / f"{script_path.stem}.csv"
 
         logger.info(f"Loading dataset with {script_path.name}.")
         loader.load().to_csv(output_path, index=False)
@@ -541,6 +548,19 @@ def enrich_command():
     return enriched_df
 
 
+@app.command(name="analysis-data")
+def analysis_data_command(
+    preset: Annotated[
+        str,
+        typer.Argument(help=f"Cohort preset to build. One of: {', '.join(PRESETS)}."),
+    ] = DEFAULT_PRESET,
+):
+    """Build one analysis cohort from the enriched dataset into its own folder."""
+    if preset not in PRESETS:
+        raise typer.BadParameter(f"unknown preset {preset!r}; available: {', '.join(PRESETS)}")
+    return build_cohort(PRESETS[preset])
+
+
 @app.command()
 def run(
     dataset_id: Annotated[
@@ -560,36 +580,39 @@ def run(
         ),
     ] = None,
 ):
-    """Run the full pipeline: export, harmonize, merge, backfill demographics, then enrich.
+    """Run the full pipeline: load, harmonize, merge, backfill demographics, enrich, then build the analysis cohort.
 
     Omitting dataset_id performs a clean regeneration. Supplying --exclude
     also performs a clean regeneration, but skips the matching datasets.
 
     Passing dataset_id retains the existing targeted-run behavior: only that
-    dataset is regenerated during export and harmonization, while other
+    dataset is regenerated during load and harmonization, while other
     existing harmonized outputs remain available to the merge stage.
     """
-    logger.info("=== Stage 1/5: export ===")
-    export(
+    logger.info("=== Stage 1/6: load ===")
+    load(
         dataset_id=dataset_id,
         exclude_dataset_ids=exclude_dataset_ids,
     )
 
-    logger.info("=== Stage 2/5: harmonize ===")
+    logger.info("=== Stage 2/6: harmonize ===")
     harmonize(
         dataset_id=dataset_id,
         exclude_dataset_ids=exclude_dataset_ids,
     )
 
-    logger.info("=== Stage 3/5: merge ===")
+    logger.info("=== Stage 3/6: merge ===")
     merged_df, _cluster_columns = merge()
 
-    logger.info("=== Stage 4/5: POOL2 demographic backfill ===")
+    logger.info("=== Stage 4/6: POOL2 demographic backfill ===")
     merged_df = backfill_baseline_demographics(merged_df)
 
-    logger.info("=== Stage 5/5: enrichment ===")
+    logger.info("=== Stage 5/6: enrichment ===")
     enriched_df = enrich(merged_df)
     _save_enriched(enriched_df)
+
+    logger.info("=== Stage 6/6: analysis cohort ===")
+    analysis_data_command()
 
     logger.success("Full pipeline complete.")
 

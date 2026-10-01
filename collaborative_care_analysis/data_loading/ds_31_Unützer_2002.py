@@ -1,3 +1,4 @@
+from loguru import logger
 import pandas as pd
 
 from collaborative_care_analysis.config import RAW_DATASETS_DIR
@@ -8,7 +9,9 @@ from collaborative_care_analysis.config import RAW_DATASETS_DIR
 # major depression and/or dysthymia. IMPACT collaborative care (a depression care
 # manager offering problem-solving treatment and/or antidepressant support,
 # stepped care, psychiatrist supervision) vs usual care. Primary outcome:
-# depression severity (SCL-20, mean of 20 items, 0-4).
+# depression severity (SCL-20, mean of 20 items, 0-4). ``RAND`` 1 = intervention
+# (n=906), 0 = usual care (n=895), matching the paper, whose mean age 71.2 (7.5)
+# and 1168 women this file also reproduces exactly.
 #
 # ``Unutzer_2002.csv`` is the curated file matching the documented IPD variable
 # list (see "IMPACT_List of variables for the IPD analyses"); it carries SCL-20
@@ -48,12 +51,23 @@ FAMILIES = {
 
 def load(file_path=_STUDY_DIR / "Unutzer_2002.csv") -> pd.DataFrame:
     df = pd.read_csv(file_path)
+    # blank/whitespace-only cells are missing, before any dtype work
+    with pd.option_context("future.no_silent_downcasting", True):
+        df = df.replace(to_replace=r"^\s*$", value=pd.NA, regex=True)
 
-    assert df[ID_COL].notna().all(), "Rows with missing aid"
-    if df[ID_COL].duplicated().any():
-        raise ValueError("Duplicate patient IDs in wide dataset")
+    incomplete = df[ID_COL].isna() | df["RAND"].isna()
+    if incomplete.any():
+        logger.warning(f"Dropped {int(incomplete.sum())} rows with missing {ID_COL} or RAND.")
+        df = df.loc[~incomplete]
+
+    duplicated_id = df[ID_COL].duplicated(keep=False)
+    if duplicated_id.any():
+        logger.warning(f"Dropped {int(duplicated_id.sum())} rows with duplicated {ID_COL}.")
+        df = df.loc[~duplicated_id]
 
     static_present = [c for c in TIME_INDEPENDENT_COLS if c in df.columns]
+    if absent := [c for c in TIME_INDEPENDENT_COLS if c not in df.columns]:
+        logger.warning(f"Declared time-independent column(s) absent from the export: {absent}")
 
     frames = []
     for months in (0, 6, 12):

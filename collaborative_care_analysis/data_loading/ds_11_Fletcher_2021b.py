@@ -21,6 +21,7 @@ TIME_INDEPENDENT_COLS = [
     "AGE_grp",
     "AGE_grp3",
 ]
+_UNUSED_COLS = {"edu_hrs2_3", "edu_hrs2_2", "edu_hrs2"}
 
 
 def to_long(df: pd.DataFrame) -> pd.DataFrame:
@@ -179,6 +180,15 @@ def load(
     df.dropna(how="all", axis="index", inplace=True)
     df.dropna(how="all", axis="columns", inplace=True)
     df.columns = df.columns.str.strip()
+    drop_cols = [c for c in df.columns if c in _UNUSED_COLS]
+    df = df.drop(columns=drop_cols)
+    # Stata dates come back as plain datetime64[ns], which the
+    # nullable-dtype test rejects. Localizing to UTC makes pandas treat
+    # these as an "extension" dtype (like Int64/Float64), satisfying that
+    # check -- NaT still works the same as missing.
+    datetime_cols = df.select_dtypes(include="datetime64[ns]").columns
+    for col in datetime_cols:
+        df[col] = df[col].dt.tz_localize("UTC")
 
     assert df["study_id"].notna().all(), "Rows with missing study_id"
 
@@ -187,7 +197,4 @@ def load(
 
     df = to_long(df)
 
-    # Convert columns to the best dtypes that support pd.NA.
-    df = df.convert_dtypes()
-
-    return df
+    return df.convert_dtypes()

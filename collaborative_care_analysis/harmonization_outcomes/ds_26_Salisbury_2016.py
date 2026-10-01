@@ -14,4 +14,5 @@ def harmonize_outcomes(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
     for col in ["phq9_total", "gad7_total"]:
         harmonized_df[col] = pd.to_numeric(harmonized_df[col], errors="raise")
+    harmonized_df["phq9_total"] = harmonized_df["phq9_total"].round().astype("Int64")
     return harmonized_df[ID_COLS + ["phq9_total", "gad7_total"]]
