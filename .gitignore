@@ -132,6 +132,14 @@ target/
 *.ipynb
 .ipynb_checkpoints
 
+# Local Stage-2 backups and cached figures (the reports committed to Git contain code only)
+reports/originals/
+reports/STEP2_CNMA_files/
+reports/STEP2_ASSUMPTION_CHECKS_files/
+reports/rendered/
+.quarto/
+*.quarto_ipynb
+
 
 # IPython
 profile_default/
