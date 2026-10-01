@@ -8,6 +8,8 @@
 
 This repository contains the code and documentation for the project "Collaborative Care Compass", developed during the [Data Science for Social Good (DSSG) Summer Fellowship Munich 2026](https://www.dssgxmunich.org/call-for-fellows).
 
+https://github.com/user-attachments/assets/79f20885-5ade-46e3-9cee-7c49d4877a86
+
 ## Project Overview 🌍
  
 The project aims to optimise the implementation of Collaborative Care for Depression in German primary care by identifying the most effective combinations of intervention components for specific patient profiles. Leveraging a dataset from the LMU University Hospital, the team analyses how individual treatment elements affect outcomes, to support the effective use of resources and improve patient recovery. The ultimate goal is an intuitive, patient-focused prediction tool, designed in collaboration with general practitioners, that provides data-driven decision support that is both clinically effective and practically sustainable.
