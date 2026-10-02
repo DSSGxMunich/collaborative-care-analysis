@@ -31,11 +31,9 @@
 
 # Data
 /data/**
-!/data/external/
 !/data/internal/
 !/data/processed/
 !/data/raw/
-!/data/external/.gitkeep
 !/data/internal/.gitkeep
 !/data/processed/.gitkeep
 !/data/raw/.gitkeep
