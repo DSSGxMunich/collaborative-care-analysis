@@ -15,7 +15,6 @@ DATA_DIR = PROJ_ROOT / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
 INTERIM_DATA_DIR = DATA_DIR / "interim"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
-EXTERNAL_DATA_DIR = DATA_DIR / "external"
 
 RAW_DATASETS_DIR = RAW_DATA_DIR / "Individual Datasets"
 RAW_ANNOTATIONS_DIR = RAW_DATA_DIR / "annotations"
@@ -38,7 +37,6 @@ GENERATED_CODEBOOKS_DIR = INTERIM_DATA_DIR / "generated_codebooks"
 
 MODELS_DIR = PROJ_ROOT / "models"
 REPORTS_DIR = PROJ_ROOT / "reports"
-FIGURES_DIR = REPORTS_DIR / "figures"
 
 COLNAME_STUDYID = "STUDY_ID"
 
