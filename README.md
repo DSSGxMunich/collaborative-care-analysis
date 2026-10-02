@@ -1,8 +1,6 @@
-<p>
-  <a href="https://www.dssgxmunich.org/project-2026"><img src="assets/dssgx-munich.png" alt="DSSGx Munich logo" height="62" align="left"></a>
-  <a href="https://www.lmu-klinikum.de/"><img src="assets/lmu-klinikum.svg" alt="LMU Klinikum logo" width="180" align="right"></a>
+<p align="left">
+  <a href="https://www.lmu-klinikum.de/"><img src="assets/lmu-klinikum.svg" alt="LMU Klinikum logo" width="180"></a>
 </p>
-<br clear="both">
 
 # Collaborative Care Compass 🧭
 
