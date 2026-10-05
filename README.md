@@ -10,6 +10,9 @@
 
 This repository contains the code and documentation for the project "Collaborative Care Compass", developed during the [Data Science for Social Good (DSSG) Summer Fellowship Munich 2026](https://www.dssgxmunich.org/project-2026).
 
+**Live:** https://dssgxmunich.github.io/collaborative-care-webapp/  
+**Code for web app:** [`dssgxmunich/collaborative-care-webapp`](https://github.com/dssgxmunich/collaborative-care-webapp/)
+
 https://github.com/user-attachments/assets/79f20885-5ade-46e3-9cee-7c49d4877a86
 
 ## Project Overview 🌍
