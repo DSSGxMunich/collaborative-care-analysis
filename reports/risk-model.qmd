@@ -59,7 +59,7 @@ html(describe(df), which = "categorical", scroll = TRUE)
 # inspect marginal distributions for covariates and baseline
 tab <- table(df$arm, df$study_id)
 tab <- tab[, order(-colSums(tab))]
-par(mar = c(9, 4, 2, 1)) 
+par(mar = c(9, 4, 2, 1))
 barplot(tab, col = c("#9AA4AA", "#195A7D"), las = 2, ylab = "Patients",
         legend.text = TRUE, args.legend = list(x = "topright", bty = "n"))
 par(mar = c(5, 4, 4, 2) + 0.1)
@@ -120,7 +120,7 @@ model_formula <- forms$full
 ```
 
 ## Sample Size Calculation
-We conduct a sample size calculation according to [Pate et al. (2023)](https://journals.sagepub.com/doi/10.1177/09622802231151220). 
+We conduct a sample size calculation according to [Pate et al. (2023)](https://journals.sagepub.com/doi/10.1177/09622802231151220).
 ```{r}
 # Step 1
 # calculating Q, the number of predictor parameters
@@ -153,7 +153,7 @@ crit_i_m <- function(Q, R2adj, S = 0.9) {
   Q / ((S - 1) * log(1 - R2adj / S))
 }
 
-pairs[, m_kr := crit_i_m(Q, R2_adj, S)] 
+pairs[, m_kr := crit_i_m(Q, R2_adj, S)]
 pairs[, n_kr := m_kr / p_kr]
 crit_i <- max(pairs$n_kr)
 
@@ -164,7 +164,7 @@ crit_ii <- (K - 1) * Q /
   ((R2_adj_overall / (R2_adj_overall + delta * max_r2_overall) - 1) *
      log(1 - R2_adj_overall - delta * max_r2_overall))
 
-# Step 5: criterion (iii) 
+# Step 5: criterion (iii)
 alpha <- 0.05
 chi <- qchisq(1 - alpha / K, df = 1)
 crit_iii <- max(chi * pk * (1 - pk) / delta^2)
@@ -177,7 +177,7 @@ c(Q = Q, K = K, n_obs = n_obs,
 We treat the required sample size as a conservative upper bound. Our ordinal model under the proportional odds assumption likely requires a smaller sample size, since less parameters are to be estimated than for a multinomial model (see the discussion section in Pate et al.). Since two out of three criteria in the sample size calculation are fulfilled, we deem the sample size sufficient for the model we aim to fit, without risking serious overfitting.
 
 ## Ordinality and PO Assumption
-Under the assumption that a predictor $X$ is linearly related to the cumulative log-odds of $\{Y^{(12)}_{ij} \leq k\}$, the ordinality assumption underlying an ordinal regression model can be checked by plotting the mean of $X$ against levels of $Y$. The stratified means should then show a consistent trend. Note that the ordinality assumption may appear to be violated due to non-linear effects of $X$ on $Y$ (see chapter 13 in Frank Harrell's [Regression Modeling Strategies](https://link.springer.com/book/10.1007/978-3-319-19425-7)). 
+Under the assumption that a predictor $X$ is linearly related to the cumulative log-odds of $\{Y^{(12)}_{ij} \leq k\}$, the ordinality assumption underlying an ordinal regression model can be checked by plotting the mean of $X$ against levels of $Y$. The stratified means should then show a consistent trend. Note that the ordinality assumption may appear to be violated due to non-linear effects of $X$ on $Y$ (see chapter 13 in Frank Harrell's [Regression Modeling Strategies](https://link.springer.com/book/10.1007/978-3-319-19425-7)).
 ```{r}
 #| fig-width: 12
 #| fig-height: 4
@@ -217,7 +217,7 @@ Under the proportional odds assumption, the cumulative log-odds for different cu
 #| fig-height: 4
 #| out-width: "100%"
 
-cuts <- c(5, 10, 15, 20, 25) 
+cuts <- c(5, 10, 15, 20, 25)
 
 plot_parallelism <- function(x) {
   plot(NA, xlim = range(df[[x]]), ylim = c(-6, 4),
@@ -255,7 +255,7 @@ Especially, centered baseline PHQ-9 departs from the PO assumption. We neverthel
 
 ## Internal-External Cross-Validation
 
-Following [Steyerberg and Harrell (2016)](https://doi.org/10.1016/j.jclinepi.2015.04.005), we assess how the model performs in a setting it has not seen by internal-external cross-validation (IECV). Each study is left out once, the model is fitted to the remaining eleven, and its predictions are evaluated in the left-out study. We report 
+Following [Steyerberg and Harrell (2016)](https://doi.org/10.1016/j.jclinepi.2015.04.005), we assess how the model performs in a setting it has not seen by internal-external cross-validation (IECV). Each study is left out once, the model is fitted to the remaining eleven, and its predictions are evaluated in the left-out study. We report
 
 * Somers' $D_{xy}$ between the linear predictor and the observed PHQ-9 score (full scale)
 * c-statistic
@@ -320,7 +320,7 @@ iecv <- rbindlist(parallel::mclapply(levels(df$study_id), leave_one_out,
 ```
 
 ```{r}
-#| label: random-effect-meta-analysis 
+#| label: random-effect-meta-analysis
 pool <- function(est, se) {
   m <- rma(yi = est, sei = se, method = "REML")
   p <- predict(m)

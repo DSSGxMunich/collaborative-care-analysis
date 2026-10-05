@@ -1,0 +1,703 @@
+---
+title: "09.6 PATH-CNMA assumption checks"
+format:
+  html:
+    toc: true
+    code-fold: true
+    code-tools: true
+    embed-resources: true
+jupyter: python3
+execute:
+  enabled: false
+---
+
+Companion to the [primary Stage-2 report](STEP2_CNMA.qmd), which shows the treatment network and component contrast matrix. These checks follow the additive-CNMA framework of [Rücker, Schmitz, and Schwarzer](https://doi.org/10.1002/bimj.201900339).
+
+No component-by-component interaction terms are fitted. Global additivity is checked with
+
+$$
+Q_{\mathrm{add}}
+=
+\left(\mathbf d-\mathbf X\widehat{\boldsymbol\beta}\right)^{\!\mathsf T}
+\mathbf W
+\left(\mathbf d-\mathbf X\widehat{\boldsymbol\beta}\right).
+$$
+
+## 1. Setup and trial contrasts
+
+Import the same cohort used by notebook 09.5, encode the 10 components, and calculate each study's intervention-minus-control PHQ-9 contrast.
+
+````{python}
+#| label: cell-001
+#| eval: false
+
+%matplotlib inline
+
+import json
+from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from scipy.stats import chi2
+
+from collaborative_care_analysis.data_analysis.stage2_inputs import (
+    create_path_cnma_cohort,
+    load_stage1_risk_scores,
+)
+
+
+def find_project_root(start=Path.cwd()):
+    for candidate in (start, *start.parents):
+        if (candidate / "pyproject.toml").exists() and (candidate / "data").exists():
+            return candidate
+    raise FileNotFoundError("Run this report from inside the DSSGX CODE project.")
+
+
+PROJECT_ROOT = find_project_root()
+ENRICHED_PATH = (
+    PROJECT_ROOT / "data" / "interim" / "enriched_dataset" / "enriched_dataset.csv"
+)
+RISK_MODEL_PATH = PROJECT_ROOT / "models" / "risk_score_model.rds"
+RISK_MODEL_SCRIPT_PATH = (
+    PROJECT_ROOT
+    / "collaborative_care_analysis"
+    / "data_analysis"
+    / "risk_score_model.R"
+)
+RISK_MODEL_DATA_PATH = (
+    PROJECT_ROOT
+    / "data"
+    / "processed"
+    / "analysis_datasets"
+    / "phq9_12mo_core"
+    / "wide.csv"
+)
+EXPORT_DIR = PROJECT_ROOT / "reports" / "exports" / "path_cnma_assumption_checks"
+
+FOLLOW_UP_WINDOW = (11.5, 12.5)
+EXCLUDED_STUDIES = {"08_Coventry_2015"}
+RANDOMIZED_ARMS = {"control", "intervention"}
+
+pd.set_option("display.max_columns", 40)
+pd.set_option("display.width", 180)
+````
+
+**What this cell does.** Loads the libraries, imports the shared Stage-2 input functions, and locates the Stage-1 model and cohort used by the primary report.
+
+**How to interpret the result.** No output is expected. A missing-file error means that the Stage-1 model or its analysis cohort must be built before running Stage 2.
+
+````{python}
+#| label: cell-002
+#| eval: false
+
+COMPONENT_SOURCES = {
+    "specialist_involvement": [
+        "treatment_supervising_psychiatrist_psychologist_was_involved",
+        "treatment_cotreating_between_psychiatrist_and_psychologist_was_done",
+    ],
+    "psychological_treatment": [
+        "treatment_counseling_was_provided_in_addition_to_medication_(≤ 8 sessions)",
+        "treatment_manual_based_psychotherapy",
+    ],
+    "goal_setting": ["treatment_treatment_goals_were_considered"],
+    "patient_preference": ["treatment_patient_preference_was_considered_in_treatment_decisions"],
+    "automated_follow_up": ["treatment_automated_follow_up_process_was_used"],
+    "regular_patient_review": ["treatment_regular_patient_review_was_scheduled"],
+    "coping_strategies": ["treatment_are_disease_coping_strategies_taught"],
+    "relapse_prevention": ["treatment_is_there_a_relapse_prevention_plan"],
+    "family_involvement": ["treatment_were_family_and_friends_involved"],
+    "community_cultural_bg": ["treatment_community_cultural_bg"],
+}
+
+COMPONENT_LABELS = {
+    "specialist_involvement": "Specialist involvement",
+    "psychological_treatment": "Psychological treatment",
+    "goal_setting": "Goal setting",
+    "patient_preference": "Patient preference considered",
+    "automated_follow_up": "Automated follow-up",
+    "regular_patient_review": "Regular patient review",
+    "coping_strategies": "Coping strategies",
+    "relapse_prevention": "Relapse prevention plan",
+    "family_involvement": "Family and friends involved",
+    "community_cultural_bg": "Community or cultural context",
+}
+component_cols = list(COMPONENT_SOURCES)
+````
+
+**What this cell does.** Defines the same 10 components and labels used in the fitted model.
+
+**How to interpret the result.** No output is expected. Confirm that all 10 component names and labels are present before constructing the design matrix.
+
+````{python}
+#| label: cell-003
+#| eval: false
+
+risk_scores = load_stage1_risk_scores(
+    RISK_MODEL_PATH,
+    RISK_MODEL_SCRIPT_PATH,
+    RISK_MODEL_DATA_PATH,
+)
+
+cohort, analysis_df = create_path_cnma_cohort(
+    ENRICHED_PATH,
+    risk_scores,
+    follow_up_window=FOLLOW_UP_WINDOW,
+    excluded_studies=EXCLUDED_STUDIES,
+    randomized_arms=RANDOMIZED_ARMS,
+)
+
+patient_key = ["STUDY_ID", "patient_id"]
+arm_keys = ["STUDY_ID", "study_arm"]
+
+source_cols = sorted({column for columns in COMPONENT_SOURCES.values() for column in columns})
+arm_keys = ["STUDY_ID", "study_arm"]
+within_arm_variation = cohort.groupby(arm_keys)[source_cols].nunique(dropna=True)
+if within_arm_variation.gt(1).any().any():
+    raise ValueError("At least one component code varies within a study arm.")
+
+arm_components_raw = cohort.groupby(arm_keys)[source_cols].first()
+if arm_components_raw.isna().any().any():
+    raise ValueError("At least one study arm has a missing component code.")
+
+arm_components = pd.DataFrame(index=arm_components_raw.index)
+for component, sources in COMPONENT_SOURCES.items():
+    arm_components[component] = arm_components_raw[sources].eq("yes").max(axis=1).astype(int)
+
+analysis_df = analysis_df.merge(
+    arm_components.reset_index(), on=arm_keys, how="left", validate="many_to_one"
+)
+model_columns = [
+    *patient_key,
+    "study_arm",
+    "age",
+    "sex",
+    "phq9_baseline",
+    "phq9_12m",
+    "outcome_month",
+    "risk_score",
+    *component_cols,
+]
+model_df = analysis_df[model_columns].dropna(subset=["phq9_12m", "risk_score", *component_cols]).copy()
+
+assert len(model_df) == 6473
+assert model_df["STUDY_ID"].nunique() == 12
+print(f"Analysis cohort: {len(model_df):,} patients in {model_df['STUDY_ID'].nunique()} studies")
+````
+
+**What this cell does.** Calls `create_path_cnma_cohort()`, applies the common component coding, and creates the complete-case diagnostic dataset.
+
+**How to interpret the result.** The cohort should contain the intended studies and matched risk scores. Unexpected losses suggest missing outcomes, missing scores, or identifier mismatches.
+
+````{python}
+#| label: cell-004
+#| eval: false
+
+arm_packages = model_df.groupby(arm_keys)[component_cols].first()
+X_contrast = (
+    arm_packages.xs("intervention", level="study_arm")
+    - arm_packages.xs("control", level="study_arm")
+)
+
+arm_outcomes = model_df.groupby(arm_keys)["phq9_12m"].agg(["mean", "var", "count"])
+arm_mean = arm_outcomes["mean"].unstack("study_arm")
+arm_var = arm_outcomes["var"].unstack("study_arm")
+arm_n = arm_outcomes["count"].unstack("study_arm")
+
+trial_contrasts = pd.DataFrame(index=X_contrast.index)
+trial_contrasts["mean_difference"] = arm_mean["intervention"] - arm_mean["control"]
+trial_contrasts["standard_error"] = np.sqrt(
+    arm_var["intervention"] / arm_n["intervention"]
+    + arm_var["control"] / arm_n["control"]
+)
+trial_contrasts["variance"] = trial_contrasts["standard_error"] ** 2
+trial_contrasts["weight"] = 1 / trial_contrasts["variance"]
+
+display(trial_contrasts.round(3), X_contrast)
+````
+
+**What this cell does.** Calculates each study's intervention-minus-control mean PHQ-9 difference, its standard error, and the corresponding component contrast row.
+
+**How to interpret the result.** Each row represents one randomized study contrast. Negative mean differences favor intervention because lower PHQ-9 is better; matrix entries show which components differ between arms.
+
+## 2. Global additivity
+
+Fit the additive component design to the 12 trial contrasts. `Q` measures the outcome variation left unexplained after fitting the 10 component effects; a large value would indicate poor additive fit.
+
+````{python}
+#| label: cell-005
+#| eval: false
+
+def weighted_fit(design, outcome, weights):
+    weighted_design = design * np.sqrt(weights[:, None])
+    weighted_outcome = outcome * np.sqrt(weights)
+    coefficients = np.linalg.lstsq(weighted_design, weighted_outcome, rcond=None)[0]
+    fitted = design @ coefficients
+    residuals = outcome - fitted
+    rank = np.linalg.matrix_rank(design)
+    q_value = float(np.sum(weights * residuals**2))
+    degrees_of_freedom = len(outcome) - rank
+    return {
+        "coefficients": coefficients,
+        "fitted": fitted,
+        "residuals": residuals,
+        "rank": rank,
+        "Q": q_value,
+        "df": degrees_of_freedom,
+        "p_value": float(chi2.sf(q_value, degrees_of_freedom)),
+    }
+
+
+X = X_contrast.to_numpy(dtype=float)
+d = trial_contrasts["mean_difference"].to_numpy()
+weights = trial_contrasts["weight"].to_numpy()
+additive = weighted_fit(X, d, weights)
+
+additive_fit = pd.Series(
+    {
+        "comparisons": len(d),
+        "components": X.shape[1],
+        "rank": additive["rank"],
+        "residual df": additive["df"],
+        "Q": additive["Q"],
+        "Q p-value": additive["p_value"],
+        "weighted condition number": np.linalg.cond(X * np.sqrt(weights[:, None])),
+    },
+    name="value",
+)
+additive_fit.to_frame().round(3)
+````
+
+**What this cell does.** Fits the weighted additive component model to the 12 trial contrasts and calculates the residual Q statistic.
+
+**How to interpret the result.** A small p-value indicates lack of additive fit. A large p-value means that lack of fit was not detected, but few residual degrees of freedom make this a low-power check rather than proof of additivity.
+
+````{python}
+#| label: cell-006
+#| eval: false
+
+contrast_fit = trial_contrasts.copy()
+contrast_fit["fitted_additive"] = additive["fitted"]
+contrast_fit["residual"] = additive["residuals"]
+contrast_fit["Q_contribution"] = weights * additive["residuals"] ** 2
+
+plot_data = contrast_fit.iloc[::-1]
+y_positions = np.arange(len(plot_data))
+fig, ax = plt.subplots(figsize=(10, 6))
+ax.errorbar(
+    plot_data["mean_difference"],
+    y_positions,
+    xerr=1.96 * plot_data["standard_error"],
+    fmt="o",
+    color="#2f5d7e",
+    capsize=2,
+    label="Observed mean difference and 95% CI",
+)
+ax.scatter(
+    plot_data["fitted_additive"],
+    y_positions,
+    marker="x",
+    color="#b4442e",
+    label="Additive CNMA fit",
+    zorder=3,
+)
+ax.axvline(0, color="0.5", linewidth=1, linestyle="--")
+ax.set_yticks(y_positions, plot_data.index)
+ax.set_xlabel("Intervention - control PHQ-9")
+ax.set_title("Observed trial contrasts and additive CNMA fit")
+ax.legend(frameon=False)
+fig.tight_layout()
+````
+
+**What this cell does.** Plots each observed trial contrast against the value predicted by the additive component model.
+
+**How to interpret the result.** Points close to the equality line indicate that additive fitted contrasts resemble observed contrasts. Systematic departures suggest non-additivity or misspecification.
+
+No lack of additive fit is detected (`Q=0.207`, `df=2`, `p=0.902`). In plain language, the additive model reproduces the trial contrasts closely. This is a weak test, however, because only two residual degrees of freedom remain.
+
+## 3. Transitivity
+
+Trials informing different components should be comparable in characteristics that could change treatment effects. Following [Cochrane guidance on transitivity](https://training.cochrane.org/handbook/current/chapter-11#section-11-2-2), compare component contrasts with baseline PHQ-9, age, sex composition, year, and Step-1 risk. Follow-up is fixed at 12 months; setting is unavailable.
+
+````{python}
+#| label: cell-007
+#| eval: false
+
+model_df["female"] = model_df["sex"].eq("Female").where(
+    model_df["sex"].isin(["Female", "Male"])
+)
+trial_characteristics = model_df.groupby("STUDY_ID").agg(
+    patients=("patient_id", "size"),
+    mean_baseline_phq9=("phq9_baseline", "mean"),
+    mean_age=("age", "mean"),
+    female_proportion=("female", "mean"),
+    mean_risk_score=("risk_score", "mean"),
+    mean_followup_month=("outcome_month", "mean"),
+)
+trial_characteristics["publication_year"] = (
+    trial_characteristics.index.to_series()
+    .str.extract(r"_(\d{4})[A-Za-z]?$")[0]
+    .astype(float)
+    .to_numpy()
+)
+
+modifier_cols = [
+    "mean_baseline_phq9",
+    "mean_age",
+    "female_proportion",
+    "publication_year",
+    "mean_risk_score",
+]
+trial_characteristics.round(3)
+````
+
+**What this cell does.** Summarizes potential effect modifiers separately for each study.
+
+**How to interpret the result.** Compare potential effect modifiers across studies and component exposures. Large systematic differences weaken the transitivity assumption.
+
+````{python}
+#| label: cell-008
+#| eval: false
+
+transitivity_correlations = pd.DataFrame(
+    index=modifier_cols, columns=component_cols, dtype=float
+)
+for modifier in modifier_cols:
+    values = trial_characteristics.loc[X_contrast.index, modifier]
+    for component in component_cols:
+        tested = X_contrast[component].astype(float)
+        if tested.nunique() > 1 and values.nunique() > 1:
+            transitivity_correlations.loc[modifier, component] = np.corrcoef(
+                values, tested
+            )[0, 1]
+
+transitivity_flags = (
+    transitivity_correlations.stack()
+    .rename("correlation")
+    .loc[lambda values: values.abs() >= 0.60]
+    .sort_values(key=abs, ascending=False)
+    .to_frame()
+)
+
+fig, ax = plt.subplots(figsize=(13, 5))
+heatmap = ax.imshow(
+    transitivity_correlations.to_numpy(dtype=float),
+    cmap="coolwarm",
+    vmin=-1,
+    vmax=1,
+    aspect="auto",
+)
+ax.set_xticks(
+    np.arange(len(component_cols)),
+    [COMPONENT_LABELS[column] for column in component_cols],
+    rotation=45,
+    ha="right",
+)
+ax.set_yticks(np.arange(len(modifier_cols)), modifier_cols)
+for row in range(len(modifier_cols)):
+    for column in range(len(component_cols)):
+        value = transitivity_correlations.iloc[row, column]
+        label = "NA" if pd.isna(value) else f"{value:.2f}"
+        ax.text(column, row, label, ha="center", va="center", fontsize=8)
+fig.colorbar(heatmap, ax=ax, label="Point-biserial correlation")
+ax.set_title("Trial characteristics versus components tested")
+fig.tight_layout()
+
+transitivity_flags.round(3)
+````
+
+**What this cell does.** Correlates trial characteristics with the component contrasts to screen for possible transitivity problems.
+
+**How to interpret the result.** Large absolute correlations mean that a component is concentrated in studies with particular patient characteristics. Such flags suggest possible confounding of component effects with study case mix.
+
+Two correlations exceed `|r|=0.60`: patient preference with baseline PHQ-9 (`r=-0.644`) and with risk (`r=-0.656`). This means the patient-preference comparison appears more often in lower-severity studies. It does not mean patient preference lowers baseline severity. These are descriptive flags from only 12 studies.
+
+## 4. Identifiability
+
+Full rank means the design contains enough distinct component patterns to estimate each component separately. The condition number checks whether those estimates may still be sensitive to small data changes.
+
+````{python}
+#| label: cell-009
+#| eval: false
+
+singular_values = np.linalg.svd(X * np.sqrt(weights[:, None]), compute_uv=False)
+component_support = X_contrast.ne(0).sum().rename("trials testing component").to_frame()
+component_support.index = component_support.index.map(COMPONENT_LABELS)
+
+leave_one_out_rank = pd.Series(
+    {
+        study: np.linalg.matrix_rank(np.delete(X, index, axis=0))
+        for index, study in enumerate(X_contrast.index)
+    },
+    name="rank after omission",
+)
+
+design_diagnostics = pd.Series(
+    {
+        "comparisons": X.shape[0],
+        "component columns": X.shape[1],
+        "rank": np.linalg.matrix_rank(X),
+        "deficiency": X.shape[1] - np.linalg.matrix_rank(X),
+        "unweighted condition number": np.linalg.cond(X),
+        "weighted condition number": np.linalg.cond(X * np.sqrt(weights[:, None])),
+        "minimum leave-one-study-out rank": leave_one_out_rank.min(),
+    },
+    name="value",
+)
+
+display(design_diagnostics.to_frame().round(3), component_support, leave_one_out_rank.to_frame())
+````
+
+**What this cell does.** Checks rank, conditioning, component support, and whether rank is preserved when each study is removed in turn.
+
+**How to interpret the result.** Full rank supports identifiability, while a large condition number warns that estimates may still be unstable. Low contrast counts identify weakly supported components.
+
+````{python}
+#| label: cell-010
+#| eval: false
+
+fig, ax = plt.subplots(figsize=(7, 4))
+ax.plot(np.arange(1, len(singular_values) + 1), singular_values, "o-", color="#2f5d7e")
+ax.set_xlabel("Singular-value index")
+ax.set_ylabel("Weighted singular value")
+ax.set_title("Spectrum of the component contrast matrix")
+ax.set_xticks(np.arange(1, len(singular_values) + 1))
+fig.tight_layout()
+````
+
+**What this cell does.** Plots the singular values of the weighted component matrix, another view of how well the component directions are separated.
+
+**How to interpret the result.** Zero singular values indicate rank deficiency. A wide spread between the largest and smallest values indicates an ill-conditioned design and potentially sensitive estimates.
+
+The matrix is full rank (`10/10`) even after removing any one study. The weighted condition number (`51.7`) nevertheless indicates that some unregularized component estimates are unstable. Identifiable therefore does not mean precise.
+
+## 5. Consistency and influence
+
+Standardized residuals ask whether a study is poorly reproduced by the additive model. Leave-one-study-out refits ask whether one study has excessive influence on the component estimates.
+
+````{python}
+#| label: cell-011
+#| eval: false
+
+weighted_design = X * np.sqrt(weights[:, None])
+q_matrix, _ = np.linalg.qr(weighted_design, mode="reduced")
+leverage = np.sum(q_matrix**2, axis=1)
+standardized_residual = additive["residuals"] / np.sqrt(
+    trial_contrasts["variance"].to_numpy() * np.maximum(1 - leverage, 1e-12)
+)
+
+residual_diagnostics = contrast_fit.copy()
+residual_diagnostics["leverage"] = leverage
+residual_diagnostics["standardized_residual"] = standardized_residual
+
+plot_data = residual_diagnostics.sort_values("standardized_residual")
+fig, ax = plt.subplots(figsize=(9, 6))
+ax.scatter(plot_data["standardized_residual"], np.arange(len(plot_data)), color="#2f5d7e")
+ax.axvline(0, color="0.5", linewidth=1)
+ax.axvline(-2, color="#b4442e", linewidth=1, linestyle="--")
+ax.axvline(2, color="#b4442e", linewidth=1, linestyle="--")
+ax.set_yticks(np.arange(len(plot_data)), plot_data.index)
+ax.set_xlabel("Standardized residual")
+ax.set_title("Trial residuals from the additive CNMA fit")
+fig.tight_layout()
+
+residual_diagnostics[["residual", "standardized_residual", "Q_contribution", "leverage"]].round(3)
+````
+
+**What this cell does.** Calculates leverage and standardized residuals to find trials poorly reproduced by the additive model.
+
+**How to interpret the result.** Standardized residuals beyond roughly ±2 flag poor fit. High leverage means that a study has unusual component information and can strongly affect the estimates even with a small residual.
+
+````{python}
+#| label: cell-012
+#| eval: false
+
+full_coefficients = additive["coefficients"]
+loo_effect_rows = []
+influence_rows = []
+
+for omitted_index, omitted_study in enumerate(X_contrast.index):
+    keep = np.arange(len(d)) != omitted_index
+    omitted_rank = np.linalg.matrix_rank(X[keep])
+    if omitted_rank != len(component_cols):
+        influence_rows.append(
+            {
+                "omitted_study": omitted_study,
+                "rank": omitted_rank,
+                "median_absolute_shift": np.nan,
+                "maximum_absolute_shift": np.nan,
+            }
+        )
+        continue
+
+    omitted_fit = weighted_fit(X[keep], d[keep], weights[keep])
+    shifts = np.abs(omitted_fit["coefficients"] - full_coefficients)
+    influence_rows.append(
+        {
+            "omitted_study": omitted_study,
+            "rank": omitted_rank,
+            "median_absolute_shift": np.median(shifts),
+            "maximum_absolute_shift": np.max(shifts),
+        }
+    )
+    loo_effect_rows.append(
+        pd.DataFrame(
+            {
+                "omitted_study": omitted_study,
+                "component": component_cols,
+                "estimate": omitted_fit["coefficients"],
+            }
+        )
+    )
+
+leave_one_out_influence = (
+    pd.DataFrame(influence_rows)
+    .set_index("omitted_study")
+    .sort_values("maximum_absolute_shift", ascending=False)
+)
+leave_one_out_effects = pd.concat(loo_effect_rows, ignore_index=True)
+
+leave_one_out_component_stability = (
+    leave_one_out_effects.groupby("component")["estimate"]
+    .agg(["min", "max"])
+    .reindex(component_cols)
+)
+leave_one_out_component_stability.insert(0, "full_data_estimate", full_coefficients)
+leave_one_out_component_stability["maximum_absolute_shift"] = np.maximum(
+    np.abs(
+        leave_one_out_component_stability["min"]
+        - leave_one_out_component_stability["full_data_estimate"]
+    ),
+    np.abs(
+        leave_one_out_component_stability["max"]
+        - leave_one_out_component_stability["full_data_estimate"]
+    ),
+)
+leave_one_out_component_stability.index = leave_one_out_component_stability.index.map(
+    COMPONENT_LABELS
+)
+
+display(leave_one_out_influence.round(3), leave_one_out_component_stability.round(3))
+````
+
+**What this cell does.** Refits the unregularized additive model after omitting one study at a time and records changes in every component estimate.
+
+**How to interpret the result.** Rank should remain full after omitting each study. Large changes in component estimates identify influential studies and conclusions that depend heavily on individual trials.
+
+````{python}
+#| label: cell-013
+#| eval: false
+
+plot_data = leave_one_out_influence.iloc[::-1]
+fig, ax = plt.subplots(figsize=(9, 6))
+ax.barh(plot_data.index, plot_data["maximum_absolute_shift"], color="#2f5d7e")
+ax.set_xlabel("Largest absolute change in a component estimate")
+ax.set_title("Leave-one-study-out influence on the additive decomposition")
+fig.tight_layout()
+````
+
+**What this cell does.** Plots the maximum component-estimate change caused by removing each study.
+
+**How to interpret the result.** Longer bars indicate studies whose removal changes at least one component estimate more strongly.
+
+## 6. Summary
+
+````{python}
+#| label: cell-014
+#| eval: false
+
+maximum_residual = float(np.max(np.abs(standardized_residual)))
+maximum_loo_shift = float(leave_one_out_influence["maximum_absolute_shift"].max())
+transitivity_flag_count = len(transitivity_flags)
+
+assumption_summary = pd.DataFrame(
+    [
+        {
+            "assumption": "Global additivity",
+            "diagnostic": f"Q={additive['Q']:.3f}, df={additive['df']}, p={additive['p_value']:.3f}",
+            "assessment": "No lack of fit detected, but power is limited by only 2 residual df.",
+        },
+        {
+            "assumption": "Transitivity",
+            "diagnostic": f"{transitivity_flag_count} modifier-component correlations with |r| >= 0.60",
+            "assessment": "Potential imbalance requires substantive review; setting was unavailable.",
+        },
+        {
+            "assumption": "Rank / identifiability",
+            "diagnostic": (
+                f"rank={np.linalg.matrix_rank(X)}/{X.shape[1]}, "
+                f"weighted condition number={np.linalg.cond(X * np.sqrt(weights[:, None])):.1f}"
+            ),
+            "assessment": "Full rank and robust to omitting one study, but the design is not strongly conditioned.",
+        },
+        {
+            "assumption": "Trial-level consistency",
+            "diagnostic": (
+                f"maximum |standardized residual|={maximum_residual:.2f}; "
+                f"maximum leave-one-out shift={maximum_loo_shift:.2f} PHQ-9"
+            ),
+            "assessment": "No outlying residuals; some component estimates remain study-sensitive.",
+        },
+    ]
+).set_index("assumption")
+
+assumption_summary
+````
+
+**What this cell does.** Collects the main assumption checks into one concise results table.
+
+**How to interpret the result.** Read the checks together: a pass means that a problem was not detected, not that the assumption is proven. Warnings should be carried into the limitations and interpretation.
+
+## 7. Export
+
+````{python}
+#| label: cell-015
+#| eval: false
+
+EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+
+trial_contrasts.to_csv(EXPORT_DIR / "trial_contrasts.csv")
+additive_fit.to_csv(EXPORT_DIR / "global_additivity_fit.csv", header=True)
+contrast_fit.to_csv(EXPORT_DIR / "additive_trial_fit.csv")
+trial_characteristics.to_csv(EXPORT_DIR / "trial_characteristics.csv")
+transitivity_correlations.to_csv(EXPORT_DIR / "transitivity_correlations.csv")
+transitivity_flags.to_csv(EXPORT_DIR / "transitivity_flags.csv")
+design_diagnostics.to_csv(EXPORT_DIR / "design_diagnostics.csv", header=True)
+residual_diagnostics.to_csv(EXPORT_DIR / "trial_residual_diagnostics.csv")
+leave_one_out_influence.to_csv(EXPORT_DIR / "leave_one_out_study_influence.csv")
+leave_one_out_component_stability.to_csv(
+    EXPORT_DIR / "leave_one_out_component_stability.csv"
+)
+assumption_summary.to_csv(EXPORT_DIR / "assumption_summary.csv")
+
+manifest = {
+    "analysis": "PATH-CNMA assumption checks",
+    "source_report": "reports/STEP2_CNMA.qmd",
+    "reference": (
+        "Rücker G, Schmitz S, Schwarzer G. Component network meta-analysis compared "
+        "to a matching method in a disconnected network: A case study. "
+        "Biometrical Journal. 2021;63:447-461."
+    ),
+    "component_interactions_fitted": False,
+    "n_patients": int(len(model_df)),
+    "n_studies": int(model_df["STUDY_ID"].nunique()),
+    "n_components": len(component_cols),
+    "global_additivity_Q": additive["Q"],
+    "global_additivity_df": int(additive["df"]),
+    "global_additivity_p_value": additive["p_value"],
+    "transitivity_limitations": [
+        "Only 12 studies",
+        "Setting unavailable",
+        "Follow-up month constant after cohort restriction",
+        "Publication year parsed from the study identifier",
+    ],
+}
+with (EXPORT_DIR / "manifest.json").open("w") as file:
+    json.dump(manifest, file, indent=2)
+
+print(f"Exported assumption checks to {EXPORT_DIR}")
+````
+
+**What this cell does.** Writes the trial contrasts, assumption diagnostics, influence analyses, summary table, and metadata to disk.
+
+**How to interpret the result.** A printed export path confirms that the diagnostics were written. Check the summary and manifest before sharing them.

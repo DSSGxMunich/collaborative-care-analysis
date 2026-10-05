@@ -1,0 +1,1334 @@
+---
+title: "09.5 Primary PATH-CNMA"
+format:
+  html:
+    toc: true
+    code-fold: true
+    code-tools: true
+    embed-resources: true
+jupyter: python3
+execute:
+  enabled: false
+---
+
+Estimate 10 component effects and their variation by predicted severity across 12 studies. The outcome is 12-month PHQ-9; negative effects are favorable.
+
+This report fits and checks the Bayesian model. [The assumption-check report](STEP2_ASSUMPTION_CHECKS.qmd) evaluates the CNMA assumptions.
+
+$$
+y_i \sim \mathcal{N}\!\left(\mu_i,\sigma^2\right)
+$$
+
+$$
+\mu_i = \alpha_{s(i)} + \lambda r_i
++ \sum_{k=1}^{10} x_{ik}\left(\beta_k + \delta_k r_i\right)
+$$
+
+## 1. Setup
+
+````{python}
+#| label: cell-001
+#| eval: false
+
+%matplotlib inline
+
+import json
+import platform
+import warnings
+from pathlib import Path
+
+import arviz as az
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+import pandas as pd
+import pymc as pm
+
+from collaborative_care_analysis.data_analysis.stage2_inputs import (
+    create_path_cnma_cohort,
+    load_stage1_risk_scores,
+)
+
+
+def find_project_root(start=Path.cwd()):
+    candidates = (start, *start.parents)
+    for candidate in candidates:
+        if (candidate / "pyproject.toml").exists() and (candidate / "data").exists():
+            return candidate
+    raise FileNotFoundError("Run this report from inside the DSSGX CODE project.")
+
+
+PROJECT_ROOT = find_project_root()
+ENRICHED_PATH = (
+    PROJECT_ROOT / "data" / "interim" / "enriched_dataset" / "enriched_dataset.csv"
+)
+RISK_MODEL_PATH = PROJECT_ROOT / "models" / "risk_score_model.rds"
+RISK_MODEL_SCRIPT_PATH = (
+    PROJECT_ROOT
+    / "collaborative_care_analysis"
+    / "data_analysis"
+    / "risk_score_model.R"
+)
+RISK_MODEL_DATA_PATH = (
+    PROJECT_ROOT
+    / "data"
+    / "processed"
+    / "analysis_datasets"
+    / "phq9_12mo_core"
+    / "wide.csv"
+)
+EXPORT_DIR = PROJECT_ROOT / "reports" / "exports" / "path_cnma_step2"
+
+FOLLOW_UP_WINDOW = (11.5, 12.5)
+EXCLUDED_STUDIES = {"08_Coventry_2015"}  # no eligible control arm
+RANDOMIZED_ARMS = {"control", "intervention"}
+CENTER_RISK = False  # Step-1 scores are already approximately mean-zero.
+
+PRIOR_DRAWS = 1_000
+DRAWS = 4_000
+TUNE = 4_000
+CHAINS = 4
+TARGET_ACCEPT = 0.99
+RANDOM_SEED = 42
+
+INTERCEPT_PRIOR_MEAN = 13.5
+INTERCEPT_PRIOR_SD = 6.5
+SENSITIVITY_DRAWS = 2_000
+SENSITIVITY_TUNE = 2_000
+SENSITIVITY_PRIORS = {
+    "Primary: Normal(13.5, 6.5)": (13.5, 6.5),
+    "Previous: Normal(10, 5)": (10.0, 5.0),
+    "Original: Normal(0, 5)": (0.0, 5.0),
+    "Wide: Normal(13.5, 13.5)": (13.5, 13.5),
+}
+REFERENCE_PRIOR = "Primary: Normal(13.5, 6.5)"
+
+pd.set_option("display.max_columns", 40)
+pd.set_option("display.width", 180)
+
+required_inputs = [
+    ENRICHED_PATH,
+    RISK_MODEL_PATH,
+    RISK_MODEL_SCRIPT_PATH,
+    RISK_MODEL_DATA_PATH,
+]
+missing_inputs = [path for path in required_inputs if not path.exists()]
+if missing_inputs:
+    missing = "\n".join(f"- {path}" for path in missing_inputs)
+    raise FileNotFoundError(
+        "Required Stage-1 inputs are missing:\n"
+        f"{missing}\n"
+        "Build phq9_12mo_core and fit risk_score_model.R first."
+    )
+````
+
+**What this cell does.** Loads the analysis libraries, imports the shared 12-study cohort function, locates the project data, and records the model settings and priors.
+
+**How to interpret the result.** This setup cell should finish without an exception. Confirm that the prior and sampler settings match the analysis plan before fitting the model.
+
+## 2. Cohort and risk score
+
+Generate each patient's score from the fitted Stage-1 R model, then apply the baseline, 12-month, study-arm, study-exclusion, and merge rules shared by both Stage-2 reports.
+
+````{python}
+#| label: cell-002
+#| eval: false
+
+risk_scores = load_stage1_risk_scores(
+    RISK_MODEL_PATH,
+    RISK_MODEL_SCRIPT_PATH,
+    RISK_MODEL_DATA_PATH,
+)
+
+cohort, analysis_df = create_path_cnma_cohort(
+    ENRICHED_PATH,
+    risk_scores,
+    follow_up_window=FOLLOW_UP_WINDOW,
+    excluded_studies=EXCLUDED_STUDIES,
+    randomized_arms=RANDOMIZED_ARMS,
+)
+
+study_arm_counts = analysis_df.groupby(["STUDY_ID", "study_arm"]).size().unstack()
+risk_coverage = pd.Series(
+    {
+        "cohort patients": len(analysis_df),
+        "patients with a risk score": analysis_df["risk_score"].notna().sum(),
+        "patients without a risk score": analysis_df["risk_score"].isna().sum(),
+        "studies represented in Stage-1 predictions": analysis_df.loc[
+            analysis_df["risk_score"].notna(), "STUDY_ID"
+        ].nunique(),
+    },
+    name="count",
+)
+
+print(
+    f"Eligible cohort: {len(analysis_df):,} patients in "
+    f"{analysis_df['STUDY_ID'].nunique()} studies"
+)
+display(study_arm_counts, risk_coverage.to_frame())
+analysis_df["risk_score"].describe().round(3)
+````
+
+**What this cell does.** Calls `create_path_cnma_cohort()` instead of repeating the filtering logic, then summarizes study arms and risk-score coverage.
+
+**How to interpret the result.** Check the numbers of studies, eligible patients, and matched Stage-1 scores. Unexpected missing scores usually indicate a mismatch in study or patient identifiers.
+
+## 3. Components and design
+
+Encode the 10 arm-level components, retain complete cases, and verify the randomized contrast matrix.
+
+````{python}
+#| label: cell-003
+#| eval: false
+
+COMPONENT_SOURCES = {
+    "specialist_involvement": [
+        "treatment_supervising_psychiatrist_psychologist_was_involved",
+        "treatment_cotreating_between_psychiatrist_and_psychologist_was_done",
+    ],
+    "psychological_treatment": [
+        "treatment_counseling_was_provided_in_addition_to_medication_(≤ 8 sessions)",
+        "treatment_manual_based_psychotherapy",
+    ],
+    "goal_setting": ["treatment_treatment_goals_were_considered"],
+    "patient_preference": ["treatment_patient_preference_was_considered_in_treatment_decisions"],
+    "automated_follow_up": ["treatment_automated_follow_up_process_was_used"],
+    "regular_patient_review": ["treatment_regular_patient_review_was_scheduled"],
+    "coping_strategies": ["treatment_are_disease_coping_strategies_taught"],
+    "relapse_prevention": ["treatment_is_there_a_relapse_prevention_plan"],
+    "family_involvement": ["treatment_were_family_and_friends_involved"],
+    "community_cultural_bg": ["treatment_community_cultural_bg"],
+}
+
+COMPONENT_LABELS = {
+    "specialist_involvement": "Specialist involvement",
+    "psychological_treatment": "Psychological treatment",
+    "goal_setting": "Goal setting",
+    "patient_preference": "Patient preference considered",
+    "automated_follow_up": "Automated follow-up",
+    "regular_patient_review": "Regular patient review",
+    "coping_strategies": "Coping strategies",
+    "relapse_prevention": "Relapse prevention plan",
+    "family_involvement": "Family and friends involved",
+    "community_cultural_bg": "Community or cultural context",
+}
+
+component_cols = list(COMPONENT_SOURCES)
+assert len(component_cols) == 10
+assert set(COMPONENT_LABELS) == set(component_cols)
+````
+
+**What this cell does.** Defines the 10 collaborative-care components and the readable labels used throughout the notebook.
+
+**How to interpret the result.** No output is expected. An assertion error means that the component definitions and readable labels are out of sync.
+
+````{python}
+#| label: cell-004
+#| eval: false
+
+source_cols = sorted({column for columns in COMPONENT_SOURCES.values() for column in columns})
+arm_keys = ["STUDY_ID", "study_arm"]
+
+within_arm_variation = cohort.groupby(arm_keys)[source_cols].nunique(dropna=True)
+if within_arm_variation.gt(1).any().any():
+    offenders = within_arm_variation.gt(1).stack().loc[lambda values: values].index.tolist()
+    raise ValueError(f"Component coding varies within a study arm: {offenders[:5]}")
+
+arm_components_raw = cohort.groupby(arm_keys)[source_cols].first()
+if arm_components_raw.isna().any().any():
+    raise ValueError("At least one study arm has a missing component code.")
+
+arm_components = pd.DataFrame(index=arm_components_raw.index)
+for component, sources in COMPONENT_SOURCES.items():
+    arm_components[component] = arm_components_raw[sources].eq("yes").max(axis=1).astype(int)
+
+nested_sources = {
+    "specialist_involvement": "treatment_supervising_psychiatrist_psychologist_was_involved",
+    "psychological_treatment": "treatment_counseling_was_provided_in_addition_to_medication_(≤ 8 sessions)",
+}
+for component, larger_source in nested_sources.items():
+    expected = arm_components_raw[larger_source].eq("yes").astype(int)
+    if not arm_components[component].eq(expected).all():
+        raise ValueError(f"The nesting assumption no longer holds for {component}.")
+
+analysis_df = analysis_df.merge(
+    arm_components.reset_index(), on=arm_keys, how="left", validate="many_to_one"
+)
+
+component_definition = pd.DataFrame(
+    {
+        "clinical label": pd.Series(COMPONENT_LABELS),
+        "source variables": pd.Series(
+            {component: " OR ".join(sources) for component, sources in COMPONENT_SOURCES.items()}
+        ),
+        "patients exposed": analysis_df[component_cols].sum().astype(int),
+    }
+)
+component_definition
+````
+
+**What this cell does.** Converts the original treatment variables into one binary indicator per component and checks that component coding is constant within each study arm.
+
+**How to interpret the result.** Each component should be constant within a randomized arm. Exposure counts show how much information is available for each component; very small counts imply weak support.
+
+````{python}
+#| label: cell-005
+#| eval: false
+
+model_columns = [
+    "STUDY_ID",
+    "patient_id",
+    "study_arm",
+    "phq9_12m",
+    "phq9_baseline",
+    "risk_score",
+    *component_cols,
+]
+model_df = analysis_df[model_columns].dropna().copy()
+
+if model_df["STUDY_ID"].nunique() != analysis_df["STUDY_ID"].nunique():
+    missing_studies = sorted(set(analysis_df["STUDY_ID"]) - set(model_df["STUDY_ID"]))
+    raise ValueError(f"Complete-case filtering removed entire studies: {missing_studies}")
+
+X_components = model_df[component_cols].to_numpy(dtype=float)
+risk_raw = model_df["risk_score"].to_numpy(dtype=float)
+risk_offset = risk_raw.mean() if CENTER_RISK else 0.0
+risk = risk_raw - risk_offset
+X_component_risk = X_components * risk[:, None]
+y = model_df["phq9_12m"].to_numpy(dtype=float)
+study_codes, study_names = pd.factorize(model_df["STUDY_ID"], sort=True)
+
+arm_packages = model_df.groupby(arm_keys)[component_cols].first()
+X_arm_contrasts = (
+    arm_packages.xs("intervention", level="study_arm")
+    - arm_packages.xs("control", level="study_arm")
+)
+
+study_indicators = np.eye(len(study_names))[study_codes]
+X_model = np.column_stack([study_indicators, risk, X_components, X_component_risk])
+
+model_flow = pd.Series(
+    {
+        "eligible patients": len(analysis_df),
+        "complete cases": len(model_df),
+        "excluded for missing model data": len(analysis_df) - len(model_df),
+        "studies": model_df["STUDY_ID"].nunique(),
+    },
+    name="count",
+)
+rank_checks = pd.DataFrame(
+    {
+        "rows": [*X_arm_contrasts.shape[:1], X_model.shape[0]],
+        "columns": [X_arm_contrasts.shape[1], X_model.shape[1]],
+        "rank": [np.linalg.matrix_rank(X_arm_contrasts), np.linalg.matrix_rank(X_model)],
+    },
+    index=["randomized arm contrasts", "full model matrix"],
+)
+rank_checks["deficiency"] = rank_checks["columns"] - rank_checks["rank"]
+component_support = (
+    X_arm_contrasts.ne(0)
+    .sum()
+    .rename("randomized contrasts containing component")
+    .to_frame()
+)
+component_support.index = component_support.index.map(COMPONENT_LABELS)
+component_support.index.name = "component"
+
+if rank_checks.loc["randomized arm contrasts", "deficiency"]:
+    warnings.warn("The arm-contrast matrix is rank deficient; component effects are not separately identified.")
+if rank_checks.loc["full model matrix", "deficiency"]:
+    warnings.warn("The full model matrix is rank deficient.")
+
+display(model_flow.to_frame(), rank_checks, component_support)
+````
+
+**What this cell does.** Creates the complete-case model data and checks whether the component effects can be separated mathematically.
+
+**How to interpret the result.** Full column rank means that the specified effects are mathematically identifiable. Any positive rank deficiency means that at least one effect cannot be separated from the others.
+
+### Network and contrast matrix
+
+The network shows which treatment packages were compared directly. Nodes are packages, node size represents patients, and thicker edges represent more trials. This follows standard [Cochrane guidance for network diagrams](https://training.cochrane.org/handbook/current/chapter-11#section-11-1-1).
+
+The matrix is calculated from the same component coding used in the model. It is fixed before fitting: `+` means the intervention adds a component, `−` means it removes one, and a blank cell means no difference between arms.
+
+````{python}
+#| label: cell-006
+#| eval: false
+
+COMPONENT_ABBREVIATIONS = {
+    "specialist_involvement": "SI",
+    "psychological_treatment": "PT",
+    "goal_setting": "GS",
+    "patient_preference": "PP",
+    "automated_follow_up": "AF",
+    "regular_patient_review": "RR",
+    "coping_strategies": "CS",
+    "relapse_prevention": "RP",
+    "family_involvement": "FI",
+    "community_cultural_bg": "CC",
+}
+
+package_values = sorted(
+    {tuple(row) for row in arm_packages[component_cols].to_numpy(dtype=int)}
+)
+package_lookup = {
+    values: f"P{index + 1}" for index, values in enumerate(package_values)
+}
+arm_package_ids = arm_packages[component_cols].apply(
+    lambda row: package_lookup[tuple(row.astype(int))], axis=1
+)
+
+arm_patient_counts = model_df.groupby(arm_keys).size()
+package_patient_counts = (
+    pd.DataFrame({"package": arm_package_ids, "patients": arm_patient_counts})
+    .groupby("package")["patients"]
+    .sum()
+)
+package_arm_counts = arm_package_ids.value_counts()
+
+package_definitions = pd.DataFrame(
+    {
+        "components": [
+            " + ".join(
+                COMPONENT_ABBREVIATIONS[component]
+                for component, included in zip(component_cols, values)
+                if included
+            )
+            or "None"
+            for values in package_values
+        ],
+        "arms": [package_arm_counts[package_lookup[values]] for values in package_values],
+        "patients": [package_patient_counts[package_lookup[values]] for values in package_values],
+    },
+    index=[package_lookup[values] for values in package_values],
+)
+package_definitions.index.name = "package"
+
+network_comparisons = pd.DataFrame(
+    [
+        {
+            "study": study,
+            "control_package": arm_package_ids.loc[(study, "control")],
+            "intervention_package": arm_package_ids.loc[(study, "intervention")],
+        }
+        for study in X_arm_contrasts.index
+    ]
+).set_index("study")
+
+package_network = nx.Graph()
+for package, row in package_definitions.iterrows():
+    package_network.add_node(package, patients=int(row["patients"]))
+
+for study, row in network_comparisons.iterrows():
+    control_package = row["control_package"]
+    intervention_package = row["intervention_package"]
+    if package_network.has_edge(control_package, intervention_package):
+        package_network[control_package][intervention_package]["studies"].append(study)
+    else:
+        package_network.add_edge(
+            control_package, intervention_package, studies=[study]
+        )
+
+positions = nx.spring_layout(package_network, seed=RANDOM_SEED, weight=None)
+maximum_patients = package_definitions["patients"].max()
+node_sizes = [
+    600 + 2_400 * package_network.nodes[node]["patients"] / maximum_patients
+    for node in package_network.nodes
+]
+edge_widths = [
+    1.5 + len(package_network[u][v]["studies"])
+    for u, v in package_network.edges
+]
+
+network_figure, network_axis = plt.subplots(figsize=(10, 7))
+nx.draw_networkx_nodes(
+    package_network,
+    positions,
+    node_size=node_sizes,
+    node_color="#d9e7f0",
+    edgecolors="#2f5d7e",
+    linewidths=1.2,
+    ax=network_axis,
+)
+nx.draw_networkx_edges(
+    package_network,
+    positions,
+    width=edge_widths,
+    edge_color="#7a7a7a",
+    alpha=0.8,
+    ax=network_axis,
+)
+edge_labels = {
+    (u, v): ", ".join(
+        study.split("_", 1)[-1].replace("_", " ")
+        for study in package_network[u][v]["studies"]
+    )
+    for u, v in package_network.edges
+}
+nx.draw_networkx_edge_labels(
+    package_network,
+    positions,
+    edge_labels=edge_labels,
+    label_pos=0.62,
+    rotate=False,
+    font_size=7,
+    font_color="0.3",
+    bbox={"alpha": 0.8, "color": "white", "edgecolor": "none", "pad": 0.5},
+    ax=network_axis,
+)
+nx.draw_networkx_labels(
+    package_network,
+    positions,
+    font_size=10,
+    font_weight="bold",
+    ax=network_axis,
+)
+network_axis.set_title("Treatment-package network")
+network_axis.text(
+    0.01,
+    0.01,
+    "Node area ∝ patients; edge width ∝ trials",
+    transform=network_axis.transAxes,
+    color="0.35",
+)
+network_axis.axis("off")
+network_figure.tight_layout()
+
+component_key = pd.Series(
+    {abbreviation: COMPONENT_LABELS[component] for component, abbreviation in COMPONENT_ABBREVIATIONS.items()},
+    name="component",
+).to_frame()
+display(package_definitions, component_key)
+````
+
+**What this cell does.** Groups arms with identical component combinations into treatment packages and draws the direct-comparison network.
+
+**How to interpret the result.** Nodes represent treatment packages, node size represents patients, and edges represent direct randomized comparisons. Sparse or single-study packages indicate limited direct evidence.
+
+````{python}
+#| label: cell-007
+#| eval: false
+
+from matplotlib.colors import ListedColormap
+from matplotlib.patches import Patch
+
+contrast_matrix = X_arm_contrasts.rename(columns=COMPONENT_LABELS)
+matrix_values = contrast_matrix.to_numpy(dtype=int)
+contrast_colors = ListedColormap(["#c36b2c", "#f2f2f2", "#2f5d7e"])
+
+matrix_figure, matrix_axis = plt.subplots(figsize=(13, 6))
+matrix_axis.imshow(
+    matrix_values,
+    cmap=contrast_colors,
+    vmin=-1,
+    vmax=1,
+    aspect="auto",
+)
+
+for row_index in range(matrix_values.shape[0]):
+    for column_index in range(matrix_values.shape[1]):
+        value = matrix_values[row_index, column_index]
+        if value:
+            matrix_axis.text(
+                column_index,
+                row_index,
+                "+" if value > 0 else "−",
+                ha="center",
+                va="center",
+                color="white",
+                fontweight="bold",
+            )
+
+matrix_axis.set_xticks(
+    np.arange(len(contrast_matrix.columns)),
+    contrast_matrix.columns,
+    rotation=45,
+    ha="right",
+)
+matrix_axis.set_yticks(
+    np.arange(len(contrast_matrix.index)),
+    [study.split("_", 1)[-1] for study in contrast_matrix.index],
+)
+matrix_axis.set_xticks(np.arange(-0.5, matrix_values.shape[1], 1), minor=True)
+matrix_axis.set_yticks(np.arange(-0.5, matrix_values.shape[0], 1), minor=True)
+matrix_axis.grid(which="minor", color="white", linewidth=1)
+matrix_axis.tick_params(which="minor", bottom=False, left=False)
+matrix_axis.set_xlabel("Component")
+matrix_axis.set_ylabel("Study")
+matrix_axis.set_title("Randomized component contrasts: intervention minus control")
+legend_handles = [Patch(facecolor="#2f5d7e", label="Added in intervention (+)")]
+if (matrix_values < 0).any():
+    legend_handles.append(
+        Patch(facecolor="#c36b2c", label="Removed in intervention (−)")
+    )
+matrix_axis.legend(
+    handles=legend_handles,
+    loc="upper left",
+    bbox_to_anchor=(1.01, 1),
+    frameon=False,
+)
+matrix_figure.tight_layout()
+````
+
+**What this cell does.** Displays the 12-study by 10-component contrast matrix used to identify the component effects.
+
+**How to interpret the result.** A `+` means that the intervention adds the component relative to control; a blank means no arm difference. These entries describe treatment composition, not effectiveness.
+
+**How to read these figures:** `P1` means no coded collaborative-care components, not no care. All control arms map to `P1`, so the network is a star; every active package is represented by one study. The matrix contains additions only. A `+` under **Patient preference considered** means that the intervention added that component; it does not say whether the component was effective. Effects are estimated in Section 6.
+
+The contrast matrix has rank `10/10`, so the 10 component directions are mathematically identifiable. With only 12 study contrasts, identification is still sparse.
+
+## 4. Model
+
+The [PHQ-9 ranges from 0 to 27](https://pmc.ncbi.nlm.nih.gov/articles/PMC1495268/). The study-intercept prior is centered at the midpoint:
+
+$$
+\alpha_s \sim \mathcal{N}\!\left(13.5,6.5^2\right)
+$$
+
+Here, 13.5 is the mean and 6.5 is the standard deviation. The approximate 95% interval is 0.8–26.2. Component effects and component-by-risk terms use $\mathcal{N}(0,0.5^2)$ priors. Study intercepts keep the component comparisons within randomized studies.
+
+````{python}
+#| label: cell-008
+#| eval: false
+
+coords = {
+    "study": study_names.tolist(),
+    "component": component_cols,
+    "observation": np.arange(len(model_df)),
+}
+
+
+def build_path_cnma_model(intercept_mean, intercept_sd):
+    model = pm.Model(coords=coords)
+    with model:
+        alpha_study = pm.Normal(
+            "alpha_study", mu=intercept_mean, sigma=intercept_sd, dims="study"
+        )
+        lambda_risk = pm.Normal("lambda_risk", mu=0, sigma=1)
+        beta_component = pm.Normal("beta_component", mu=0, sigma=0.5, dims="component")
+        delta_component_risk = pm.Normal(
+            "delta_component_risk", mu=0, sigma=0.5, dims="component"
+        )
+        sigma = pm.HalfNormal("sigma", sigma=5)
+
+        mu = (
+            alpha_study[study_codes]
+            + lambda_risk * risk
+            + pm.math.dot(X_components, beta_component)
+            + pm.math.dot(X_component_risk, delta_component_risk)
+        )
+        pm.Normal("y_obs", mu=mu, sigma=sigma, observed=y, dims="observation")
+    return model
+
+
+path_cnma_model = build_path_cnma_model(INTERCEPT_PRIOR_MEAN, INTERCEPT_PRIOR_SD)
+````
+
+**What this cell does.** Builds the PyMC model with study intercepts, the Step-1 risk effect, 10 component effects, and 10 component-by-risk terms.
+
+**How to interpret the result.** No output is expected. Successful completion means that PyMC accepted the model specification; model quality is assessed by the predictive and sampling diagnostics below.
+
+### Prior predictive check
+
+````{python}
+#| label: cell-009
+#| eval: false
+
+def predictive_summary(values):
+    values = np.asarray(values).reshape(-1)
+    return pd.Series(
+        {
+            "p05": np.quantile(values, 0.05),
+            "median": np.median(values),
+            "p95": np.quantile(values, 0.95),
+            "Pr(0 ≤ PHQ-9 ≤ 27)": np.mean((values >= 0) & (values <= 27)),
+        }
+    )
+
+
+with path_cnma_model:
+    prior_idata = pm.sample_prior_predictive(
+        samples=PRIOR_DRAWS, random_seed=RANDOM_SEED
+    )
+
+prior_check = pd.DataFrame(
+    {
+        "prior predictive": predictive_summary(prior_idata.prior_predictive["y_obs"]),
+        "observed": predictive_summary(y),
+    }
+).T
+
+display(prior_check.round(3))
+az.plot_ppc(prior_idata, group="prior", num_pp_samples=200)
+````
+
+**What this cell does.** Simulates PHQ-9 outcomes from the priors before using the observed outcomes. This checks whether the priors imply a reasonable outcome scale.
+
+**How to interpret the result.** Prior-predictive values should cover plausible PHQ-9 scores without placing excessive mass outside 0–27. A poor match suggests revising the priors or likelihood before fitting.
+
+### Fit
+
+````{python}
+#| label: cell-010
+#| eval: false
+
+with path_cnma_model:
+    trace_path_cnma = pm.sample(
+        draws=DRAWS,
+        tune=TUNE,
+        chains=CHAINS,
+        target_accept=TARGET_ACCEPT,
+        random_seed=RANDOM_SEED,
+        progressbar=False,
+    )
+````
+
+**What this cell does.** Fits the primary Bayesian model with the NUTS sampler.
+
+**How to interpret the result.** Completion only confirms that sampling finished. Use divergences, R-hat, effective sample size, energy, and trace plots to decide whether the draws are reliable.
+
+## 5. Model checks
+
+First check whether the sampler behaved well; then check whether simulated outcomes resemble the observed data. See the current [ArviZ sampling diagnostics](https://python.arviz.org/projects/stats/en/latest/api/generated/arviz_stats.diagnose.html) and [PyMC predictive-check guide](https://www.pymc.io/projects/docs/en/stable/learn/core_notebooks/posterior_predictive.html).
+
+````{python}
+#| label: cell-011
+#| eval: false
+
+summary_vars = [
+    "alpha_study",
+    "lambda_risk",
+    "beta_component",
+    "delta_component_risk",
+    "sigma",
+]
+posterior_summary = az.summary(trace_path_cnma, var_names=summary_vars, hdi_prob=0.95)
+
+diagnostics = pd.Series(
+    {
+        "divergences": int(trace_path_cnma.sample_stats["diverging"].sum()),
+        "max R-hat": posterior_summary["r_hat"].max(),
+        "min bulk ESS": posterior_summary["ess_bulk"].min(),
+        "min tail ESS": posterior_summary["ess_tail"].min(),
+        "min E-BFMI": np.min(az.bfmi(trace_path_cnma)),
+    },
+    name="value",
+)
+
+if diagnostics["divergences"] > 0:
+    warnings.warn("Sampling produced divergent transitions.")
+if diagnostics["max R-hat"] > 1.01:
+    warnings.warn("At least one parameter has R-hat above 1.01.")
+if diagnostics["min E-BFMI"] < 0.3:
+    warnings.warn("At least one chain has low E-BFMI.")
+
+display(diagnostics.to_frame().round(3))
+````
+
+**What this cell does.** Calculates the main numerical checks for convergence and sampler behavior.
+
+**How to interpret the result.** Prefer zero divergences, R-hat close to 1 (typically below 1.01), large bulk and tail effective sample sizes, and E-BFMI above 0.30.
+
+````{python}
+#| label: cell-012
+#| eval: false
+
+az.plot_trace(
+    trace_path_cnma,
+    var_names=["lambda_risk", "sigma", "beta_component", "delta_component_risk"],
+    compact=True,
+    legend=True,
+    figsize=(13, 10),
+);
+````
+
+**What this cell does.** Plots posterior traces so that the four chains can be compared visually.
+
+**How to interpret the result.** Well-mixed chains overlap, move freely across the same range, and show no drift or persistent separation.
+
+````{python}
+#| label: cell-013
+#| eval: false
+
+az.plot_autocorr(
+    trace_path_cnma,
+    var_names=["lambda_risk", "sigma"],
+    combined=True,
+    max_lag=100,
+    grid=(1, 2),
+    figsize=(12, 3),
+);
+````
+
+**What this cell does.** Plots autocorrelation for the global risk effect and residual standard deviation.
+
+**How to interpret the result.** Autocorrelation should fall quickly as lag increases. Slow decay means that successive draws contain less independent information.
+
+````{python}
+#| label: cell-014
+#| eval: false
+
+az.plot_energy(trace_path_cnma);
+````
+
+**What this cell does.** Compares the sampler's marginal energy distribution with its energy transitions.
+
+**How to interpret the result.** The marginal and transition-energy distributions should overlap reasonably well. E-BFMI below about 0.30 warns that the sampler may not explore the posterior efficiently.
+
+### Posterior predictive checks
+
+These plots compare observed PHQ-9 scores with new outcomes simulated from the fitted model. Close agreement supports the likelihood; visible differences identify what the model misses.
+
+````{python}
+#| label: cell-015
+#| eval: false
+
+with path_cnma_model:
+    pm.sample_posterior_predictive(
+        trace_path_cnma,
+        extend_inferencedata=True,
+        random_seed=RANDOM_SEED,
+        progressbar=False,
+    )
+
+posterior_check = pd.DataFrame(
+    {
+        "posterior predictive": predictive_summary(
+            trace_path_cnma.posterior_predictive["y_obs"]
+        ),
+        "observed": predictive_summary(y),
+    }
+).T
+
+display(posterior_check.round(3))
+az.plot_ppc(trace_path_cnma, num_pp_samples=200)
+````
+
+**What this cell does.** Generates new PHQ-9 outcomes from the fitted model and compares their overall distribution with the observed data.
+
+**How to interpret the result.** Compare the observed and replicated medians, spreads, and tails. Close overlap supports the likelihood; systematic differences show what the model fails to reproduce.
+
+````{python}
+#| label: cell-016
+#| eval: false
+
+y_replicated = trace_path_cnma.posterior_predictive["y_obs"]
+
+observed_statistics = {
+    "mean": float(np.mean(y)),
+    "standard deviation": float(np.std(y, ddof=1)),
+    "fraction at or below 0": float(np.mean(y <= 0)),
+    "fraction at or above 20": float(np.mean(y >= 20)),
+}
+replicated_statistics = {
+    "mean": y_replicated.mean(dim="observation"),
+    "standard deviation": y_replicated.std(dim="observation", ddof=1),
+    "fraction at or below 0": (y_replicated <= 0).mean(dim="observation"),
+    "fraction at or above 20": (y_replicated >= 20).mean(dim="observation"),
+}
+
+ppc_rows = []
+for statistic, observed_value in observed_statistics.items():
+    replicated_values = np.asarray(replicated_statistics[statistic]).reshape(-1)
+    bayesian_p_value = float(np.mean(replicated_values >= observed_value))
+    ppc_rows.append(
+        {
+            "statistic": statistic,
+            "observed": observed_value,
+            "predictive median": np.median(replicated_values),
+            "predictive q025": np.quantile(replicated_values, 0.025),
+            "predictive q975": np.quantile(replicated_values, 0.975),
+            "Bayesian p-value": bayesian_p_value,
+            "extreme": bayesian_p_value < 0.025 or bayesian_p_value > 0.975,
+        }
+    )
+
+posterior_predictive_statistics = pd.DataFrame(ppc_rows).set_index("statistic")
+posterior_predictive_statistics.round(3)
+````
+
+**What this cell does.** Checks specific features of the posterior predictions rather than relying only on the density plot.
+
+**How to interpret the result.** Bayesian p-values near 0.5 indicate good reproduction of a statistic; values near 0 or 1 indicate mismatch. Pay particular attention to impossible values and the upper tail.
+
+````{python}
+#| label: cell-017
+#| eval: false
+
+study_ppc_rows = []
+for study_code, study_name in enumerate(study_names):
+    observation_index = np.flatnonzero(study_codes == study_code)
+    replicated_study_mean = (
+        y_replicated.isel(observation=observation_index)
+        .mean(dim="observation")
+        .to_numpy()
+        .reshape(-1)
+    )
+    study_ppc_rows.append(
+        {
+            "study": study_name,
+            "observed mean": np.mean(y[observation_index]),
+            "predictive median": np.median(replicated_study_mean),
+            "predictive q025": np.quantile(replicated_study_mean, 0.025),
+            "predictive q975": np.quantile(replicated_study_mean, 0.975),
+        }
+    )
+
+posterior_predictive_study_means = pd.DataFrame(study_ppc_rows).set_index("study")
+plot_data = posterior_predictive_study_means.iloc[::-1]
+y_positions = np.arange(len(plot_data))
+
+fig, ax = plt.subplots(figsize=(10, 6))
+ax.errorbar(
+    plot_data["predictive median"],
+    y_positions,
+    xerr=[
+        plot_data["predictive median"] - plot_data["predictive q025"],
+        plot_data["predictive q975"] - plot_data["predictive median"],
+    ],
+    fmt="o",
+    color="#2f5d7e",
+    capsize=2,
+    label="Posterior predictive median and 95% interval",
+)
+ax.scatter(
+    plot_data["observed mean"],
+    y_positions,
+    marker="x",
+    color="#b4442e",
+    label="Observed mean",
+    zorder=3,
+)
+ax.set_yticks(y_positions, plot_data.index)
+ax.set_xlabel("Mean 12-month PHQ-9")
+ax.set_title("Observed and posterior-predictive study means")
+ax.legend(frameon=False)
+fig.tight_layout()
+````
+
+**What this cell does.** Compares each study's observed mean PHQ-9 with the distribution of means predicted for that study.
+
+**How to interpret the result.** Observed study means should fall within their predictive intervals without a systematic pattern of under- or overprediction.
+
+The model fits the overall and study-level means. The Normal likelihood predicts too many scores at or below 0 and too few at or above 20; this is a likelihood limitation, not a sampling problem.
+
+## 6. Component effects
+
+Each point is the posterior median and each line is a 95% posterior interval. Negative values indicate lower PHQ-9. An interval crossing zero means the data do not clearly determine the direction. Results are shown at low, median, and high predicted severity.
+
+````{python}
+#| label: cell-018
+#| eval: false
+
+def summarize_effect(draws, prefix):
+    return pd.DataFrame(
+        {
+            f"{prefix}_median": np.median(draws, axis=1),
+            f"{prefix}_q025": np.quantile(draws, 0.025, axis=1),
+            f"{prefix}_q975": np.quantile(draws, 0.975, axis=1),
+            f"Pr({prefix} < 0)": np.mean(draws < 0, axis=1),
+        },
+        index=pd.Index(component_cols, name="component"),
+    )
+
+
+beta_draws = (
+    trace_path_cnma.posterior["beta_component"]
+    .stack(sample=("chain", "draw"))
+    .transpose("component", "sample")
+    .to_numpy()
+)
+delta_draws = (
+    trace_path_cnma.posterior["delta_component_risk"]
+    .stack(sample=("chain", "draw"))
+    .transpose("component", "sample")
+    .to_numpy()
+)
+
+parameter_effects = pd.concat(
+    [summarize_effect(beta_draws, "beta"), summarize_effect(delta_draws, "delta")],
+    axis=1,
+)
+parameter_effects.insert(0, "clinical_name", parameter_effects.index.map(COMPONENT_LABELS))
+parameter_effects.set_index("clinical_name").round(3)
+````
+
+**What this cell does.** Summarizes the component main effects at risk score 0 and the component-by-risk slopes.
+
+**How to interpret the result.** Negative component effects favor lower PHQ-9. An interval crossing zero leaves the direction uncertain; the sign of the risk interaction shows how the component effect changes with baseline risk.
+
+````{python}
+#| label: cell-019
+#| eval: false
+
+risk_quantiles = {"25th percentile": 0.25, "median": 0.50, "75th percentile": 0.75}
+risk_levels_raw = {
+    label: float(np.quantile(risk_raw, quantile))
+    for label, quantile in risk_quantiles.items()
+}
+
+effect_rows = []
+for label, raw_value in risk_levels_raw.items():
+    model_value = raw_value - risk_offset
+    draws = beta_draws + delta_draws * model_value
+    effect_rows.append(
+        pd.DataFrame(
+            {
+                "component": component_cols,
+                "clinical_name": [COMPONENT_LABELS[column] for column in component_cols],
+                "risk_level": label,
+                "risk_score": raw_value,
+                "effect_median": np.median(draws, axis=1),
+                "effect_q025": np.quantile(draws, 0.025, axis=1),
+                "effect_q975": np.quantile(draws, 0.975, axis=1),
+                "probability_lower_phq9": np.mean(draws < 0, axis=1),
+            }
+        )
+    )
+
+effects_by_risk = pd.concat(effect_rows, ignore_index=True)
+effects_by_risk["risk_level"] = pd.Categorical(
+    effects_by_risk["risk_level"], categories=list(risk_quantiles), ordered=True
+)
+effects_by_risk_named = effects_by_risk.set_index(["clinical_name", "risk_level"]).sort_index()
+effect_medians = effects_by_risk.pivot(
+    index="clinical_name", columns="risk_level", values="effect_median"
+)
+effect_medians.round(2)
+````
+
+**What this cell does.** Converts the main effects and risk slopes into component effects at the observed low, median, and high severity levels.
+
+**How to interpret the result.** Compare each component across low, median, and high risk. Negative values favor the component; an interval crossing zero means that the data no longer clearly determine the direction.
+
+````{python}
+#| label: cell-020
+#| eval: false
+
+plot_order = [COMPONENT_LABELS[column] for column in component_cols][::-1]
+fig, axes = plt.subplots(1, 3, figsize=(13, 6), sharey=True, sharex=True)
+
+for ax, risk_label in zip(axes, risk_quantiles):
+    panel = (
+        effects_by_risk.loc[effects_by_risk["risk_level"].eq(risk_label)]
+        .set_index("clinical_name")
+        .loc[plot_order]
+    )
+    y_positions = np.arange(len(panel))
+    ax.errorbar(
+        panel["effect_median"],
+        y_positions,
+        xerr=[
+            panel["effect_median"] - panel["effect_q025"],
+            panel["effect_q975"] - panel["effect_median"],
+        ],
+        fmt="o",
+        color="#2f5d7e",
+        capsize=2,
+    )
+    ax.axvline(0, color="0.45", linewidth=1, linestyle="--")
+    ax.set_title(f"{risk_label}\nrisk = {panel['risk_score'].iloc[0]:.2f}")
+    ax.set_xlabel("Change in PHQ-9")
+    ax.set_yticks(y_positions, panel.index)
+
+fig.suptitle("Posterior component effects by predicted severity", y=1.02)
+fig.tight_layout()
+````
+
+**What this cell does.** Plots each component's posterior median and 95% interval at low, median, and high predicted severity.
+
+**How to interpret the result.** Look for changes in both the point estimates and uncertainty intervals across risk levels. Crossing zero indicates that evidence for a clear benefit or harm is absent at that level.
+
+## 7. Intercept-prior sensitivity
+
+Compare the primary $\mathcal{N}(13.5,6.5^2)$ prior with $\mathcal{N}(10,5^2)$, $\mathcal{N}(0,5^2)$, and $\mathcal{N}(13.5,13.5^2)$. The squared values are variances; the corresponding standard deviations are 6.5, 5, 5, and 13.5. If the component estimates remain similar, the intercept prior is not driving the conclusions. Prior predictive simulation is recommended in the [PyMC Bayesian workflow](https://www.pymc.io/projects/docs/en/stable/learn/core_notebooks/posterior_predictive.html).
+
+````{python}
+#| label: cell-021
+#| eval: false
+
+prior_sensitivity_rows = []
+
+for prior_index, (prior_name, (intercept_mean, intercept_sd)) in enumerate(
+    SENSITIVITY_PRIORS.items()
+):
+    if prior_name == REFERENCE_PRIOR:
+        sensitivity_prior_idata = prior_idata
+    else:
+        sensitivity_model = build_path_cnma_model(intercept_mean, intercept_sd)
+        with sensitivity_model:
+            sensitivity_prior_idata = pm.sample_prior_predictive(
+                samples=PRIOR_DRAWS,
+                random_seed=RANDOM_SEED + prior_index,
+            )
+
+    row = predictive_summary(sensitivity_prior_idata.prior_predictive["y_obs"])
+    row["intercept mean"] = intercept_mean
+    row["intercept SD"] = intercept_sd
+    row.name = prior_name
+    prior_sensitivity_rows.append(row)
+
+prior_sensitivity_predictive = pd.DataFrame(prior_sensitivity_rows)[
+    ["intercept mean", "intercept SD", "p05", "median", "p95", "Pr(0 ≤ PHQ-9 ≤ 27)"]
+]
+prior_sensitivity_predictive.round(3)
+````
+
+**What this cell does.** Simulates outcomes under four alternative study-intercept priors before fitting those alternatives.
+
+**How to interpret the result.** Prefer priors that generate plausible PHQ-9 distributions. A large fraction outside 0–27 indicates that the prior is poorly aligned with the outcome scale.
+
+````{python}
+#| label: cell-022
+#| eval: false
+
+sensitivity_traces = {REFERENCE_PRIOR: trace_path_cnma}
+
+for prior_index, (prior_name, (intercept_mean, intercept_sd)) in enumerate(
+    SENSITIVITY_PRIORS.items()
+):
+    if prior_name == REFERENCE_PRIOR:
+        continue
+
+    print(f"Fitting {prior_name}")
+    sensitivity_model = build_path_cnma_model(intercept_mean, intercept_sd)
+    with sensitivity_model:
+        sensitivity_traces[prior_name] = pm.sample(
+            draws=SENSITIVITY_DRAWS,
+            tune=SENSITIVITY_TUNE,
+            chains=CHAINS,
+            target_accept=TARGET_ACCEPT,
+            random_seed=RANDOM_SEED + prior_index,
+            progressbar=False,
+        )
+````
+
+**What this cell does.** Refits the model under the three alternative intercept priors while keeping the data and all other priors fixed.
+
+**How to interpret the result.** Each sensitivity fit must satisfy the same convergence checks as the primary model before its estimates are compared.
+
+````{python}
+#| label: cell-023
+#| eval: false
+
+sensitivity_effect_rows = []
+sensitivity_diagnostic_rows = []
+
+for prior_name in SENSITIVITY_PRIORS:
+    sensitivity_trace = sensitivity_traces[prior_name]
+    sensitivity_summary = az.summary(
+        sensitivity_trace,
+        var_names=summary_vars,
+        hdi_prob=0.95,
+    )
+    sensitivity_diagnostic_rows.append(
+        {
+            "prior": prior_name,
+            "divergences": int(sensitivity_trace.sample_stats["diverging"].sum()),
+            "max R-hat": sensitivity_summary["r_hat"].max(),
+            "min bulk ESS": sensitivity_summary["ess_bulk"].min(),
+            "min tail ESS": sensitivity_summary["ess_tail"].min(),
+            "min E-BFMI": np.min(az.bfmi(sensitivity_trace)),
+        }
+    )
+
+    for variable, parameter in [
+        ("beta_component", "main effect"),
+        ("delta_component_risk", "risk interaction"),
+    ]:
+        draws = (
+            sensitivity_trace.posterior[variable]
+            .stack(sample=("chain", "draw"))
+            .transpose("component", "sample")
+            .to_numpy()
+        )
+        sensitivity_effect_rows.append(
+            pd.DataFrame(
+                {
+                    "prior": prior_name,
+                    "parameter": parameter,
+                    "component": component_cols,
+                    "clinical_name": [COMPONENT_LABELS[column] for column in component_cols],
+                    "median": np.median(draws, axis=1),
+                    "q025": np.quantile(draws, 0.025, axis=1),
+                    "q975": np.quantile(draws, 0.975, axis=1),
+                    "probability_lower_phq9": np.mean(draws < 0, axis=1),
+                }
+            )
+        )
+
+prior_sensitivity_diagnostics = pd.DataFrame(sensitivity_diagnostic_rows).set_index("prior")
+prior_sensitivity_effects = pd.concat(sensitivity_effect_rows, ignore_index=True)
+
+reference_medians = (
+    prior_sensitivity_effects.loc[
+        prior_sensitivity_effects["prior"].eq(REFERENCE_PRIOR),
+        ["parameter", "component", "median"],
+    ]
+    .rename(columns={"median": "reference_median"})
+)
+prior_sensitivity_effects = prior_sensitivity_effects.merge(
+    reference_medians, on=["parameter", "component"], validate="many_to_one"
+)
+prior_sensitivity_effects["absolute_shift_from_reference"] = (
+    prior_sensitivity_effects["median"]
+    - prior_sensitivity_effects["reference_median"]
+).abs()
+
+prior_sensitivity_shifts = (
+    prior_sensitivity_effects.groupby(["prior", "parameter"])[
+        "absolute_shift_from_reference"
+    ]
+    .agg(["median", "max"])
+    .rename(columns={"median": "median absolute shift", "max": "maximum absolute shift"})
+)
+
+if prior_sensitivity_diagnostics["divergences"].gt(0).any():
+    warnings.warn("At least one prior-sensitivity fit produced divergences.")
+if prior_sensitivity_diagnostics["max R-hat"].gt(1.01).any():
+    warnings.warn("At least one prior-sensitivity fit has R-hat above 1.01.")
+
+display(
+    prior_sensitivity_diagnostics.round(3),
+    prior_sensitivity_shifts.round(3),
+)
+````
+
+**What this cell does.** Checks the alternative fits and measures how much each component estimate moves relative to the primary prior.
+
+**How to interpret the result.** Small shifts across prior choices indicate robust conclusions. Large shifts, sign changes, or materially wider intervals indicate prior sensitivity.
+
+````{python}
+#| label: cell-024
+#| eval: false
+
+fig, axes = plt.subplots(1, 2, figsize=(13, 6), sharey=True, sharex=True)
+plot_parameters = ["main effect", "risk interaction"]
+offsets = np.linspace(-0.24, 0.24, len(SENSITIVITY_PRIORS))
+colors = ["#767676", "#2f5d7e", "#c36b2c", "#7a4f8f"]
+
+for ax, parameter in zip(axes, plot_parameters):
+    for offset, color, prior_name in zip(offsets, colors, SENSITIVITY_PRIORS):
+        panel = (
+            prior_sensitivity_effects.loc[
+                prior_sensitivity_effects["parameter"].eq(parameter)
+                & prior_sensitivity_effects["prior"].eq(prior_name)
+            ]
+            .set_index("component")
+            .loc[component_cols[::-1]]
+        )
+        y_positions = np.arange(len(panel)) + offset
+        ax.plot(panel["median"], y_positions, "o", color=color, label=prior_name)
+
+    ax.axvline(0, color="0.45", linewidth=1, linestyle="--")
+    ax.set_title(parameter.title())
+    ax.set_xlabel("Posterior median change in PHQ-9")
+    ax.set_yticks(
+        np.arange(len(component_cols)),
+        [COMPONENT_LABELS[column] for column in component_cols[::-1]],
+    )
+
+axes[1].legend(loc="center left", bbox_to_anchor=(1.02, 0.5), frameon=False)
+fig.suptitle("Component estimates under alternative intercept priors", y=1.02)
+fig.tight_layout()
+````
+
+**What this cell does.** Plots the component medians from all four intercept-prior choices on the same axes.
+
+**How to interpret the result.** Estimates that overlap across prior choices indicate stability; visible separation indicates that the prior affects the conclusion.
+
+## 8. Export
+
+Export model results, diagnostics, and sensitivity results. Continue with the [assumption-check report](STEP2_ASSUMPTION_CHECKS.qmd).
+
+````{python}
+#| label: cell-025
+#| eval: false
+
+EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+
+contrast_matrix.to_csv(EXPORT_DIR / "component_contrast_matrix.csv")
+package_definitions.to_csv(EXPORT_DIR / "treatment_package_definitions.csv")
+network_comparisons.to_csv(EXPORT_DIR / "treatment_package_comparisons.csv")
+network_figure.savefig(
+    EXPORT_DIR / "treatment_package_network.png", dpi=200, bbox_inches="tight"
+)
+matrix_figure.savefig(
+    EXPORT_DIR / "component_contrast_matrix.png", dpi=200, bbox_inches="tight"
+)
+
+posterior_summary.to_csv(EXPORT_DIR / "posterior_summary.csv")
+parameter_effects.to_csv(EXPORT_DIR / "component_effects_named.csv")
+effects_by_risk.to_csv(EXPORT_DIR / "component_effects_by_risk.csv", index=False)
+effects_by_risk_named.to_csv(EXPORT_DIR / "component_effects_by_risk_named.csv")
+diagnostics.to_csv(EXPORT_DIR / "sampling_diagnostics.csv", header=True)
+posterior_predictive_statistics.to_csv(
+    EXPORT_DIR / "posterior_predictive_statistics.csv"
+)
+posterior_predictive_study_means.to_csv(
+    EXPORT_DIR / "posterior_predictive_study_means.csv"
+)
+prior_sensitivity_predictive.to_csv(EXPORT_DIR / "prior_sensitivity_predictive.csv")
+prior_sensitivity_diagnostics.to_csv(EXPORT_DIR / "prior_sensitivity_diagnostics.csv")
+prior_sensitivity_effects.to_csv(
+    EXPORT_DIR / "prior_sensitivity_component_effects.csv", index=False
+)
+prior_sensitivity_shifts.to_csv(EXPORT_DIR / "prior_sensitivity_effect_shifts.csv")
+
+az.InferenceData(
+    posterior=trace_path_cnma.posterior[summary_vars],
+    sample_stats=trace_path_cnma.sample_stats,
+).to_netcdf(EXPORT_DIR / "path_cnma_posterior.nc")
+
+manifest = {
+    "model_name": "PATH-CNMA Step 2 — 10 components, 12 studies",
+    "outcome": "phq9_12m",
+    "risk_model_file": str(RISK_MODEL_PATH),
+    "risk_model_script": str(RISK_MODEL_SCRIPT_PATH),
+    "risk_model_data": str(RISK_MODEL_DATA_PATH),
+    "risk_column": "risk_score",
+    "center_risk": CENTER_RISK,
+    "components": component_cols,
+    "component_sources": COMPONENT_SOURCES,
+    "cohort_studies": sorted(analysis_df["STUDY_ID"].unique()),
+    "model_studies": sorted(model_df["STUDY_ID"].unique()),
+    "n_patients": int(len(model_df)),
+    "n_randomized_comparisons": int(X_arm_contrasts.shape[0]),
+    "rank_of_contrast_matrix": int(np.linalg.matrix_rank(X_arm_contrasts)),
+    "formula": (
+        "phq9_12m = alpha_study + lambda_risk * risk_score + "
+        "sum_k component_k * (beta_k + delta_k * risk_score)"
+    ),
+    "priors": {
+        "alpha_study": "Normal(13.5, 6.5)",
+        "lambda_risk": "Normal(0, 1)",
+        "beta_component": "Normal(0, 0.5)",
+        "delta_component_risk": "Normal(0, 0.5)",
+        "sigma": "HalfNormal(5)",
+    },
+    "prior_sensitivity": {
+        "intercept_priors": {
+            name: {"mean": values[0], "sd": values[1]}
+            for name, values in SENSITIVITY_PRIORS.items()
+        },
+        "draws_per_chain": SENSITIVITY_DRAWS,
+        "tune_per_chain": SENSITIVITY_TUNE,
+    },
+    "software": {
+        "python": platform.python_version(),
+        "pymc": pm.__version__,
+        "arviz": az.__version__,
+    },
+}
+
+with (EXPORT_DIR / "manifest.json").open("w") as file:
+    json.dump(manifest, file, indent=2)
+
+print(f"Exported results to {EXPORT_DIR}")
+````
+
+**What this cell does.** Writes the posterior summaries, predictive checks, sensitivity results, design tables, figures, model metadata, and posterior draws to the export folder.
+
+**How to interpret the result.** A printed export path confirms that the files were written. Check the manifest and expected tables before sharing the results.
