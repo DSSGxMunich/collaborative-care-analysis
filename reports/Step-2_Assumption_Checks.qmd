@@ -7,8 +7,6 @@ format:
     code-tools: true
     embed-resources: true
 jupyter: python3
-execute:
-  enabled: false
 ---
 
 Companion to the [primary Stage-2 report](STEP2_CNMA.qmd), which shows the treatment network and component contrast matrix. These checks follow the additive-CNMA framework of [Rücker, Schmitz, and Schwarzer](https://doi.org/10.1002/bimj.201900339).
@@ -29,7 +27,7 @@ Import the same cohort used by notebook 09.5, encode the 10 components, and calc
 
 ````{python}
 #| label: cell-001
-#| eval: false
+#| eval: true
 
 %matplotlib inline
 
@@ -89,7 +87,7 @@ pd.set_option("display.width", 180)
 
 ````{python}
 #| label: cell-002
-#| eval: false
+#| eval: true
 
 COMPONENT_SOURCES = {
     "specialist_involvement": [
@@ -131,7 +129,7 @@ component_cols = list(COMPONENT_SOURCES)
 
 ````{python}
 #| label: cell-003
-#| eval: false
+#| eval: true
 
 risk_scores = load_stage1_risk_scores(
     RISK_MODEL_PATH,
@@ -180,7 +178,7 @@ model_columns = [
 ]
 model_df = analysis_df[model_columns].dropna(subset=["phq9_12m", "risk_score", *component_cols]).copy()
 
-assert len(model_df) == 6473
+assert len(model_df) == len(risk_scores), "Some patients with a Stage-1 risk score are missing from the model data."
 assert model_df["STUDY_ID"].nunique() == 12
 print(f"Analysis cohort: {len(model_df):,} patients in {model_df['STUDY_ID'].nunique()} studies")
 ````
@@ -191,7 +189,7 @@ print(f"Analysis cohort: {len(model_df):,} patients in {model_df['STUDY_ID'].nun
 
 ````{python}
 #| label: cell-004
-#| eval: false
+#| eval: true
 
 arm_packages = model_df.groupby(arm_keys)[component_cols].first()
 X_contrast = (
@@ -226,7 +224,7 @@ Fit the additive component design to the 12 trial contrasts. `Q` measures the ou
 
 ````{python}
 #| label: cell-005
-#| eval: false
+#| eval: true
 
 def weighted_fit(design, outcome, weights):
     weighted_design = design * np.sqrt(weights[:, None])
@@ -274,7 +272,7 @@ additive_fit.to_frame().round(3)
 
 ````{python}
 #| label: cell-006
-#| eval: false
+#| eval: true
 
 contrast_fit = trial_contrasts.copy()
 contrast_fit["fitted_additive"] = additive["fitted"]
@@ -321,7 +319,7 @@ Trials informing different components should be comparable in characteristics th
 
 ````{python}
 #| label: cell-007
-#| eval: false
+#| eval: true
 
 model_df["female"] = model_df["sex"].eq("Female").where(
     model_df["sex"].isin(["Female", "Male"])
@@ -357,7 +355,7 @@ trial_characteristics.round(3)
 
 ````{python}
 #| label: cell-008
-#| eval: false
+#| eval: true
 
 transitivity_correlations = pd.DataFrame(
     index=modifier_cols, columns=component_cols, dtype=float
@@ -418,7 +416,7 @@ Full rank means the design contains enough distinct component patterns to estima
 
 ````{python}
 #| label: cell-009
-#| eval: false
+#| eval: true
 
 singular_values = np.linalg.svd(X * np.sqrt(weights[:, None]), compute_uv=False)
 component_support = X_contrast.ne(0).sum().rename("trials testing component").to_frame()
@@ -454,7 +452,7 @@ display(design_diagnostics.to_frame().round(3), component_support, leave_one_out
 
 ````{python}
 #| label: cell-010
-#| eval: false
+#| eval: true
 
 fig, ax = plt.subplots(figsize=(7, 4))
 ax.plot(np.arange(1, len(singular_values) + 1), singular_values, "o-", color="#2f5d7e")
@@ -477,7 +475,7 @@ Standardized residuals ask whether a study is poorly reproduced by the additive 
 
 ````{python}
 #| label: cell-011
-#| eval: false
+#| eval: true
 
 weighted_design = X * np.sqrt(weights[:, None])
 q_matrix, _ = np.linalg.qr(weighted_design, mode="reduced")
@@ -510,7 +508,7 @@ residual_diagnostics[["residual", "standardized_residual", "Q_contribution", "le
 
 ````{python}
 #| label: cell-012
-#| eval: false
+#| eval: true
 
 full_coefficients = additive["coefficients"]
 loo_effect_rows = []
@@ -586,7 +584,7 @@ display(leave_one_out_influence.round(3), leave_one_out_component_stability.roun
 
 ````{python}
 #| label: cell-013
-#| eval: false
+#| eval: true
 
 plot_data = leave_one_out_influence.iloc[::-1]
 fig, ax = plt.subplots(figsize=(9, 6))
@@ -604,7 +602,7 @@ fig.tight_layout()
 
 ````{python}
 #| label: cell-014
-#| eval: false
+#| eval: true
 
 maximum_residual = float(np.max(np.abs(standardized_residual)))
 maximum_loo_shift = float(leave_one_out_influence["maximum_absolute_shift"].max())
@@ -652,7 +650,7 @@ assumption_summary
 
 ````{python}
 #| label: cell-015
-#| eval: false
+#| eval: true
 
 EXPORT_DIR.mkdir(parents=True, exist_ok=True)
 

@@ -7,8 +7,6 @@ format:
     code-tools: true
     embed-resources: true
 jupyter: python3
-execute:
-  enabled: false
 ---
 
 Estimate 10 component effects and their variation by predicted severity across 12 studies. The outcome is 12-month PHQ-9; negative effects are favorable.
@@ -28,7 +26,7 @@ $$
 
 ````{python}
 #| label: cell-001
-#| eval: false
+#| eval: true
 
 %matplotlib inline
 
@@ -132,7 +130,7 @@ Generate each patient's score from the fitted Stage-1 R model, then apply the ba
 
 ````{python}
 #| label: cell-002
-#| eval: false
+#| eval: true
 
 risk_scores = load_stage1_risk_scores(
     RISK_MODEL_PATH,
@@ -179,7 +177,7 @@ Encode the 10 arm-level components, retain complete cases, and verify the random
 
 ````{python}
 #| label: cell-003
-#| eval: false
+#| eval: true
 
 COMPONENT_SOURCES = {
     "specialist_involvement": [
@@ -224,7 +222,7 @@ assert set(COMPONENT_LABELS) == set(component_cols)
 
 ````{python}
 #| label: cell-004
-#| eval: false
+#| eval: true
 
 source_cols = sorted({column for columns in COMPONENT_SOURCES.values() for column in columns})
 arm_keys = ["STUDY_ID", "study_arm"]
@@ -273,7 +271,7 @@ component_definition
 
 ````{python}
 #| label: cell-005
-#| eval: false
+#| eval: true
 
 model_columns = [
     "STUDY_ID",
@@ -354,7 +352,7 @@ The matrix is calculated from the same component coding used in the model. It is
 
 ````{python}
 #| label: cell-006
-#| eval: false
+#| eval: true
 
 COMPONENT_ABBREVIATIONS = {
     "specialist_involvement": "SI",
@@ -508,7 +506,7 @@ display(package_definitions, component_key)
 
 ````{python}
 #| label: cell-007
-#| eval: false
+#| eval: true
 
 from matplotlib.colors import ListedColormap
 from matplotlib.patches import Patch
@@ -591,7 +589,7 @@ Here, 13.5 is the mean and 6.5 is the standard deviation. The approximate 95% in
 
 ````{python}
 #| label: cell-008
-#| eval: false
+#| eval: true
 
 coords = {
     "study": study_names.tolist(),
@@ -634,7 +632,7 @@ path_cnma_model = build_path_cnma_model(INTERCEPT_PRIOR_MEAN, INTERCEPT_PRIOR_SD
 
 ````{python}
 #| label: cell-009
-#| eval: false
+#| eval: true
 
 def predictive_summary(values):
     values = np.asarray(values).reshape(-1)
@@ -672,7 +670,7 @@ az.plot_ppc(prior_idata, group="prior", num_pp_samples=200)
 
 ````{python}
 #| label: cell-010
-#| eval: false
+#| eval: true
 
 with path_cnma_model:
     trace_path_cnma = pm.sample(
@@ -695,7 +693,7 @@ First check whether the sampler behaved well; then check whether simulated outco
 
 ````{python}
 #| label: cell-011
-#| eval: false
+#| eval: true
 
 summary_vars = [
     "alpha_study",
@@ -733,7 +731,7 @@ display(diagnostics.to_frame().round(3))
 
 ````{python}
 #| label: cell-012
-#| eval: false
+#| eval: true
 
 az.plot_trace(
     trace_path_cnma,
@@ -750,7 +748,7 @@ az.plot_trace(
 
 ````{python}
 #| label: cell-013
-#| eval: false
+#| eval: true
 
 az.plot_autocorr(
     trace_path_cnma,
@@ -768,7 +766,7 @@ az.plot_autocorr(
 
 ````{python}
 #| label: cell-014
-#| eval: false
+#| eval: true
 
 az.plot_energy(trace_path_cnma);
 ````
@@ -783,7 +781,7 @@ These plots compare observed PHQ-9 scores with new outcomes simulated from the f
 
 ````{python}
 #| label: cell-015
-#| eval: false
+#| eval: true
 
 with path_cnma_model:
     pm.sample_posterior_predictive(
@@ -812,7 +810,7 @@ az.plot_ppc(trace_path_cnma, num_pp_samples=200)
 
 ````{python}
 #| label: cell-016
-#| eval: false
+#| eval: true
 
 y_replicated = trace_path_cnma.posterior_predictive["y_obs"]
 
@@ -855,7 +853,7 @@ posterior_predictive_statistics.round(3)
 
 ````{python}
 #| label: cell-017
-#| eval: false
+#| eval: true
 
 study_ppc_rows = []
 for study_code, study_name in enumerate(study_names):
@@ -920,7 +918,7 @@ Each point is the posterior median and each line is a 95% posterior interval. Ne
 
 ````{python}
 #| label: cell-018
-#| eval: false
+#| eval: true
 
 def summarize_effect(draws, prefix):
     return pd.DataFrame(
@@ -961,7 +959,7 @@ parameter_effects.set_index("clinical_name").round(3)
 
 ````{python}
 #| label: cell-019
-#| eval: false
+#| eval: true
 
 risk_quantiles = {"25th percentile": 0.25, "median": 0.50, "75th percentile": 0.75}
 risk_levels_raw = {
@@ -1005,7 +1003,7 @@ effect_medians.round(2)
 
 ````{python}
 #| label: cell-020
-#| eval: false
+#| eval: true
 
 plot_order = [COMPONENT_LABELS[column] for column in component_cols][::-1]
 fig, axes = plt.subplots(1, 3, figsize=(13, 6), sharey=True, sharex=True)
@@ -1047,7 +1045,7 @@ Compare the primary $\mathcal{N}(13.5,6.5^2)$ prior with $\mathcal{N}(10,5^2)$, 
 
 ````{python}
 #| label: cell-021
-#| eval: false
+#| eval: true
 
 prior_sensitivity_rows = []
 
@@ -1082,7 +1080,7 @@ prior_sensitivity_predictive.round(3)
 
 ````{python}
 #| label: cell-022
-#| eval: false
+#| eval: true
 
 sensitivity_traces = {REFERENCE_PRIOR: trace_path_cnma}
 
@@ -1111,7 +1109,7 @@ for prior_index, (prior_name, (intercept_mean, intercept_sd)) in enumerate(
 
 ````{python}
 #| label: cell-023
-#| eval: false
+#| eval: true
 
 sensitivity_effect_rows = []
 sensitivity_diagnostic_rows = []
@@ -1202,7 +1200,7 @@ display(
 
 ````{python}
 #| label: cell-024
-#| eval: false
+#| eval: true
 
 fig, axes = plt.subplots(1, 2, figsize=(13, 6), sharey=True, sharex=True)
 plot_parameters = ["main effect", "risk interaction"]
@@ -1245,7 +1243,7 @@ Export model results, diagnostics, and sensitivity results. Continue with the [a
 
 ````{python}
 #| label: cell-025
-#| eval: false
+#| eval: true
 
 EXPORT_DIR.mkdir(parents=True, exist_ok=True)
 
