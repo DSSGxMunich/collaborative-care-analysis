@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.26">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="DSSGx Munich 2026 Fellows">
+<meta name="dcterms.date" content="2026-10-02">
+
+<title>The Two-Stage Prediction Model for Individualized Treatment Benefit Behind the Collaborative Care Compass</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="Step-1_Risk-Model_files/libs/clipboard/clipboard.min.js"></script>
+<script src="Step-1_Risk-Model_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="Step-1_Risk-Model_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="Step-1_Risk-Model_files/libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="Step-1_Risk-Model_files/libs/quarto-html/popper.min.js"></script>
+<script src="Step-1_Risk-Model_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="Step-1_Risk-Model_files/libs/quarto-html/anchor.min.js"></script>
+<link href="Step-1_Risk-Model_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="Step-1_Risk-Model_files/libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="Step-1_Risk-Model_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="Step-1_Risk-Model_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="Step-1_Risk-Model_files/libs/bootstrap/bootstrap-d6a003b94517c951b2d65075d42fb01b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="fullcontent quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title">The Two-Stage Prediction Model for Individualized Treatment Benefit Behind the <em>Collaborative Care Compass</em></h1><button type="button" class="btn code-tools-button dropdown-toggle" id="quarto-code-tools-menu" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi"></i> Code</button><ul class="dropdown-menu dropdown-menu-end" aria-labelelledby="quarto-code-tools-menu"><li><a id="quarto-show-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Show All Code</a></li><li><a id="quarto-hide-all-code" class="dropdown-item" href="javascript:void(0)" role="button">Hide All Code</a></li><li><hr class="dropdown-divider"></li><li><a id="quarto-view-source" class="dropdown-item" href="javascript:void(0)" role="button">View Source</a></li></ul></div></div>
+<p class="subtitle lead">Stage 1: The Risk Model</p>
+</div>
+
+
+<div class="quarto-title-meta-author">
+  <div class="quarto-title-meta-heading">Author</div>
+  <div class="quarto-title-meta-heading">Affiliations</div>
+  
+    <div class="quarto-title-meta-contents">
+    <p class="author"><a href="https://www.dssgxmunich.org/project-2026">DSSGx Munich 2026 Fellows</a> </p>
+  </div>
+  <div class="quarto-title-meta-contents">
+        <p class="affiliation">
+            <a href="https://www.stat.lmu.de/soda/en/">
+            Social Data Science and AI Lab, LMU Munich
+            </a>
+          </p>
+        <p class="affiliation">
+            <a href="https://mcml.ai/">
+            Munich Center for Machine Learning
+            </a>
+          </p>
+      </div>
+  </div>
+
+<div class="quarto-title-meta">
+
+      
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">October 2, 2026</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="overview" class="level1">
+<h1>Overview</h1>
+<p>The <a href="https://dssgxmunich.github.io/collaborative-care-webapp/"><i>Collaborative Care Compass</i></a> is a research prototype to predict how collaborative care treatment components influence the PHQ-9 score for a person with depression one year from treatment start. It is developed based on individual patient data (IPD) from randomized controlled trials comparing collaborative care as intervention and usual care as control.<br></p>
+<p>The model consists of two parts: The first part is a risk model, predicting depressive symptom severity at 12 months from baseline characteristics. The output of the model is a risk score, used as input to the second part which estimates how the effects of collaborative care components vary by baseline risk, following the <a href="https://pubmed.ncbi.nlm.nih.gov/31711134/">PATH framework by Kent et al.&nbsp;(2020)</a>.</p>
+<p><strong>This report covers stage 1, the risk model.</strong> Stage 2, the component network meta-analysis, is documented separately.</p>
+</section>
+<section id="risk-model" class="level1">
+<h1>Risk Model</h1>
+<p>We believe the PATH consensus criteria on the effectiveness of risk modeling to RCT (meta-) analysis are fulfilled. There is, to our knowledge, no compatible, externally-developed risk model available to stratify trial results. We therefore develop a risk model based on the multi-trial population we carefully extracted out of IPD from 29 RCTs.<br></p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(data.table)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(Hmisc)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(splines)</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ordinal)</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rms)</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(metafor)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Sourcing risk_score_model.R brings in the model definition and the cohort</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="co"># path it reads, DATA_PATH.</span></span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a>REPO_ROOT <span class="ot">&lt;-</span> rprojroot<span class="sc">::</span><span class="fu">find_root</span>(rprojroot<span class="sc">::</span><span class="fu">has_file</span>(<span class="st">"pyproject.toml"</span>))</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">file.path</span>(REPO_ROOT, <span class="st">"collaborative_care_analysis"</span>, <span class="st">"data_analysis"</span>,</span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a>                 <span class="st">"risk_score_model.R"</span>))</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a><span class="co"># The cohort is built from the harmonised IPD by</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co">#   uv run collaborative_care_analysis/dataset.py analysis-data phq9_12mo_core</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">load_model_data</span>(DATA_PATH)</span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a><span class="co"># inspect marginal distributions for covariates and baseline</span></span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>tab <span class="ot">&lt;-</span> <span class="fu">table</span>(df<span class="sc">$</span>arm, df<span class="sc">$</span>study_id)</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>tab <span class="ot">&lt;-</span> tab[, <span class="fu">order</span>(<span class="sc">-</span><span class="fu">colSums</span>(tab))]</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">9</span>, <span class="dv">4</span>, <span class="dv">2</span>, <span class="dv">1</span>))</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a><span class="fu">barplot</span>(tab, <span class="at">col =</span> <span class="fu">c</span>(<span class="st">"#9AA4AA"</span>, <span class="st">"#195A7D"</span>), <span class="at">las =</span> <span class="dv">2</span>, <span class="at">ylab =</span> <span class="st">"Patients"</span>,</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>        <span class="at">legend.text =</span> <span class="cn">TRUE</span>, <span class="at">args.legend =</span> <span class="fu">list</span>(<span class="at">x =</span> <span class="st">"topright"</span>, <span class="at">bty =</span> <span class="st">"n"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Step-1_Risk-Model_files/figure-html/setup-1.png" class="img-fluid figure-img" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">2</span>) <span class="sc">+</span> <span class="fl">0.1</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(df<span class="sc">$</span>age, <span class="at">main =</span> <span class="st">"Age at baseline"</span>,  <span class="at">xlab =</span> <span class="st">"age"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Step-1_Risk-Model_files/figure-html/setup-2.png" class="img-fluid figure-img" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="fu">barplot</span>(<span class="fu">table</span>(df<span class="sc">$</span>sex), <span class="at">main =</span> <span class="st">"Sex"</span>, <span class="at">xlab =</span> <span class="st">"sex"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Step-1_Risk-Model_files/figure-html/setup-3.png" class="img-fluid figure-img" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(df<span class="sc">$</span>phq9_at_baseline, <span class="at">main =</span> <span class="st">"PHQ-9 at baseline"</span>,  <span class="at">xlab =</span> <span class="st">"score"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Step-1_Risk-Model_files/figure-html/setup-4.png" class="img-fluid figure-img" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(df<span class="sc">$</span>phq9_at_12mo, <span class="at">main =</span> <span class="st">"PHQ-9 at 12 months"</span>, <span class="at">xlab =</span> <span class="st">"score"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Step-1_Risk-Model_files/figure-html/setup-5.png" class="img-fluid figure-img" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+</div>
+<section id="initial-model-specification" class="level2">
+<h2 class="anchored" data-anchor-id="initial-model-specification">Initial Model Specification</h2>
+<p>Let <span class="math inline">\(Y^{(12)}_{ij} \in \{0, 1, \dots, 27\}\)</span> denote the total PHQ-9 score of individual <span class="math inline">\(i = 1, \dots, n_j\)</span> in study <span class="math inline">\(j = 1, \dots, 12\)</span> at 12 months post-randomization, and <span class="math inline">\(y^{(0)}_{ij}\)</span> the known PHQ-9 score at baseline. We specify the semiparametric ordinal logistic mixed model</p>
+<p><span class="math display">\[
+P\left(Y^{(12)}_{ij} \leq k \mid \mathbf{x}_{ij}, y^{(0)}_{ij}, \alpha_j, \gamma_j\right)
+= \sigma\left(\theta_k - \eta_{ij}\right), \qquad k = 0, 1, \dots, 26,
+\]</span></p>
+<p>with linear predictor</p>
+<p><span class="math display">\[
+\eta_{ij} = \beta_{\text{sex}}\, \text{sex}_{ij}
++ \sum_{m=1}^{2} \beta_{\text{age},m}\, s_m(\text{age}_{ij})
++ \left(\beta_{0} + \gamma_j\right) y^{(0)}_{ij}
++ \alpha_j,
+\]</span></p>
+<p>where</p>
+<ul>
+<li><span class="math inline">\(\theta_0 &lt; \theta_1 &lt; \dots &lt; \theta_{26}\)</span> are threshold intercepts between adjacent PHQ-9 scores,</li>
+<li><span class="math inline">\(\text{sex}_{ij}\)</span> is an indicator for male sex,</li>
+<li><span class="math inline">\(s_1(\text{age})\)</span> and <span class="math inline">\(s_2(\text{age})\)</span> are basis functions of a restricted cubic spline with three knots at the 10th, 50th and 90th age percentiles,</li>
+<li><span class="math inline">\(\text{age}_{ij}\)</span> and <span class="math inline">\(y^{(0)}_{ij}\)</span> enter centred and scaled by their sample mean and standard deviation,</li>
+<li><span class="math inline">\(\gamma_j\)</span> is a random study slope on baseline PHQ-9,</li>
+<li><span class="math inline">\(\alpha_j\)</span> is a random study intercept,</li>
+</ul>
+<p>and the study-level random effects are independent,</p>
+<p><span class="math display">\[
+\alpha_j \sim \mathcal{N}\left(0, \tau_\alpha^2\right), \qquad
+\gamma_j \sim \mathcal{N}\left(0, \tau_\gamma^2\right).
+\]</span></p>
+</section>
+<section id="model-data" class="level2">
+<h2 class="anchored" data-anchor-id="model-data">Model Data</h2>
+<p>All models below use baseline PHQ-9 and age centered and scaled by their sample mean and standard deviation, and a spline for age with knots at the 10th, 50th and 90th percentiles.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>prepared <span class="ot">&lt;-</span> <span class="fu">add_centred_terms</span>(df)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> prepared<span class="sc">$</span>data</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>knots_c <span class="ot">&lt;-</span> <span class="fu">age_spline_knots</span>(df)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="co"># fixed part is used for the design matrix and for predictions, full part adds</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="co"># the study random effects</span></span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>forms <span class="ot">&lt;-</span> <span class="fu">model_formulas</span>(knots_c)</span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>fixed_form <span class="ot">&lt;-</span> forms<span class="sc">$</span>fixed</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>model_formula <span class="ot">&lt;-</span> forms<span class="sc">$</span>full</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+</section>
+<section id="sample-size-calculation" class="level2">
+<h2 class="anchored" data-anchor-id="sample-size-calculation">Sample Size Calculation</h2>
+<p>We conduct a sample size calculation according to <a href="https://journals.sagepub.com/doi/10.1177/09622802231151220">Pate et al.&nbsp;(2023)</a>.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 1</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="co"># calculating Q, the number of predictor parameters</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(fixed_form, <span class="at">data =</span> df)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>Q <span class="ot">&lt;-</span> (<span class="fu">ncol</span>(X) <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">+</span> <span class="dv">1</span>  <span class="co"># baseline (1) + age spline (2) + sex (1), plus the random slope</span></span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co"># calculating outcome proportions</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>counts <span class="ot">&lt;-</span> df[<span class="fu">order</span>(phq9_at_12mo), .N, by <span class="ot">=</span> phq9_at_12mo]</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>n_obs <span class="ot">&lt;-</span> <span class="fu">sum</span>(counts<span class="sc">$</span>N)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>pk <span class="ot">&lt;-</span> counts<span class="sc">$</span>N <span class="sc">/</span> n_obs</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a>pairs <span class="ot">&lt;-</span> <span class="fu">CJ</span>(<span class="at">r =</span> counts<span class="sc">$</span>phq9_at_12mo, <span class="at">k =</span> counts<span class="sc">$</span>phq9_at_12mo)[k <span class="sc">&gt;</span> r]</span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a>pairs[counts, E_r <span class="sc">:</span><span class="er">=</span> i.N, on <span class="ot">=</span> .(<span class="at">r =</span> phq9_at_12mo)]</span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a>pairs[counts, E_k <span class="sc">:</span><span class="er">=</span> i.N, on <span class="ot">=</span> .(<span class="at">k =</span> phq9_at_12mo)]</span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a>pairs[, p_kr <span class="sc">:</span><span class="er">=</span> (E_k <span class="sc">+</span> E_r) <span class="sc">/</span> n_obs]  <span class="co"># p_{k,r}</span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-16"><a href="#cb7-16" aria-hidden="true" tabindex="-1"></a><span class="co"># max(R2_CS_app) for the overall multinomial model</span></span>
+<span id="cb7-17"><a href="#cb7-17" aria-hidden="true" tabindex="-1"></a>max_r2_overall <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> <span class="fu">prod</span>(pk<span class="sc">^</span>pk)<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb7-18"><a href="#cb7-18" aria-hidden="true" tabindex="-1"></a><span class="co"># fallback to R2_Nagelkerke = 0.15</span></span>
+<span id="cb7-19"><a href="#cb7-19" aria-hidden="true" tabindex="-1"></a>R2_adj_overall <span class="ot">&lt;-</span> <span class="fl">0.15</span> <span class="sc">*</span> max_r2_overall</span>
+<span id="cb7-20"><a href="#cb7-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-21"><a href="#cb7-21" aria-hidden="true" tabindex="-1"></a><span class="co"># max(R2_CS_app,k,r) per one vs one sub-model</span></span>
+<span id="cb7-22"><a href="#cb7-22" aria-hidden="true" tabindex="-1"></a>pairs[, phi_kr <span class="sc">:</span><span class="er">=</span> E_k <span class="sc">/</span> (E_k <span class="sc">+</span> E_r)]</span>
+<span id="cb7-23"><a href="#cb7-23" aria-hidden="true" tabindex="-1"></a>pairs[, max_r2 <span class="sc">:</span><span class="er">=</span> <span class="dv">1</span> <span class="sc">-</span> (phi_kr<span class="sc">^</span>phi_kr <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> phi_kr)<span class="sc">^</span>(<span class="dv">1</span> <span class="sc">-</span> phi_kr))<span class="sc">^</span><span class="dv">2</span>]</span>
+<span id="cb7-24"><a href="#cb7-24" aria-hidden="true" tabindex="-1"></a>pairs[, R2_adj <span class="sc">:</span><span class="er">=</span> <span class="fl">0.15</span> <span class="sc">*</span> max_r2]</span>
+<span id="cb7-25"><a href="#cb7-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-26"><a href="#cb7-26" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 3: criterion (i)</span></span>
+<span id="cb7-27"><a href="#cb7-27" aria-hidden="true" tabindex="-1"></a>S <span class="ot">&lt;-</span> <span class="fl">0.9</span></span>
+<span id="cb7-28"><a href="#cb7-28" aria-hidden="true" tabindex="-1"></a>crit_i_m <span class="ot">&lt;-</span> <span class="cf">function</span>(Q, R2adj, <span class="at">S =</span> <span class="fl">0.9</span>) {</span>
+<span id="cb7-29"><a href="#cb7-29" aria-hidden="true" tabindex="-1"></a>  Q <span class="sc">/</span> ((S <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">*</span> <span class="fu">log</span>(<span class="dv">1</span> <span class="sc">-</span> R2adj <span class="sc">/</span> S))</span>
+<span id="cb7-30"><a href="#cb7-30" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb7-31"><a href="#cb7-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-32"><a href="#cb7-32" aria-hidden="true" tabindex="-1"></a>pairs[, m_kr <span class="sc">:</span><span class="er">=</span> <span class="fu">crit_i_m</span>(Q, R2_adj, S)]</span>
+<span id="cb7-33"><a href="#cb7-33" aria-hidden="true" tabindex="-1"></a>pairs[, n_kr <span class="sc">:</span><span class="er">=</span> m_kr <span class="sc">/</span> p_kr]</span>
+<span id="cb7-34"><a href="#cb7-34" aria-hidden="true" tabindex="-1"></a>crit_i <span class="ot">&lt;-</span> <span class="fu">max</span>(pairs<span class="sc">$</span>n_kr)</span>
+<span id="cb7-35"><a href="#cb7-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-36"><a href="#cb7-36" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 4: criterion (ii)</span></span>
+<span id="cb7-37"><a href="#cb7-37" aria-hidden="true" tabindex="-1"></a>delta  <span class="ot">&lt;-</span> <span class="fl">0.05</span></span>
+<span id="cb7-38"><a href="#cb7-38" aria-hidden="true" tabindex="-1"></a>K <span class="ot">&lt;-</span> <span class="fu">nrow</span>(counts)</span>
+<span id="cb7-39"><a href="#cb7-39" aria-hidden="true" tabindex="-1"></a>crit_ii <span class="ot">&lt;-</span> (K <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">*</span> Q <span class="sc">/</span></span>
+<span id="cb7-40"><a href="#cb7-40" aria-hidden="true" tabindex="-1"></a>  ((R2_adj_overall <span class="sc">/</span> (R2_adj_overall <span class="sc">+</span> delta <span class="sc">*</span> max_r2_overall) <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">*</span></span>
+<span id="cb7-41"><a href="#cb7-41" aria-hidden="true" tabindex="-1"></a>     <span class="fu">log</span>(<span class="dv">1</span> <span class="sc">-</span> R2_adj_overall <span class="sc">-</span> delta <span class="sc">*</span> max_r2_overall))</span>
+<span id="cb7-42"><a href="#cb7-42" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-43"><a href="#cb7-43" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 5: criterion (iii)</span></span>
+<span id="cb7-44"><a href="#cb7-44" aria-hidden="true" tabindex="-1"></a>alpha <span class="ot">&lt;-</span> <span class="fl">0.05</span></span>
+<span id="cb7-45"><a href="#cb7-45" aria-hidden="true" tabindex="-1"></a>chi <span class="ot">&lt;-</span> <span class="fu">qchisq</span>(<span class="dv">1</span> <span class="sc">-</span> alpha <span class="sc">/</span> K, <span class="at">df =</span> <span class="dv">1</span>)</span>
+<span id="cb7-46"><a href="#cb7-46" aria-hidden="true" tabindex="-1"></a>crit_iii <span class="ot">&lt;-</span> <span class="fu">max</span>(chi <span class="sc">*</span> pk <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> pk) <span class="sc">/</span> delta<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb7-47"><a href="#cb7-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-48"><a href="#cb7-48" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 6: the requirement is the maximum</span></span>
+<span id="cb7-49"><a href="#cb7-49" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">Q =</span> Q, <span class="at">K =</span> K, <span class="at">n_obs =</span> n_obs,</span>
+<span id="cb7-50"><a href="#cb7-50" aria-hidden="true" tabindex="-1"></a>  <span class="at">crit_i =</span> crit_i, <span class="at">crit_ii =</span> crit_ii, <span class="at">crit_iii =</span> crit_iii,</span>
+<span id="cb7-51"><a href="#cb7-51" aria-hidden="true" tabindex="-1"></a>  <span class="at">required =</span> <span class="fu">max</span>(crit_i, crit_ii, crit_iii))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>         Q          K      n_obs     crit_i    crit_ii   crit_iii   required 
+    5.0000    28.0000  6454.0000 62097.1795  2426.0586   298.2365 62097.1795 </code></pre>
+</div>
+</div>
+<p>We treat the required sample size as a conservative upper bound. Our ordinal model under the proportional odds assumption likely requires a smaller sample size, since less parameters are to be estimated than for a multinomial model (see the discussion section in Pate et al.). Since two out of three criteria in the sample size calculation are fulfilled, we deem the sample size sufficient for the model we aim to fit, without risking serious overfitting.</p>
+</section>
+<section id="ordinality-and-po-assumption" class="level2">
+<h2 class="anchored" data-anchor-id="ordinality-and-po-assumption">Ordinality and PO Assumption</h2>
+<p>Under the assumption that a predictor <span class="math inline">\(X\)</span> is linearly related to the cumulative log-odds of <span class="math inline">\(\{Y^{(12)}_{ij} \leq k\}\)</span>, the ordinality assumption underlying an ordinal regression model can be checked by plotting the mean of <span class="math inline">\(X\)</span> against levels of <span class="math inline">\(Y\)</span>. The stratified means should then show a consistent trend. Note that the ordinality assumption may appear to be violated due to non-linear effects of <span class="math inline">\(X\)</span> on <span class="math inline">\(Y\)</span> (see chapter 13 in Frank Harrell’s <a href="https://link.springer.com/book/10.1007/978-3-319-19425-7">Regression Modeling Strategies</a>).</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>x_cont <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"phq9_at_baseline"</span>, <span class="st">"age"</span>)</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>x_all  <span class="ot">&lt;-</span> <span class="fu">c</span>(x_cont, <span class="st">"sex"</span>)</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a><span class="co"># mean of X by level of Y, with 95% CIs; for a factor, the proportion in its second level</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>means_by_y <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>  v     <span class="ot">&lt;-</span> df[[x]]</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>  label <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="st">"mean"</span>, x)</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.factor</span>(v)) {</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    label <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"P("</span>, x, <span class="st">" = "</span>, <span class="fu">levels</span>(v)[<span class="dv">2</span>], <span class="st">")"</span>)</span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    v     <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(v <span class="sc">==</span> <span class="fu">levels</span>(v)[<span class="dv">2</span>])</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  s <span class="ot">&lt;-</span> <span class="fu">data.table</span>(<span class="at">y =</span> df<span class="sc">$</span>phq9_at_12mo, <span class="at">v =</span> v)[</span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a>    , .(<span class="at">m =</span> <span class="fu">mean</span>(v), <span class="at">se =</span> <span class="fu">sd</span>(v) <span class="sc">/</span> <span class="fu">sqrt</span>(.N)), by <span class="ot">=</span> y][<span class="fu">order</span>(y)]</span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a>  s[, <span class="st">`</span><span class="at">:=</span><span class="st">`</span>(<span class="at">lo =</span> m <span class="sc">-</span> <span class="fl">1.96</span> <span class="sc">*</span> se, <span class="at">hi =</span> m <span class="sc">+</span> <span class="fl">1.96</span> <span class="sc">*</span> se)]</span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">means =</span> s, <span class="at">label =</span> label)</span>
+<span id="cb9-16"><a href="#cb9-16" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb9-17"><a href="#cb9-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-18"><a href="#cb9-18" aria-hidden="true" tabindex="-1"></a>op <span class="ot">&lt;-</span> <span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fu">length</span>(x_all)), <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">2</span>, <span class="dv">1</span>))</span>
+<span id="cb9-19"><a href="#cb9-19" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (x <span class="cf">in</span> x_all) {</span>
+<span id="cb9-20"><a href="#cb9-20" aria-hidden="true" tabindex="-1"></a>  r <span class="ot">&lt;-</span> <span class="fu">means_by_y</span>(x)</span>
+<span id="cb9-21"><a href="#cb9-21" aria-hidden="true" tabindex="-1"></a>  s <span class="ot">&lt;-</span> r<span class="sc">$</span>means</span>
+<span id="cb9-22"><a href="#cb9-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot</span>(s<span class="sc">$</span>y, s<span class="sc">$</span>m, <span class="at">type =</span> <span class="st">"b"</span>, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">0.6</span>, <span class="at">ylim =</span> <span class="fu">range</span>(s<span class="sc">$</span>lo, s<span class="sc">$</span>hi, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb9-23"><a href="#cb9-23" aria-hidden="true" tabindex="-1"></a>       <span class="at">xlab =</span> <span class="st">"phq9_at_12mo"</span>, <span class="at">ylab =</span> r<span class="sc">$</span>label, <span class="at">main =</span> x)</span>
+<span id="cb9-24"><a href="#cb9-24" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrows</span>(s<span class="sc">$</span>y, s<span class="sc">$</span>lo, s<span class="sc">$</span>y, s<span class="sc">$</span>hi, <span class="at">angle =</span> <span class="dv">90</span>, <span class="at">code =</span> <span class="dv">3</span>, <span class="at">length =</span> <span class="fl">0.02</span>, <span class="at">col =</span> <span class="st">"grey50"</span>)</span>
+<span id="cb9-25"><a href="#cb9-25" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Step-1_Risk-Model_files/figure-html/unnamed-chunk-2-1.png" class="img-fluid figure-img" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(op)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<p>Under the proportional odds assumption, the cumulative log-odds for different cut-points, plotted against individual predictors, should be parallel.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>cuts <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">15</span>, <span class="dv">20</span>, <span class="dv">25</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a>plot_parallelism <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot</span>(<span class="cn">NA</span>, <span class="at">xlim =</span> <span class="fu">range</span>(df[[x]]), <span class="at">ylim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">6</span>, <span class="dv">4</span>),</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>       <span class="at">xlab =</span> x, <span class="at">ylab =</span> <span class="st">"logit P(Y &gt;= j)"</span>, <span class="at">main =</span> x)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_along</span>(cuts))</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">suppressWarnings</span>(<span class="fu">plsmo</span>(df[[x]], df<span class="sc">$</span>phq9_at_12mo <span class="sc">&gt;=</span> cuts[i], <span class="at">fun =</span> qlogis,</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>                           <span class="at">add =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> i, <span class="at">lwd =</span> <span class="dv">2</span>))</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">legend</span>(<span class="st">"bottomright"</span>, <span class="fu">paste</span>(<span class="st">"Y &gt;="</span>, cuts), <span class="at">col =</span> <span class="fu">seq_along</span>(cuts),</span>
+<span id="cb11-10"><a href="#cb11-10" aria-hidden="true" tabindex="-1"></a>         <span class="at">lwd =</span> <span class="dv">2</span>, <span class="at">bty =</span> <span class="st">"n"</span>, <span class="at">cex =</span> <span class="fl">0.8</span>)</span>
+<span id="cb11-11"><a href="#cb11-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb11-12"><a href="#cb11-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-13"><a href="#cb11-13" aria-hidden="true" tabindex="-1"></a>op <span class="ot">&lt;-</span> <span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fu">length</span>(x_cont)), <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">2</span>, <span class="dv">1</span>))</span>
+<span id="cb11-14"><a href="#cb11-14" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (x <span class="cf">in</span> x_cont) <span class="fu">plot_parallelism</span>(x)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div>
+<figure class="figure">
+<p><img src="Step-1_Risk-Model_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" style="width:100.0%"></p>
+</figure>
+</div>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(op)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<p>Compare the goodness of fit between the full PO model and letting one predictor’s coefficient vary across thresholds (partial PO).</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># since clmm does not support nominal_test, the random intercept and slope</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co"># are approximated by fixed study effects and a study * baseline interaction</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>m_po <span class="ot">&lt;-</span> <span class="fu">clm</span>(<span class="fu">update</span>(fixed_form, <span class="fu">ordered</span>(phq9_at_12mo) <span class="sc">~</span> . <span class="sc">+</span> study_id <span class="sc">+</span></span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>                     phq9_at_baseline_c<span class="sc">:</span>study_id),</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">data =</span> df)</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a><span class="co"># test the predictors only; the study terms are there to adjust</span></span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>predictors <span class="ot">&lt;-</span> <span class="fu">grep</span>(<span class="st">"study_id"</span>, <span class="fu">attr</span>(<span class="fu">terms</span>(m_po), <span class="st">"term.labels"</span>),</span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>                   <span class="at">value =</span> <span class="cn">TRUE</span>, <span class="at">invert =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>nt <span class="ot">&lt;-</span> <span class="fu">nominal_test</span>(m_po, <span class="at">scope =</span> predictors)</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>nt<span class="sc">$</span>LRT_per_df <span class="ot">&lt;-</span> <span class="fu">round</span>(nt<span class="sc">$</span>LRT <span class="sc">/</span> nt<span class="sc">$</span>Df, <span class="dv">2</span>)</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>nt[, <span class="fu">c</span>(<span class="st">"Df"</span>, <span class="st">"LRT"</span>, <span class="st">"LRT_per_df"</span>)]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>                                                                     Df     LRT
+&lt;none&gt;                                                                         
+phq9_at_baseline_c                                                   26 218.285
+ns(age_c, knots = age_knots[2], Boundary.knots = age_knots[c(1, 3)]) 52 162.890
+sex                                                                  26  55.939
+                                                                     LRT_per_df
+&lt;none&gt;                                                                         
+phq9_at_baseline_c                                                         8.40
+ns(age_c, knots = age_knots[2], Boundary.knots = age_knots[c(1, 3)])       3.13
+sex                                                                        2.15</code></pre>
+</div>
+</div>
+<p>Especially, centered baseline PHQ-9 departs from the PO assumption. We nevertheless retain the more parsimonious PO model and assess whether this affects predictive performance, the core utility for of the risk model, using internal-external cross-validation.</p>
+</section>
+<section id="internal-external-cross-validation" class="level2">
+<h2 class="anchored" data-anchor-id="internal-external-cross-validation">Internal-External Cross-Validation</h2>
+<p>Following <a href="https://doi.org/10.1016/j.jclinepi.2015.04.005">Steyerberg and Harrell (2016)</a>, we assess how the model performs in a setting it has not seen by internal-external cross-validation (IECV). Each study is left out once, the model is fitted to the remaining eleven, and its predictions are evaluated in the left-out study. We report</p>
+<ul>
+<li>Somers’ <span class="math inline">\(D_{xy}\)</span> between the linear predictor and the observed PHQ-9 score (full scale)</li>
+<li>c-statistic</li>
+<li>calibration slope</li>
+<li>calibration-in-the-large (all for PHQ-9 <span class="math inline">\(\geq 5\)</span>, <span class="math inline">\(\geq 10\)</span> and <span class="math inline">\(\geq 15\)</span>)</li>
+</ul>
+<p>The estimates of each metric are pooled by random-effects meta-analysis, giving the average performance, its between-study standard deviation <span class="math inline">\(\tau\)</span>, and a 95% prediction interval for a new study.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb15"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co">#|</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>predict_new_study <span class="ot">&lt;-</span> <span class="cf">function</span>(fit, newdata) {</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>  cf <span class="ot">&lt;-</span> <span class="fu">coef</span>(fit)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>  theta <span class="ot">&lt;-</span> cf[<span class="fu">grepl</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">|"</span>, <span class="fu">names</span>(cf))]     <span class="co"># thresholds</span></span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>  beta<span class="ot">&lt;-</span>  cf[<span class="sc">!</span><span class="fu">grepl</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">|"</span>, <span class="fu">names</span>(cf))]</span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a>  X <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(fixed_form, <span class="at">data =</span> newdata)[, <span class="sc">-</span><span class="dv">1</span>, drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">colnames</span>(X), <span class="fu">names</span>(beta)))</span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> <span class="fu">as.vector</span>(X <span class="sc">%*%</span> beta)</span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a>  cum <span class="ot">&lt;-</span> <span class="fu">sapply</span>(theta, <span class="cf">function</span>(t) <span class="fu">plogis</span>(t <span class="sc">-</span> eta))</span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">eta =</span> eta, <span class="at">cum =</span> <span class="fu">matrix</span>(cum, <span class="at">nrow =</span> <span class="fu">length</span>(eta)))   <span class="co"># P(Y &lt;= j - 1) column</span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-13"><a href="#cb15-13" aria-hidden="true" tabindex="-1"></a>evaluate_study <span class="ot">&lt;-</span> <span class="cf">function</span>(pred, y) {</span>
+<span id="cb15-14"><a href="#cb15-14" aria-hidden="true" tabindex="-1"></a>  rc  <span class="ot">&lt;-</span> <span class="fu">rcorr.cens</span>(pred<span class="sc">$</span>eta, y)</span>
+<span id="cb15-15"><a href="#cb15-15" aria-hidden="true" tabindex="-1"></a>  res <span class="ot">&lt;-</span> <span class="fu">data.table</span>(<span class="at">metric =</span> <span class="st">"Dxy (full scale)"</span>, <span class="at">est =</span> rc[[<span class="st">"Dxy"</span>]], <span class="at">se =</span> rc[[<span class="st">"S.D."</span>]])</span>
+<span id="cb15-16"><a href="#cb15-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-17"><a href="#cb15-17" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (cut <span class="cf">in</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">15</span>)) {</span>
+<span id="cb15-18"><a href="#cb15-18" aria-hidden="true" tabindex="-1"></a>    obs <span class="ot">&lt;-</span> <span class="fu">as.integer</span>(y <span class="sc">&gt;=</span> cut)</span>
+<span id="cb15-19"><a href="#cb15-19" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">sum</span>(obs) <span class="sc">&lt;</span> <span class="dv">10</span> <span class="sc">||</span> <span class="fu">sum</span>(<span class="dv">1</span> <span class="sc">-</span> obs) <span class="sc">&lt;</span> <span class="dv">10</span>) <span class="cf">next</span>    <span class="co"># too few patients on one side</span></span>
+<span id="cb15-20"><a href="#cb15-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-21"><a href="#cb15-21" aria-hidden="true" tabindex="-1"></a>    p <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> pred<span class="sc">$</span>cum[, cut]                 <span class="co"># P(Y &gt;= cut) = 1 - P(Y &lt;= cut - 1)</span></span>
+<span id="cb15-22"><a href="#cb15-22" aria-hidden="true" tabindex="-1"></a>    lp <span class="ot">&lt;-</span> <span class="fu">qlogis</span>(<span class="fu">pmin</span>(<span class="fu">pmax</span>(p, <span class="fl">1e-6</span>), <span class="dv">1</span> <span class="sc">-</span> <span class="fl">1e-6</span>))</span>
+<span id="cb15-23"><a href="#cb15-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-24"><a href="#cb15-24" aria-hidden="true" tabindex="-1"></a>    rc <span class="ot">&lt;-</span> <span class="fu">rcorr.cens</span>(lp, obs)</span>
+<span id="cb15-25"><a href="#cb15-25" aria-hidden="true" tabindex="-1"></a>    slope <span class="ot">&lt;-</span> <span class="fu">coef</span>(<span class="fu">summary</span>(<span class="fu">glm</span>(obs <span class="sc">~</span> lp, <span class="at">family =</span> binomial)))[<span class="st">"lp"</span>, ]</span>
+<span id="cb15-26"><a href="#cb15-26" aria-hidden="true" tabindex="-1"></a>    citl <span class="ot">&lt;-</span> <span class="fu">coef</span>(<span class="fu">summary</span>(<span class="fu">glm</span>(obs <span class="sc">~</span> <span class="fu">offset</span>(lp), <span class="at">family =</span> binomial)))[<span class="st">"(Intercept)"</span>, ]</span>
+<span id="cb15-27"><a href="#cb15-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-28"><a href="#cb15-28" aria-hidden="true" tabindex="-1"></a>    res <span class="ot">&lt;-</span> <span class="fu">rbind</span>(res, <span class="fu">data.table</span>(</span>
+<span id="cb15-29"><a href="#cb15-29" aria-hidden="true" tabindex="-1"></a>      <span class="at">metric =</span> <span class="fu">paste</span>(<span class="fu">c</span>(<span class="st">"c-statistic"</span>, <span class="st">"calibration slope"</span>, <span class="st">"CITL"</span>), <span class="st">"at Y &gt;="</span>, cut),</span>
+<span id="cb15-30"><a href="#cb15-30" aria-hidden="true" tabindex="-1"></a>      <span class="at">est =</span> <span class="fu">c</span>(rc[[<span class="st">"C Index"</span>]],   slope[[<span class="st">"Estimate"</span>]],   citl[[<span class="st">"Estimate"</span>]]),</span>
+<span id="cb15-31"><a href="#cb15-31" aria-hidden="true" tabindex="-1"></a>      <span class="at">se =</span> <span class="fu">c</span>(rc[[<span class="st">"S.D."</span>]] <span class="sc">/</span> <span class="dv">2</span>,  slope[[<span class="st">"Std. Error"</span>]], citl[[<span class="st">"Std. Error"</span>]])))</span>
+<span id="cb15-32"><a href="#cb15-32" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb15-33"><a href="#cb15-33" aria-hidden="true" tabindex="-1"></a>  res</span>
+<span id="cb15-34"><a href="#cb15-34" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb15-35"><a href="#cb15-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb15-36"><a href="#cb15-36" aria-hidden="true" tabindex="-1"></a>leave_one_out <span class="ot">&lt;-</span> <span class="cf">function</span>(s) {</span>
+<span id="cb15-37"><a href="#cb15-37" aria-hidden="true" tabindex="-1"></a>  train <span class="ot">&lt;-</span> <span class="fu">droplevels</span>(df[study_id <span class="sc">!=</span> s])</span>
+<span id="cb15-38"><a href="#cb15-38" aria-hidden="true" tabindex="-1"></a>  test  <span class="ot">&lt;-</span> df[study_id <span class="sc">==</span> s]</span>
+<span id="cb15-39"><a href="#cb15-39" aria-hidden="true" tabindex="-1"></a>  fit   <span class="ot">&lt;-</span> <span class="fu">clmm</span>(model_formula, <span class="at">data =</span> train, <span class="at">link =</span> <span class="st">"logit"</span>)</span>
+<span id="cb15-40"><a href="#cb15-40" aria-hidden="true" tabindex="-1"></a>  res   <span class="ot">&lt;-</span> <span class="fu">evaluate_study</span>(<span class="fu">predict_new_study</span>(fit, test), test<span class="sc">$</span>phq9_at_12mo)</span>
+<span id="cb15-41"><a href="#cb15-41" aria-hidden="true" tabindex="-1"></a>  res[, study <span class="sc">:</span><span class="er">=</span> s]</span>
+<span id="cb15-42"><a href="#cb15-42" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb16"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="co"># independent cv-folds can run in parallel</span></span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a>iecv <span class="ot">&lt;-</span> <span class="fu">rbindlist</span>(parallel<span class="sc">::</span><span class="fu">mclapply</span>(<span class="fu">levels</span>(df<span class="sc">$</span>study_id), leave_one_out,</span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">mc.cores =</span> <span class="fu">max</span>(<span class="dv">1</span>, parallel<span class="sc">::</span><span class="fu">detectCores</span>() <span class="sc">-</span> <span class="dv">1</span>)))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb17"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>pool <span class="ot">&lt;-</span> <span class="cf">function</span>(est, se) {</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>  m <span class="ot">&lt;-</span> <span class="fu">rma</span>(<span class="at">yi =</span> est, <span class="at">sei =</span> se, <span class="at">method =</span> <span class="st">"REML"</span>)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>  p <span class="ot">&lt;-</span> <span class="fu">predict</span>(m)</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.table</span>(<span class="at">k =</span> m<span class="sc">$</span>k, <span class="at">pooled =</span> m<span class="sc">$</span>beta[<span class="dv">1</span>], <span class="at">tau =</span> <span class="fu">sqrt</span>(m<span class="sc">$</span>tau2),</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>             <span class="at">pi_lb =</span> p<span class="sc">$</span>pi.lb, <span class="at">pi_ub =</span> p<span class="sc">$</span>pi.ub)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a>iecv_table <span class="ot">&lt;-</span> iecv[, <span class="fu">pool</span>(est, se), by <span class="ot">=</span> metric]</span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a>iecv_table[, (<span class="dv">3</span><span class="sc">:</span><span class="dv">6</span>) <span class="sc">:</span><span class="er">=</span> <span class="fu">lapply</span>(.SD, round, <span class="dv">3</span>), .SDcols <span class="ot">=</span> <span class="dv">3</span><span class="sc">:</span><span class="dv">6</span>][]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>                          metric     k pooled   tau  pi_lb pi_ub
+                          &lt;char&gt; &lt;int&gt;  &lt;num&gt; &lt;num&gt;  &lt;num&gt; &lt;num&gt;
+ 1:             Dxy (full scale)    12  0.312 0.126  0.055 0.569
+ 2:        c-statistic at Y &gt;= 5    12  0.692 0.092  0.503 0.882
+ 3:  calibration slope at Y &gt;= 5    12  0.867 0.447 -0.052 1.786
+ 4:               CITL at Y &gt;= 5    12 -0.244 0.742 -1.760 1.272
+ 5:       c-statistic at Y &gt;= 10    12  0.720 0.068  0.581 0.860
+ 6: calibration slope at Y &gt;= 10    12  0.950 0.236  0.460 1.440
+ 7:              CITL at Y &gt;= 10    12 -0.078 0.851 -1.815 1.659
+ 8:       c-statistic at Y &gt;= 15    11  0.760 0.065  0.626 0.894
+ 9: calibration slope at Y &gt;= 15    11  1.068 0.187  0.670 1.466
+10:              CITL at Y &gt;= 15    11  0.100 0.425 -0.776 0.976</code></pre>
+</div>
+</div>
+<p>Across the twelve studies, the model discriminates moderately between patients with a better and a worse prognosis (Somers’ D). The model’s discriminative ability increases for higher thresholds as indicated by the c-statistics (more interpretation of the results needed here).</p>
+</section>
+<section id="final-model" class="level2">
+<h2 class="anchored" data-anchor-id="final-model">Final Model</h2>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>final_fit <span class="ot">&lt;-</span> <span class="fu">fit_risk_model</span>(df, forms)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>relative gradient = 1.13e-04</code></pre>
+</div>
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(final_fit)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>Cumulative Link Mixed Model fitted with the Laplace approximation
+
+formula: 
+ordered(phq9_at_12mo) ~ phq9_at_baseline_c + ns(age_c, knots = age_knots[2],  
+    Boundary.knots = age_knots[c(1, 3)]) + sex + (1 | study_id) +  
+    (0 + phq9_at_baseline_c | study_id)
+data:    df
+
+ link  threshold nobs logLik    AIC      niter       max.grad cond.H 
+ logit flexible  6454 -18350.12 36766.23 8670(28390) 2.08e+00 1.3e+04
+
+Random effects:
+ Groups   Name               Variance Std.Dev.
+ study_id (Intercept)        0.3656   0.6046  
+ study_id phq9_at_baseline_c 0.1046   0.3234  
+Number of groups:  study_id 12 
+
+Coefficients:
+                                                                      Estimate
+phq9_at_baseline_c                                                     1.15545
+ns(age_c, knots = age_knots[2], Boundary.knots = age_knots[c(1, 3)])1  0.14114
+ns(age_c, knots = age_knots[2], Boundary.knots = age_knots[c(1, 3)])2  0.24061
+sexMale                                                               -0.08430
+                                                                      Std. Error
+phq9_at_baseline_c                                                       0.10197
+ns(age_c, knots = age_knots[2], Boundary.knots = age_knots[c(1, 3)])1    0.12101
+ns(age_c, knots = age_knots[2], Boundary.knots = age_knots[c(1, 3)])2    0.06681
+sexMale                                                                  0.05034
+                                                                      z value
+phq9_at_baseline_c                                                     11.331
+ns(age_c, knots = age_knots[2], Boundary.knots = age_knots[c(1, 3)])1   1.166
+ns(age_c, knots = age_knots[2], Boundary.knots = age_knots[c(1, 3)])2   3.601
+sexMale                                                                -1.675
+                                                                      Pr(&gt;|z|)
+phq9_at_baseline_c                                                     &lt; 2e-16
+ns(age_c, knots = age_knots[2], Boundary.knots = age_knots[c(1, 3)])1 0.243473
+ns(age_c, knots = age_knots[2], Boundary.knots = age_knots[c(1, 3)])2 0.000317
+sexMale                                                               0.093985
+                                                                         
+phq9_at_baseline_c                                                    ***
+ns(age_c, knots = age_knots[2], Boundary.knots = age_knots[c(1, 3)])1    
+ns(age_c, knots = age_knots[2], Boundary.knots = age_knots[c(1, 3)])2 ***
+sexMale                                                               .  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+Threshold coefficients:
+      Estimate Std. Error z value
+0|1   -3.60172    0.19621 -18.356
+1|2   -2.97220    0.19286 -15.411
+2|3   -2.24196    0.19077 -11.752
+3|4   -1.66525    0.18980  -8.774
+4|5   -1.17256    0.18923  -6.197
+5|6   -0.72516    0.18886  -3.840
+6|7   -0.31206    0.18863  -1.654
+7|8    0.06067    0.18851   0.322
+8|9    0.42214    0.18850   2.240
+9|10   0.73963    0.18861   3.921
+10|11  0.98302    0.18879   5.207
+11|12  1.24971    0.18908   6.609
+12|13  1.48436    0.18941   7.837
+13|14  1.75100    0.18990   9.221
+14|15  1.98527    0.19041  10.427
+15|16  2.21174    0.19097  11.582
+16|17  2.47598    0.19173  12.914
+17|18  2.76095    0.19274  14.324
+18|19  3.02164    0.19389  15.585
+19|20  3.30261    0.19540  16.902
+20|21  3.54006    0.19695  17.974
+21|22  3.84380    0.19939  19.278
+22|23  4.21799    0.20338  20.740
+23|24  4.72911    0.21130  22.381
+24|25  5.30438    0.22552  23.521
+25|26  5.88117    0.24841  23.676
+26|27  6.51588    0.28908  22.540</code></pre>
+</div>
+</div>
+<p>Fitting takes around 30 seconds. <code>export_risk_model()</code> writes the coefficients, thresholds, knots and centering constants to <code>models/risk_score_model.rds</code>. Stage 2 then reads it through <code>predict_phq9()</code>.</p>
+<div class="cell">
+<details class="code-fold">
+<summary>Code</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb23"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a><span class="fu">export_risk_model</span>(final_fit, df, prepared<span class="sc">$</span>scaling, knots_c, forms)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output cell-output-stdout">
+<pre><code>wrote /Users/jan/Work/LMU/dssg-2026/collaborative-care-analysis/models/risk_score_model.rds </code></pre>
+</div>
+</div>
+<!-- -->
+
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+        for (let i=0; i<detailsSrc.length; i++) {
+          const details = detailsSrc[i].parentElement;
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">Source Code</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb25" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb25-2"><a href="#cb25-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "The Two-Stage Prediction Model for Individualized Treatment Benefit Behind the *Collaborative Care Compass*"</span></span>
+<span id="cb25-3"><a href="#cb25-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> "Stage 1: The Risk Model"</span></span>
+<span id="cb25-4"><a href="#cb25-4" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span></span>
+<span id="cb25-5"><a href="#cb25-5" aria-hidden="true" tabindex="-1"></a><span class="co">  - name: DSSGx Munich 2026 Fellows</span></span>
+<span id="cb25-6"><a href="#cb25-6" aria-hidden="true" tabindex="-1"></a><span class="co">    url: https://www.dssgxmunich.org/project-2026</span></span>
+<span id="cb25-7"><a href="#cb25-7" aria-hidden="true" tabindex="-1"></a><span class="co">    affiliations:</span></span>
+<span id="cb25-8"><a href="#cb25-8" aria-hidden="true" tabindex="-1"></a><span class="co">      - name: Social Data Science and AI Lab, LMU Munich</span></span>
+<span id="cb25-9"><a href="#cb25-9" aria-hidden="true" tabindex="-1"></a><span class="co">        url: https://www.stat.lmu.de/soda/en/</span></span>
+<span id="cb25-10"><a href="#cb25-10" aria-hidden="true" tabindex="-1"></a><span class="co">      - name: Munich Center for Machine Learning</span></span>
+<span id="cb25-11"><a href="#cb25-11" aria-hidden="true" tabindex="-1"></a><span class="co">        url: https://mcml.ai/</span></span>
+<span id="cb25-12"><a href="#cb25-12" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> 2026-10-02</span></span>
+<span id="cb25-13"><a href="#cb25-13" aria-hidden="true" tabindex="-1"></a><span class="an">format:</span></span>
+<span id="cb25-14"><a href="#cb25-14" aria-hidden="true" tabindex="-1"></a><span class="co">  html:</span></span>
+<span id="cb25-15"><a href="#cb25-15" aria-hidden="true" tabindex="-1"></a><span class="co">    code-fold: true</span></span>
+<span id="cb25-16"><a href="#cb25-16" aria-hidden="true" tabindex="-1"></a><span class="co">    code-summary: "Code"</span></span>
+<span id="cb25-17"><a href="#cb25-17" aria-hidden="true" tabindex="-1"></a><span class="co">    code-tools: true</span></span>
+<span id="cb25-18"><a href="#cb25-18" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb25-19"><a href="#cb25-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-20"><a href="#cb25-20" aria-hidden="true" tabindex="-1"></a><span class="fu"># Overview</span></span>
+<span id="cb25-21"><a href="#cb25-21" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-22"><a href="#cb25-22" aria-hidden="true" tabindex="-1"></a>The <span class="co">[</span><span class="ot">&lt;i&gt;Collaborative Care Compass&lt;/i&gt;</span><span class="co">](https://dssgxmunich.github.io/collaborative-care-webapp/)</span> is a research prototype to predict how collaborative care treatment components influence the PHQ-9 score for a person with depression one year from treatment start. It is developed based on individual patient data (IPD) from randomized controlled trials comparing collaborative care as intervention and usual care as control.<span class="dt">&lt;</span><span class="kw">br</span><span class="dt">&gt;</span></span>
+<span id="cb25-23"><a href="#cb25-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-24"><a href="#cb25-24" aria-hidden="true" tabindex="-1"></a>The model consists of two parts: The first part is a risk model, predicting depressive symptom severity at 12 months from baseline characteristics. The output of the model is a risk score, used as input to the second part which estimates how the effects of collaborative care components vary by baseline risk, following the <span class="co">[</span><span class="ot">PATH framework by Kent et al. (2020)</span><span class="co">](https://pubmed.ncbi.nlm.nih.gov/31711134/)</span>.</span>
+<span id="cb25-25"><a href="#cb25-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-26"><a href="#cb25-26" aria-hidden="true" tabindex="-1"></a>**This report covers stage 1, the risk model.** Stage 2, the component network meta-analysis, is documented separately.</span>
+<span id="cb25-27"><a href="#cb25-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-28"><a href="#cb25-28" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-29"><a href="#cb25-29" aria-hidden="true" tabindex="-1"></a><span class="fu"># Risk Model</span></span>
+<span id="cb25-30"><a href="#cb25-30" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-31"><a href="#cb25-31" aria-hidden="true" tabindex="-1"></a>We believe the PATH consensus criteria on the effectiveness of risk modeling to RCT (meta-) analysis are fulfilled. There is, to our knowledge, no compatible, externally-developed risk model available to stratify trial results. We therefore develop a risk model based on the multi-trial population we carefully extracted out of IPD from 29 RCTs.<span class="dt">&lt;</span><span class="kw">br</span><span class="dt">&gt;</span></span>
+<span id="cb25-32"><a href="#cb25-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-35"><a href="#cb25-35" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb25-36"><a href="#cb25-36" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: setup</span></span>
+<span id="cb25-37"><a href="#cb25-37" aria-hidden="true" tabindex="-1"></a><span class="co">#| message: false</span></span>
+<span id="cb25-38"><a href="#cb25-38" aria-hidden="true" tabindex="-1"></a><span class="co">#| out-width: "100%"</span></span>
+<span id="cb25-39"><a href="#cb25-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-40"><a href="#cb25-40" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(data.table)</span>
+<span id="cb25-41"><a href="#cb25-41" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(Hmisc)</span>
+<span id="cb25-42"><a href="#cb25-42" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb25-43"><a href="#cb25-43" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(splines)</span>
+<span id="cb25-44"><a href="#cb25-44" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ordinal)</span>
+<span id="cb25-45"><a href="#cb25-45" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(rms)</span>
+<span id="cb25-46"><a href="#cb25-46" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(metafor)</span>
+<span id="cb25-47"><a href="#cb25-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-48"><a href="#cb25-48" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-49"><a href="#cb25-49" aria-hidden="true" tabindex="-1"></a><span class="co"># Sourcing risk_score_model.R brings in the model definition and the cohort</span></span>
+<span id="cb25-50"><a href="#cb25-50" aria-hidden="true" tabindex="-1"></a><span class="co"># path it reads, DATA_PATH.</span></span>
+<span id="cb25-51"><a href="#cb25-51" aria-hidden="true" tabindex="-1"></a>REPO_ROOT <span class="ot">&lt;-</span> rprojroot<span class="sc">::</span><span class="fu">find_root</span>(rprojroot<span class="sc">::</span><span class="fu">has_file</span>(<span class="st">"pyproject.toml"</span>))</span>
+<span id="cb25-52"><a href="#cb25-52" aria-hidden="true" tabindex="-1"></a><span class="fu">source</span>(<span class="fu">file.path</span>(REPO_ROOT, <span class="st">"collaborative_care_analysis"</span>, <span class="st">"data_analysis"</span>,</span>
+<span id="cb25-53"><a href="#cb25-53" aria-hidden="true" tabindex="-1"></a>                 <span class="st">"risk_score_model.R"</span>))</span>
+<span id="cb25-54"><a href="#cb25-54" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-55"><a href="#cb25-55" aria-hidden="true" tabindex="-1"></a><span class="co"># The cohort is built from the harmonised IPD by</span></span>
+<span id="cb25-56"><a href="#cb25-56" aria-hidden="true" tabindex="-1"></a><span class="co">#   uv run collaborative_care_analysis/dataset.py analysis-data phq9_12mo_core</span></span>
+<span id="cb25-57"><a href="#cb25-57" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> <span class="fu">load_model_data</span>(DATA_PATH)</span>
+<span id="cb25-58"><a href="#cb25-58" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-59"><a href="#cb25-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-60"><a href="#cb25-60" aria-hidden="true" tabindex="-1"></a><span class="co"># inspect marginal distributions for covariates and baseline</span></span>
+<span id="cb25-61"><a href="#cb25-61" aria-hidden="true" tabindex="-1"></a>tab <span class="ot">&lt;-</span> <span class="fu">table</span>(df<span class="sc">$</span>arm, df<span class="sc">$</span>study_id)</span>
+<span id="cb25-62"><a href="#cb25-62" aria-hidden="true" tabindex="-1"></a>tab <span class="ot">&lt;-</span> tab[, <span class="fu">order</span>(<span class="sc">-</span><span class="fu">colSums</span>(tab))]</span>
+<span id="cb25-63"><a href="#cb25-63" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">9</span>, <span class="dv">4</span>, <span class="dv">2</span>, <span class="dv">1</span>))</span>
+<span id="cb25-64"><a href="#cb25-64" aria-hidden="true" tabindex="-1"></a><span class="fu">barplot</span>(tab, <span class="at">col =</span> <span class="fu">c</span>(<span class="st">"#9AA4AA"</span>, <span class="st">"#195A7D"</span>), <span class="at">las =</span> <span class="dv">2</span>, <span class="at">ylab =</span> <span class="st">"Patients"</span>,</span>
+<span id="cb25-65"><a href="#cb25-65" aria-hidden="true" tabindex="-1"></a>        <span class="at">legend.text =</span> <span class="cn">TRUE</span>, <span class="at">args.legend =</span> <span class="fu">list</span>(<span class="at">x =</span> <span class="st">"topright"</span>, <span class="at">bty =</span> <span class="st">"n"</span>))</span>
+<span id="cb25-66"><a href="#cb25-66" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">2</span>) <span class="sc">+</span> <span class="fl">0.1</span>)</span>
+<span id="cb25-67"><a href="#cb25-67" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(df<span class="sc">$</span>age, <span class="at">main =</span> <span class="st">"Age at baseline"</span>,  <span class="at">xlab =</span> <span class="st">"age"</span>)</span>
+<span id="cb25-68"><a href="#cb25-68" aria-hidden="true" tabindex="-1"></a><span class="fu">barplot</span>(<span class="fu">table</span>(df<span class="sc">$</span>sex), <span class="at">main =</span> <span class="st">"Sex"</span>, <span class="at">xlab =</span> <span class="st">"sex"</span>)</span>
+<span id="cb25-69"><a href="#cb25-69" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(df<span class="sc">$</span>phq9_at_baseline, <span class="at">main =</span> <span class="st">"PHQ-9 at baseline"</span>,  <span class="at">xlab =</span> <span class="st">"score"</span>)</span>
+<span id="cb25-70"><a href="#cb25-70" aria-hidden="true" tabindex="-1"></a><span class="fu">hist</span>(df<span class="sc">$</span>phq9_at_12mo, <span class="at">main =</span> <span class="st">"PHQ-9 at 12 months"</span>, <span class="at">xlab =</span> <span class="st">"score"</span>)</span>
+<span id="cb25-71"><a href="#cb25-71" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb25-72"><a href="#cb25-72" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-73"><a href="#cb25-73" aria-hidden="true" tabindex="-1"></a><span class="fu">## Initial Model Specification</span></span>
+<span id="cb25-74"><a href="#cb25-74" aria-hidden="true" tabindex="-1"></a>Let $Y^{(12)}_{ij} \in \{0, 1, \dots, 27\}$ denote the total PHQ-9 score of individual $i = 1, \dots, n_j$ in study $j = 1, \dots, 12$ at 12 months post-randomization, and $y^{(0)}_{ij}$ the known PHQ-9 score at baseline. We specify the semiparametric ordinal logistic mixed model</span>
+<span id="cb25-75"><a href="#cb25-75" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-76"><a href="#cb25-76" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb25-77"><a href="#cb25-77" aria-hidden="true" tabindex="-1"></a>P\left(Y^{(12)}_{ij} \leq k \mid \mathbf{x}_{ij}, y^{(0)}_{ij}, \alpha_j, \gamma_j\right)</span>
+<span id="cb25-78"><a href="#cb25-78" aria-hidden="true" tabindex="-1"></a>= \sigma\left(\theta_k - \eta_{ij}\right), \qquad k = 0, 1, \dots, 26,</span>
+<span id="cb25-79"><a href="#cb25-79" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb25-80"><a href="#cb25-80" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-81"><a href="#cb25-81" aria-hidden="true" tabindex="-1"></a>with linear predictor</span>
+<span id="cb25-82"><a href="#cb25-82" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-83"><a href="#cb25-83" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb25-84"><a href="#cb25-84" aria-hidden="true" tabindex="-1"></a>\eta_{ij} = \beta_{\text{sex}}\, \text{sex}_{ij}</span>
+<span id="cb25-85"><a href="#cb25-85" aria-hidden="true" tabindex="-1"></a><span class="ss">+ </span>\sum_{m=1}^{2} \beta_{\text{age},m}\, s_m(\text{age}_{ij})</span>
+<span id="cb25-86"><a href="#cb25-86" aria-hidden="true" tabindex="-1"></a><span class="ss">+ </span>\left(\beta_{0} + \gamma_j\right) y^{(0)}_{ij}</span>
+<span id="cb25-87"><a href="#cb25-87" aria-hidden="true" tabindex="-1"></a><span class="ss">+ </span>\alpha_j,</span>
+<span id="cb25-88"><a href="#cb25-88" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb25-89"><a href="#cb25-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-90"><a href="#cb25-90" aria-hidden="true" tabindex="-1"></a>where</span>
+<span id="cb25-91"><a href="#cb25-91" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-92"><a href="#cb25-92" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$\theta_0 &lt; \theta_1 &lt; \dots &lt; \theta_{26}$ are threshold intercepts between adjacent PHQ-9 scores,</span>
+<span id="cb25-93"><a href="#cb25-93" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$\text{sex}_{ij}$ is an indicator for male sex,</span>
+<span id="cb25-94"><a href="#cb25-94" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$s_1(\text{age})$ and $s_2(\text{age})$ are basis functions of a restricted cubic spline with three knots at the 10th, 50th and 90th age percentiles,</span>
+<span id="cb25-95"><a href="#cb25-95" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$\text{age}_{ij}$ and $y^{(0)}_{ij}$ enter centred and scaled by their sample mean and standard deviation,</span>
+<span id="cb25-96"><a href="#cb25-96" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$\gamma_j$ is a random study slope on baseline PHQ-9,</span>
+<span id="cb25-97"><a href="#cb25-97" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>$\alpha_j$ is a random study intercept,</span>
+<span id="cb25-98"><a href="#cb25-98" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-99"><a href="#cb25-99" aria-hidden="true" tabindex="-1"></a>and the study-level random effects are independent,</span>
+<span id="cb25-100"><a href="#cb25-100" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-101"><a href="#cb25-101" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb25-102"><a href="#cb25-102" aria-hidden="true" tabindex="-1"></a>\alpha_j \sim \mathcal{N}\left(0, \tau_\alpha^2\right), \qquad</span>
+<span id="cb25-103"><a href="#cb25-103" aria-hidden="true" tabindex="-1"></a>\gamma_j \sim \mathcal{N}\left(0, \tau_\gamma^2\right).</span>
+<span id="cb25-104"><a href="#cb25-104" aria-hidden="true" tabindex="-1"></a>$$</span>
+<span id="cb25-105"><a href="#cb25-105" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-106"><a href="#cb25-106" aria-hidden="true" tabindex="-1"></a><span class="fu">## Model Data</span></span>
+<span id="cb25-107"><a href="#cb25-107" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-108"><a href="#cb25-108" aria-hidden="true" tabindex="-1"></a>All models below use baseline PHQ-9 and age centered and scaled by their sample mean and standard deviation, and a spline for age with knots at the 10th, 50th and 90th percentiles.</span>
+<span id="cb25-109"><a href="#cb25-109" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-112"><a href="#cb25-112" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb25-113"><a href="#cb25-113" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: model-data</span></span>
+<span id="cb25-114"><a href="#cb25-114" aria-hidden="true" tabindex="-1"></a>prepared <span class="ot">&lt;-</span> <span class="fu">add_centred_terms</span>(df)</span>
+<span id="cb25-115"><a href="#cb25-115" aria-hidden="true" tabindex="-1"></a>df <span class="ot">&lt;-</span> prepared<span class="sc">$</span>data</span>
+<span id="cb25-116"><a href="#cb25-116" aria-hidden="true" tabindex="-1"></a>knots_c <span class="ot">&lt;-</span> <span class="fu">age_spline_knots</span>(df)</span>
+<span id="cb25-117"><a href="#cb25-117" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-118"><a href="#cb25-118" aria-hidden="true" tabindex="-1"></a><span class="co"># fixed part is used for the design matrix and for predictions, full part adds</span></span>
+<span id="cb25-119"><a href="#cb25-119" aria-hidden="true" tabindex="-1"></a><span class="co"># the study random effects</span></span>
+<span id="cb25-120"><a href="#cb25-120" aria-hidden="true" tabindex="-1"></a>forms <span class="ot">&lt;-</span> <span class="fu">model_formulas</span>(knots_c)</span>
+<span id="cb25-121"><a href="#cb25-121" aria-hidden="true" tabindex="-1"></a>fixed_form <span class="ot">&lt;-</span> forms<span class="sc">$</span>fixed</span>
+<span id="cb25-122"><a href="#cb25-122" aria-hidden="true" tabindex="-1"></a>model_formula <span class="ot">&lt;-</span> forms<span class="sc">$</span>full</span>
+<span id="cb25-123"><a href="#cb25-123" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb25-124"><a href="#cb25-124" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-125"><a href="#cb25-125" aria-hidden="true" tabindex="-1"></a><span class="fu">## Sample Size Calculation</span></span>
+<span id="cb25-126"><a href="#cb25-126" aria-hidden="true" tabindex="-1"></a>We conduct a sample size calculation according to <span class="co">[</span><span class="ot">Pate et al. (2023)</span><span class="co">](https://journals.sagepub.com/doi/10.1177/09622802231151220)</span>.</span>
+<span id="cb25-129"><a href="#cb25-129" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb25-130"><a href="#cb25-130" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 1</span></span>
+<span id="cb25-131"><a href="#cb25-131" aria-hidden="true" tabindex="-1"></a><span class="co"># calculating Q, the number of predictor parameters</span></span>
+<span id="cb25-132"><a href="#cb25-132" aria-hidden="true" tabindex="-1"></a>X <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(fixed_form, <span class="at">data =</span> df)</span>
+<span id="cb25-133"><a href="#cb25-133" aria-hidden="true" tabindex="-1"></a>Q <span class="ot">&lt;-</span> (<span class="fu">ncol</span>(X) <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">+</span> <span class="dv">1</span>  <span class="co"># baseline (1) + age spline (2) + sex (1), plus the random slope</span></span>
+<span id="cb25-134"><a href="#cb25-134" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-135"><a href="#cb25-135" aria-hidden="true" tabindex="-1"></a><span class="co"># calculating outcome proportions</span></span>
+<span id="cb25-136"><a href="#cb25-136" aria-hidden="true" tabindex="-1"></a>counts <span class="ot">&lt;-</span> df[<span class="fu">order</span>(phq9_at_12mo), .N, by <span class="ot">=</span> phq9_at_12mo]</span>
+<span id="cb25-137"><a href="#cb25-137" aria-hidden="true" tabindex="-1"></a>n_obs <span class="ot">&lt;-</span> <span class="fu">sum</span>(counts<span class="sc">$</span>N)</span>
+<span id="cb25-138"><a href="#cb25-138" aria-hidden="true" tabindex="-1"></a>pk <span class="ot">&lt;-</span> counts<span class="sc">$</span>N <span class="sc">/</span> n_obs</span>
+<span id="cb25-139"><a href="#cb25-139" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-140"><a href="#cb25-140" aria-hidden="true" tabindex="-1"></a>pairs <span class="ot">&lt;-</span> <span class="fu">CJ</span>(<span class="at">r =</span> counts<span class="sc">$</span>phq9_at_12mo, <span class="at">k =</span> counts<span class="sc">$</span>phq9_at_12mo)[k <span class="sc">&gt;</span> r]</span>
+<span id="cb25-141"><a href="#cb25-141" aria-hidden="true" tabindex="-1"></a>pairs[counts, E_r <span class="sc">:</span><span class="er">=</span> i.N, on <span class="ot">=</span> .(<span class="at">r =</span> phq9_at_12mo)]</span>
+<span id="cb25-142"><a href="#cb25-142" aria-hidden="true" tabindex="-1"></a>pairs[counts, E_k <span class="sc">:</span><span class="er">=</span> i.N, on <span class="ot">=</span> .(<span class="at">k =</span> phq9_at_12mo)]</span>
+<span id="cb25-143"><a href="#cb25-143" aria-hidden="true" tabindex="-1"></a>pairs[, p_kr <span class="sc">:</span><span class="er">=</span> (E_k <span class="sc">+</span> E_r) <span class="sc">/</span> n_obs]  <span class="co"># p_{k,r}</span></span>
+<span id="cb25-144"><a href="#cb25-144" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-145"><a href="#cb25-145" aria-hidden="true" tabindex="-1"></a><span class="co"># max(R2_CS_app) for the overall multinomial model</span></span>
+<span id="cb25-146"><a href="#cb25-146" aria-hidden="true" tabindex="-1"></a>max_r2_overall <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> <span class="fu">prod</span>(pk<span class="sc">^</span>pk)<span class="sc">^</span><span class="dv">2</span></span>
+<span id="cb25-147"><a href="#cb25-147" aria-hidden="true" tabindex="-1"></a><span class="co"># fallback to R2_Nagelkerke = 0.15</span></span>
+<span id="cb25-148"><a href="#cb25-148" aria-hidden="true" tabindex="-1"></a>R2_adj_overall <span class="ot">&lt;-</span> <span class="fl">0.15</span> <span class="sc">*</span> max_r2_overall</span>
+<span id="cb25-149"><a href="#cb25-149" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-150"><a href="#cb25-150" aria-hidden="true" tabindex="-1"></a><span class="co"># max(R2_CS_app,k,r) per one vs one sub-model</span></span>
+<span id="cb25-151"><a href="#cb25-151" aria-hidden="true" tabindex="-1"></a>pairs[, phi_kr <span class="sc">:</span><span class="er">=</span> E_k <span class="sc">/</span> (E_k <span class="sc">+</span> E_r)]</span>
+<span id="cb25-152"><a href="#cb25-152" aria-hidden="true" tabindex="-1"></a>pairs[, max_r2 <span class="sc">:</span><span class="er">=</span> <span class="dv">1</span> <span class="sc">-</span> (phi_kr<span class="sc">^</span>phi_kr <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> phi_kr)<span class="sc">^</span>(<span class="dv">1</span> <span class="sc">-</span> phi_kr))<span class="sc">^</span><span class="dv">2</span>]</span>
+<span id="cb25-153"><a href="#cb25-153" aria-hidden="true" tabindex="-1"></a>pairs[, R2_adj <span class="sc">:</span><span class="er">=</span> <span class="fl">0.15</span> <span class="sc">*</span> max_r2]</span>
+<span id="cb25-154"><a href="#cb25-154" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-155"><a href="#cb25-155" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 3: criterion (i)</span></span>
+<span id="cb25-156"><a href="#cb25-156" aria-hidden="true" tabindex="-1"></a>S <span class="ot">&lt;-</span> <span class="fl">0.9</span></span>
+<span id="cb25-157"><a href="#cb25-157" aria-hidden="true" tabindex="-1"></a>crit_i_m <span class="ot">&lt;-</span> <span class="cf">function</span>(Q, R2adj, <span class="at">S =</span> <span class="fl">0.9</span>) {</span>
+<span id="cb25-158"><a href="#cb25-158" aria-hidden="true" tabindex="-1"></a>  Q <span class="sc">/</span> ((S <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">*</span> <span class="fu">log</span>(<span class="dv">1</span> <span class="sc">-</span> R2adj <span class="sc">/</span> S))</span>
+<span id="cb25-159"><a href="#cb25-159" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-160"><a href="#cb25-160" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-161"><a href="#cb25-161" aria-hidden="true" tabindex="-1"></a>pairs[, m_kr <span class="sc">:</span><span class="er">=</span> <span class="fu">crit_i_m</span>(Q, R2_adj, S)]</span>
+<span id="cb25-162"><a href="#cb25-162" aria-hidden="true" tabindex="-1"></a>pairs[, n_kr <span class="sc">:</span><span class="er">=</span> m_kr <span class="sc">/</span> p_kr]</span>
+<span id="cb25-163"><a href="#cb25-163" aria-hidden="true" tabindex="-1"></a>crit_i <span class="ot">&lt;-</span> <span class="fu">max</span>(pairs<span class="sc">$</span>n_kr)</span>
+<span id="cb25-164"><a href="#cb25-164" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-165"><a href="#cb25-165" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 4: criterion (ii)</span></span>
+<span id="cb25-166"><a href="#cb25-166" aria-hidden="true" tabindex="-1"></a>delta  <span class="ot">&lt;-</span> <span class="fl">0.05</span></span>
+<span id="cb25-167"><a href="#cb25-167" aria-hidden="true" tabindex="-1"></a>K <span class="ot">&lt;-</span> <span class="fu">nrow</span>(counts)</span>
+<span id="cb25-168"><a href="#cb25-168" aria-hidden="true" tabindex="-1"></a>crit_ii <span class="ot">&lt;-</span> (K <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">*</span> Q <span class="sc">/</span></span>
+<span id="cb25-169"><a href="#cb25-169" aria-hidden="true" tabindex="-1"></a>  ((R2_adj_overall <span class="sc">/</span> (R2_adj_overall <span class="sc">+</span> delta <span class="sc">*</span> max_r2_overall) <span class="sc">-</span> <span class="dv">1</span>) <span class="sc">*</span></span>
+<span id="cb25-170"><a href="#cb25-170" aria-hidden="true" tabindex="-1"></a>     <span class="fu">log</span>(<span class="dv">1</span> <span class="sc">-</span> R2_adj_overall <span class="sc">-</span> delta <span class="sc">*</span> max_r2_overall))</span>
+<span id="cb25-171"><a href="#cb25-171" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-172"><a href="#cb25-172" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 5: criterion (iii)</span></span>
+<span id="cb25-173"><a href="#cb25-173" aria-hidden="true" tabindex="-1"></a>alpha <span class="ot">&lt;-</span> <span class="fl">0.05</span></span>
+<span id="cb25-174"><a href="#cb25-174" aria-hidden="true" tabindex="-1"></a>chi <span class="ot">&lt;-</span> <span class="fu">qchisq</span>(<span class="dv">1</span> <span class="sc">-</span> alpha <span class="sc">/</span> K, <span class="at">df =</span> <span class="dv">1</span>)</span>
+<span id="cb25-175"><a href="#cb25-175" aria-hidden="true" tabindex="-1"></a>crit_iii <span class="ot">&lt;-</span> <span class="fu">max</span>(chi <span class="sc">*</span> pk <span class="sc">*</span> (<span class="dv">1</span> <span class="sc">-</span> pk) <span class="sc">/</span> delta<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb25-176"><a href="#cb25-176" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-177"><a href="#cb25-177" aria-hidden="true" tabindex="-1"></a><span class="co"># Step 6: the requirement is the maximum</span></span>
+<span id="cb25-178"><a href="#cb25-178" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="at">Q =</span> Q, <span class="at">K =</span> K, <span class="at">n_obs =</span> n_obs,</span>
+<span id="cb25-179"><a href="#cb25-179" aria-hidden="true" tabindex="-1"></a>  <span class="at">crit_i =</span> crit_i, <span class="at">crit_ii =</span> crit_ii, <span class="at">crit_iii =</span> crit_iii,</span>
+<span id="cb25-180"><a href="#cb25-180" aria-hidden="true" tabindex="-1"></a>  <span class="at">required =</span> <span class="fu">max</span>(crit_i, crit_ii, crit_iii))</span>
+<span id="cb25-181"><a href="#cb25-181" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb25-182"><a href="#cb25-182" aria-hidden="true" tabindex="-1"></a>We treat the required sample size as a conservative upper bound. Our ordinal model under the proportional odds assumption likely requires a smaller sample size, since less parameters are to be estimated than for a multinomial model (see the discussion section in Pate et al.). Since two out of three criteria in the sample size calculation are fulfilled, we deem the sample size sufficient for the model we aim to fit, without risking serious overfitting.</span>
+<span id="cb25-183"><a href="#cb25-183" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-184"><a href="#cb25-184" aria-hidden="true" tabindex="-1"></a><span class="fu">## Ordinality and PO Assumption</span></span>
+<span id="cb25-185"><a href="#cb25-185" aria-hidden="true" tabindex="-1"></a>Under the assumption that a predictor $X$ is linearly related to the cumulative log-odds of $<span class="sc">\{</span>Y^{(12)}_{ij} \leq k<span class="sc">\}</span>$, the ordinality assumption underlying an ordinal regression model can be checked by plotting the mean of $X$ against levels of $Y$. The stratified means should then show a consistent trend. Note that the ordinality assumption may appear to be violated due to non-linear effects of $X$ on $Y$ (see chapter 13 in Frank Harrell's <span class="co">[</span><span class="ot">Regression Modeling Strategies</span><span class="co">](https://link.springer.com/book/10.1007/978-3-319-19425-7)</span>).</span>
+<span id="cb25-188"><a href="#cb25-188" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb25-189"><a href="#cb25-189" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-width: 12</span></span>
+<span id="cb25-190"><a href="#cb25-190" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-height: 4</span></span>
+<span id="cb25-191"><a href="#cb25-191" aria-hidden="true" tabindex="-1"></a><span class="co">#| out-width: "100%"</span></span>
+<span id="cb25-192"><a href="#cb25-192" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-193"><a href="#cb25-193" aria-hidden="true" tabindex="-1"></a>x_cont <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"phq9_at_baseline"</span>, <span class="st">"age"</span>)</span>
+<span id="cb25-194"><a href="#cb25-194" aria-hidden="true" tabindex="-1"></a>x_all  <span class="ot">&lt;-</span> <span class="fu">c</span>(x_cont, <span class="st">"sex"</span>)</span>
+<span id="cb25-195"><a href="#cb25-195" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-196"><a href="#cb25-196" aria-hidden="true" tabindex="-1"></a><span class="co"># mean of X by level of Y, with 95% CIs; for a factor, the proportion in its second level</span></span>
+<span id="cb25-197"><a href="#cb25-197" aria-hidden="true" tabindex="-1"></a>means_by_y <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb25-198"><a href="#cb25-198" aria-hidden="true" tabindex="-1"></a>  v     <span class="ot">&lt;-</span> df[[x]]</span>
+<span id="cb25-199"><a href="#cb25-199" aria-hidden="true" tabindex="-1"></a>  label <span class="ot">&lt;-</span> <span class="fu">paste</span>(<span class="st">"mean"</span>, x)</span>
+<span id="cb25-200"><a href="#cb25-200" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">is.factor</span>(v)) {</span>
+<span id="cb25-201"><a href="#cb25-201" aria-hidden="true" tabindex="-1"></a>    label <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">"P("</span>, x, <span class="st">" = "</span>, <span class="fu">levels</span>(v)[<span class="dv">2</span>], <span class="st">")"</span>)</span>
+<span id="cb25-202"><a href="#cb25-202" aria-hidden="true" tabindex="-1"></a>    v     <span class="ot">&lt;-</span> <span class="fu">as.numeric</span>(v <span class="sc">==</span> <span class="fu">levels</span>(v)[<span class="dv">2</span>])</span>
+<span id="cb25-203"><a href="#cb25-203" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb25-204"><a href="#cb25-204" aria-hidden="true" tabindex="-1"></a>  s <span class="ot">&lt;-</span> <span class="fu">data.table</span>(<span class="at">y =</span> df<span class="sc">$</span>phq9_at_12mo, <span class="at">v =</span> v)[</span>
+<span id="cb25-205"><a href="#cb25-205" aria-hidden="true" tabindex="-1"></a>    , .(<span class="at">m =</span> <span class="fu">mean</span>(v), <span class="at">se =</span> <span class="fu">sd</span>(v) <span class="sc">/</span> <span class="fu">sqrt</span>(.N)), by <span class="ot">=</span> y][<span class="fu">order</span>(y)]</span>
+<span id="cb25-206"><a href="#cb25-206" aria-hidden="true" tabindex="-1"></a>  s[, <span class="st">`</span><span class="at">:=</span><span class="st">`</span>(<span class="at">lo =</span> m <span class="sc">-</span> <span class="fl">1.96</span> <span class="sc">*</span> se, <span class="at">hi =</span> m <span class="sc">+</span> <span class="fl">1.96</span> <span class="sc">*</span> se)]</span>
+<span id="cb25-207"><a href="#cb25-207" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">means =</span> s, <span class="at">label =</span> label)</span>
+<span id="cb25-208"><a href="#cb25-208" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-209"><a href="#cb25-209" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-210"><a href="#cb25-210" aria-hidden="true" tabindex="-1"></a>op <span class="ot">&lt;-</span> <span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fu">length</span>(x_all)), <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">2</span>, <span class="dv">1</span>))</span>
+<span id="cb25-211"><a href="#cb25-211" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (x <span class="cf">in</span> x_all) {</span>
+<span id="cb25-212"><a href="#cb25-212" aria-hidden="true" tabindex="-1"></a>  r <span class="ot">&lt;-</span> <span class="fu">means_by_y</span>(x)</span>
+<span id="cb25-213"><a href="#cb25-213" aria-hidden="true" tabindex="-1"></a>  s <span class="ot">&lt;-</span> r<span class="sc">$</span>means</span>
+<span id="cb25-214"><a href="#cb25-214" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot</span>(s<span class="sc">$</span>y, s<span class="sc">$</span>m, <span class="at">type =</span> <span class="st">"b"</span>, <span class="at">pch =</span> <span class="dv">19</span>, <span class="at">cex =</span> <span class="fl">0.6</span>, <span class="at">ylim =</span> <span class="fu">range</span>(s<span class="sc">$</span>lo, s<span class="sc">$</span>hi, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb25-215"><a href="#cb25-215" aria-hidden="true" tabindex="-1"></a>       <span class="at">xlab =</span> <span class="st">"phq9_at_12mo"</span>, <span class="at">ylab =</span> r<span class="sc">$</span>label, <span class="at">main =</span> x)</span>
+<span id="cb25-216"><a href="#cb25-216" aria-hidden="true" tabindex="-1"></a>  <span class="fu">arrows</span>(s<span class="sc">$</span>y, s<span class="sc">$</span>lo, s<span class="sc">$</span>y, s<span class="sc">$</span>hi, <span class="at">angle =</span> <span class="dv">90</span>, <span class="at">code =</span> <span class="dv">3</span>, <span class="at">length =</span> <span class="fl">0.02</span>, <span class="at">col =</span> <span class="st">"grey50"</span>)</span>
+<span id="cb25-217"><a href="#cb25-217" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-218"><a href="#cb25-218" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(op)</span>
+<span id="cb25-219"><a href="#cb25-219" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb25-220"><a href="#cb25-220" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-221"><a href="#cb25-221" aria-hidden="true" tabindex="-1"></a>Under the proportional odds assumption, the cumulative log-odds for different cut-points, plotted against individual predictors, should be parallel.</span>
+<span id="cb25-224"><a href="#cb25-224" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb25-225"><a href="#cb25-225" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-width: 12</span></span>
+<span id="cb25-226"><a href="#cb25-226" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-height: 4</span></span>
+<span id="cb25-227"><a href="#cb25-227" aria-hidden="true" tabindex="-1"></a><span class="co">#| out-width: "100%"</span></span>
+<span id="cb25-228"><a href="#cb25-228" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-229"><a href="#cb25-229" aria-hidden="true" tabindex="-1"></a>cuts <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">15</span>, <span class="dv">20</span>, <span class="dv">25</span>)</span>
+<span id="cb25-230"><a href="#cb25-230" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-231"><a href="#cb25-231" aria-hidden="true" tabindex="-1"></a>plot_parallelism <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb25-232"><a href="#cb25-232" aria-hidden="true" tabindex="-1"></a>  <span class="fu">plot</span>(<span class="cn">NA</span>, <span class="at">xlim =</span> <span class="fu">range</span>(df[[x]]), <span class="at">ylim =</span> <span class="fu">c</span>(<span class="sc">-</span><span class="dv">6</span>, <span class="dv">4</span>),</span>
+<span id="cb25-233"><a href="#cb25-233" aria-hidden="true" tabindex="-1"></a>       <span class="at">xlab =</span> x, <span class="at">ylab =</span> <span class="st">"logit P(Y &gt;= j)"</span>, <span class="at">main =</span> x)</span>
+<span id="cb25-234"><a href="#cb25-234" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (i <span class="cf">in</span> <span class="fu">seq_along</span>(cuts))</span>
+<span id="cb25-235"><a href="#cb25-235" aria-hidden="true" tabindex="-1"></a>    <span class="fu">suppressWarnings</span>(<span class="fu">plsmo</span>(df[[x]], df<span class="sc">$</span>phq9_at_12mo <span class="sc">&gt;=</span> cuts[i], <span class="at">fun =</span> qlogis,</span>
+<span id="cb25-236"><a href="#cb25-236" aria-hidden="true" tabindex="-1"></a>                           <span class="at">add =</span> <span class="cn">TRUE</span>, <span class="at">col =</span> i, <span class="at">lwd =</span> <span class="dv">2</span>))</span>
+<span id="cb25-237"><a href="#cb25-237" aria-hidden="true" tabindex="-1"></a>  <span class="fu">legend</span>(<span class="st">"bottomright"</span>, <span class="fu">paste</span>(<span class="st">"Y &gt;="</span>, cuts), <span class="at">col =</span> <span class="fu">seq_along</span>(cuts),</span>
+<span id="cb25-238"><a href="#cb25-238" aria-hidden="true" tabindex="-1"></a>         <span class="at">lwd =</span> <span class="dv">2</span>, <span class="at">bty =</span> <span class="st">"n"</span>, <span class="at">cex =</span> <span class="fl">0.8</span>)</span>
+<span id="cb25-239"><a href="#cb25-239" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-240"><a href="#cb25-240" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-241"><a href="#cb25-241" aria-hidden="true" tabindex="-1"></a>op <span class="ot">&lt;-</span> <span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="fu">length</span>(x_cont)), <span class="at">mar =</span> <span class="fu">c</span>(<span class="dv">4</span>, <span class="dv">4</span>, <span class="dv">2</span>, <span class="dv">1</span>))</span>
+<span id="cb25-242"><a href="#cb25-242" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> (x <span class="cf">in</span> x_cont) <span class="fu">plot_parallelism</span>(x)</span>
+<span id="cb25-243"><a href="#cb25-243" aria-hidden="true" tabindex="-1"></a><span class="fu">par</span>(op)</span>
+<span id="cb25-244"><a href="#cb25-244" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb25-245"><a href="#cb25-245" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-246"><a href="#cb25-246" aria-hidden="true" tabindex="-1"></a>Compare the goodness of fit between the full PO model and letting one predictor's coefficient vary across thresholds (partial PO).</span>
+<span id="cb25-249"><a href="#cb25-249" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb25-250"><a href="#cb25-250" aria-hidden="true" tabindex="-1"></a><span class="co"># since clmm does not support nominal_test, the random intercept and slope</span></span>
+<span id="cb25-251"><a href="#cb25-251" aria-hidden="true" tabindex="-1"></a><span class="co"># are approximated by fixed study effects and a study * baseline interaction</span></span>
+<span id="cb25-252"><a href="#cb25-252" aria-hidden="true" tabindex="-1"></a>m_po <span class="ot">&lt;-</span> <span class="fu">clm</span>(<span class="fu">update</span>(fixed_form, <span class="fu">ordered</span>(phq9_at_12mo) <span class="sc">~</span> . <span class="sc">+</span> study_id <span class="sc">+</span></span>
+<span id="cb25-253"><a href="#cb25-253" aria-hidden="true" tabindex="-1"></a>                     phq9_at_baseline_c<span class="sc">:</span>study_id),</span>
+<span id="cb25-254"><a href="#cb25-254" aria-hidden="true" tabindex="-1"></a>            <span class="at">data =</span> df)</span>
+<span id="cb25-255"><a href="#cb25-255" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-256"><a href="#cb25-256" aria-hidden="true" tabindex="-1"></a><span class="co"># test the predictors only; the study terms are there to adjust</span></span>
+<span id="cb25-257"><a href="#cb25-257" aria-hidden="true" tabindex="-1"></a>predictors <span class="ot">&lt;-</span> <span class="fu">grep</span>(<span class="st">"study_id"</span>, <span class="fu">attr</span>(<span class="fu">terms</span>(m_po), <span class="st">"term.labels"</span>),</span>
+<span id="cb25-258"><a href="#cb25-258" aria-hidden="true" tabindex="-1"></a>                   <span class="at">value =</span> <span class="cn">TRUE</span>, <span class="at">invert =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb25-259"><a href="#cb25-259" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-260"><a href="#cb25-260" aria-hidden="true" tabindex="-1"></a>nt <span class="ot">&lt;-</span> <span class="fu">nominal_test</span>(m_po, <span class="at">scope =</span> predictors)</span>
+<span id="cb25-261"><a href="#cb25-261" aria-hidden="true" tabindex="-1"></a>nt<span class="sc">$</span>LRT_per_df <span class="ot">&lt;-</span> <span class="fu">round</span>(nt<span class="sc">$</span>LRT <span class="sc">/</span> nt<span class="sc">$</span>Df, <span class="dv">2</span>)</span>
+<span id="cb25-262"><a href="#cb25-262" aria-hidden="true" tabindex="-1"></a>nt[, <span class="fu">c</span>(<span class="st">"Df"</span>, <span class="st">"LRT"</span>, <span class="st">"LRT_per_df"</span>)]</span>
+<span id="cb25-263"><a href="#cb25-263" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb25-264"><a href="#cb25-264" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-265"><a href="#cb25-265" aria-hidden="true" tabindex="-1"></a>Especially, centered baseline PHQ-9 departs from the PO assumption. We nevertheless retain the more parsimonious PO model and assess whether this affects predictive performance, the core utility for of the risk model, using internal-external cross-validation.</span>
+<span id="cb25-266"><a href="#cb25-266" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-267"><a href="#cb25-267" aria-hidden="true" tabindex="-1"></a><span class="fu">## Internal-External Cross-Validation</span></span>
+<span id="cb25-268"><a href="#cb25-268" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-269"><a href="#cb25-269" aria-hidden="true" tabindex="-1"></a>Following <span class="co">[</span><span class="ot">Steyerberg and Harrell (2016)</span><span class="co">](https://doi.org/10.1016/j.jclinepi.2015.04.005)</span>, we assess how the model performs in a setting it has not seen by internal-external cross-validation (IECV). Each study is left out once, the model is fitted to the remaining eleven, and its predictions are evaluated in the left-out study. We report</span>
+<span id="cb25-270"><a href="#cb25-270" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-271"><a href="#cb25-271" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span>Somers' $D_{xy}$ between the linear predictor and the observed PHQ-9 score (full scale)</span>
+<span id="cb25-272"><a href="#cb25-272" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span>c-statistic</span>
+<span id="cb25-273"><a href="#cb25-273" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span>calibration slope</span>
+<span id="cb25-274"><a href="#cb25-274" aria-hidden="true" tabindex="-1"></a><span class="ss">* </span>calibration-in-the-large (all for PHQ-9 $\geq 5$, $\geq 10$ and $\geq 15$)</span>
+<span id="cb25-275"><a href="#cb25-275" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-276"><a href="#cb25-276" aria-hidden="true" tabindex="-1"></a>The estimates of each metric are pooled by random-effects meta-analysis, giving the average performance, its between-study standard deviation $\tau$, and a 95% prediction interval for a new study.</span>
+<span id="cb25-277"><a href="#cb25-277" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-278"><a href="#cb25-278" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-281"><a href="#cb25-281" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb25-282"><a href="#cb25-282" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: iecv-functions</span></span>
+<span id="cb25-283"><a href="#cb25-283" aria-hidden="true" tabindex="-1"></a><span class="co">#|</span></span>
+<span id="cb25-284"><a href="#cb25-284" aria-hidden="true" tabindex="-1"></a>predict_new_study <span class="ot">&lt;-</span> <span class="cf">function</span>(fit, newdata) {</span>
+<span id="cb25-285"><a href="#cb25-285" aria-hidden="true" tabindex="-1"></a>  cf <span class="ot">&lt;-</span> <span class="fu">coef</span>(fit)</span>
+<span id="cb25-286"><a href="#cb25-286" aria-hidden="true" tabindex="-1"></a>  theta <span class="ot">&lt;-</span> cf[<span class="fu">grepl</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">|"</span>, <span class="fu">names</span>(cf))]     <span class="co"># thresholds</span></span>
+<span id="cb25-287"><a href="#cb25-287" aria-hidden="true" tabindex="-1"></a>  beta<span class="ot">&lt;-</span>  cf[<span class="sc">!</span><span class="fu">grepl</span>(<span class="st">"</span><span class="sc">\\</span><span class="st">|"</span>, <span class="fu">names</span>(cf))]</span>
+<span id="cb25-288"><a href="#cb25-288" aria-hidden="true" tabindex="-1"></a>  X <span class="ot">&lt;-</span> <span class="fu">model.matrix</span>(fixed_form, <span class="at">data =</span> newdata)[, <span class="sc">-</span><span class="dv">1</span>, drop <span class="ot">=</span> <span class="cn">FALSE</span>]</span>
+<span id="cb25-289"><a href="#cb25-289" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stopifnot</span>(<span class="fu">identical</span>(<span class="fu">colnames</span>(X), <span class="fu">names</span>(beta)))</span>
+<span id="cb25-290"><a href="#cb25-290" aria-hidden="true" tabindex="-1"></a>  eta <span class="ot">&lt;-</span> <span class="fu">as.vector</span>(X <span class="sc">%*%</span> beta)</span>
+<span id="cb25-291"><a href="#cb25-291" aria-hidden="true" tabindex="-1"></a>  cum <span class="ot">&lt;-</span> <span class="fu">sapply</span>(theta, <span class="cf">function</span>(t) <span class="fu">plogis</span>(t <span class="sc">-</span> eta))</span>
+<span id="cb25-292"><a href="#cb25-292" aria-hidden="true" tabindex="-1"></a>  <span class="fu">list</span>(<span class="at">eta =</span> eta, <span class="at">cum =</span> <span class="fu">matrix</span>(cum, <span class="at">nrow =</span> <span class="fu">length</span>(eta)))   <span class="co"># P(Y &lt;= j - 1) column</span></span>
+<span id="cb25-293"><a href="#cb25-293" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-294"><a href="#cb25-294" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-295"><a href="#cb25-295" aria-hidden="true" tabindex="-1"></a>evaluate_study <span class="ot">&lt;-</span> <span class="cf">function</span>(pred, y) {</span>
+<span id="cb25-296"><a href="#cb25-296" aria-hidden="true" tabindex="-1"></a>  rc  <span class="ot">&lt;-</span> <span class="fu">rcorr.cens</span>(pred<span class="sc">$</span>eta, y)</span>
+<span id="cb25-297"><a href="#cb25-297" aria-hidden="true" tabindex="-1"></a>  res <span class="ot">&lt;-</span> <span class="fu">data.table</span>(<span class="at">metric =</span> <span class="st">"Dxy (full scale)"</span>, <span class="at">est =</span> rc[[<span class="st">"Dxy"</span>]], <span class="at">se =</span> rc[[<span class="st">"S.D."</span>]])</span>
+<span id="cb25-298"><a href="#cb25-298" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-299"><a href="#cb25-299" aria-hidden="true" tabindex="-1"></a>  <span class="cf">for</span> (cut <span class="cf">in</span> <span class="fu">c</span>(<span class="dv">5</span>, <span class="dv">10</span>, <span class="dv">15</span>)) {</span>
+<span id="cb25-300"><a href="#cb25-300" aria-hidden="true" tabindex="-1"></a>    obs <span class="ot">&lt;-</span> <span class="fu">as.integer</span>(y <span class="sc">&gt;=</span> cut)</span>
+<span id="cb25-301"><a href="#cb25-301" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">sum</span>(obs) <span class="sc">&lt;</span> <span class="dv">10</span> <span class="sc">||</span> <span class="fu">sum</span>(<span class="dv">1</span> <span class="sc">-</span> obs) <span class="sc">&lt;</span> <span class="dv">10</span>) <span class="cf">next</span>    <span class="co"># too few patients on one side</span></span>
+<span id="cb25-302"><a href="#cb25-302" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-303"><a href="#cb25-303" aria-hidden="true" tabindex="-1"></a>    p <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">-</span> pred<span class="sc">$</span>cum[, cut]                 <span class="co"># P(Y &gt;= cut) = 1 - P(Y &lt;= cut - 1)</span></span>
+<span id="cb25-304"><a href="#cb25-304" aria-hidden="true" tabindex="-1"></a>    lp <span class="ot">&lt;-</span> <span class="fu">qlogis</span>(<span class="fu">pmin</span>(<span class="fu">pmax</span>(p, <span class="fl">1e-6</span>), <span class="dv">1</span> <span class="sc">-</span> <span class="fl">1e-6</span>))</span>
+<span id="cb25-305"><a href="#cb25-305" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-306"><a href="#cb25-306" aria-hidden="true" tabindex="-1"></a>    rc <span class="ot">&lt;-</span> <span class="fu">rcorr.cens</span>(lp, obs)</span>
+<span id="cb25-307"><a href="#cb25-307" aria-hidden="true" tabindex="-1"></a>    slope <span class="ot">&lt;-</span> <span class="fu">coef</span>(<span class="fu">summary</span>(<span class="fu">glm</span>(obs <span class="sc">~</span> lp, <span class="at">family =</span> binomial)))[<span class="st">"lp"</span>, ]</span>
+<span id="cb25-308"><a href="#cb25-308" aria-hidden="true" tabindex="-1"></a>    citl <span class="ot">&lt;-</span> <span class="fu">coef</span>(<span class="fu">summary</span>(<span class="fu">glm</span>(obs <span class="sc">~</span> <span class="fu">offset</span>(lp), <span class="at">family =</span> binomial)))[<span class="st">"(Intercept)"</span>, ]</span>
+<span id="cb25-309"><a href="#cb25-309" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-310"><a href="#cb25-310" aria-hidden="true" tabindex="-1"></a>    res <span class="ot">&lt;-</span> <span class="fu">rbind</span>(res, <span class="fu">data.table</span>(</span>
+<span id="cb25-311"><a href="#cb25-311" aria-hidden="true" tabindex="-1"></a>      <span class="at">metric =</span> <span class="fu">paste</span>(<span class="fu">c</span>(<span class="st">"c-statistic"</span>, <span class="st">"calibration slope"</span>, <span class="st">"CITL"</span>), <span class="st">"at Y &gt;="</span>, cut),</span>
+<span id="cb25-312"><a href="#cb25-312" aria-hidden="true" tabindex="-1"></a>      <span class="at">est =</span> <span class="fu">c</span>(rc[[<span class="st">"C Index"</span>]],   slope[[<span class="st">"Estimate"</span>]],   citl[[<span class="st">"Estimate"</span>]]),</span>
+<span id="cb25-313"><a href="#cb25-313" aria-hidden="true" tabindex="-1"></a>      <span class="at">se =</span> <span class="fu">c</span>(rc[[<span class="st">"S.D."</span>]] <span class="sc">/</span> <span class="dv">2</span>,  slope[[<span class="st">"Std. Error"</span>]], citl[[<span class="st">"Std. Error"</span>]])))</span>
+<span id="cb25-314"><a href="#cb25-314" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb25-315"><a href="#cb25-315" aria-hidden="true" tabindex="-1"></a>  res</span>
+<span id="cb25-316"><a href="#cb25-316" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-317"><a href="#cb25-317" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-318"><a href="#cb25-318" aria-hidden="true" tabindex="-1"></a>leave_one_out <span class="ot">&lt;-</span> <span class="cf">function</span>(s) {</span>
+<span id="cb25-319"><a href="#cb25-319" aria-hidden="true" tabindex="-1"></a>  train <span class="ot">&lt;-</span> <span class="fu">droplevels</span>(df[study_id <span class="sc">!=</span> s])</span>
+<span id="cb25-320"><a href="#cb25-320" aria-hidden="true" tabindex="-1"></a>  test  <span class="ot">&lt;-</span> df[study_id <span class="sc">==</span> s]</span>
+<span id="cb25-321"><a href="#cb25-321" aria-hidden="true" tabindex="-1"></a>  fit   <span class="ot">&lt;-</span> <span class="fu">clmm</span>(model_formula, <span class="at">data =</span> train, <span class="at">link =</span> <span class="st">"logit"</span>)</span>
+<span id="cb25-322"><a href="#cb25-322" aria-hidden="true" tabindex="-1"></a>  res   <span class="ot">&lt;-</span> <span class="fu">evaluate_study</span>(<span class="fu">predict_new_study</span>(fit, test), test<span class="sc">$</span>phq9_at_12mo)</span>
+<span id="cb25-323"><a href="#cb25-323" aria-hidden="true" tabindex="-1"></a>  res[, study <span class="sc">:</span><span class="er">=</span> s]</span>
+<span id="cb25-324"><a href="#cb25-324" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-325"><a href="#cb25-325" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb25-326"><a href="#cb25-326" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-329"><a href="#cb25-329" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb25-330"><a href="#cb25-330" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: iecv</span></span>
+<span id="cb25-331"><a href="#cb25-331" aria-hidden="true" tabindex="-1"></a><span class="co">#| cache: true</span></span>
+<span id="cb25-332"><a href="#cb25-332" aria-hidden="true" tabindex="-1"></a><span class="co"># independent cv-folds can run in parallel</span></span>
+<span id="cb25-333"><a href="#cb25-333" aria-hidden="true" tabindex="-1"></a>iecv <span class="ot">&lt;-</span> <span class="fu">rbindlist</span>(parallel<span class="sc">::</span><span class="fu">mclapply</span>(<span class="fu">levels</span>(df<span class="sc">$</span>study_id), leave_one_out,</span>
+<span id="cb25-334"><a href="#cb25-334" aria-hidden="true" tabindex="-1"></a>                                     <span class="at">mc.cores =</span> <span class="fu">max</span>(<span class="dv">1</span>, parallel<span class="sc">::</span><span class="fu">detectCores</span>() <span class="sc">-</span> <span class="dv">1</span>)))</span>
+<span id="cb25-335"><a href="#cb25-335" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb25-336"><a href="#cb25-336" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-339"><a href="#cb25-339" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb25-340"><a href="#cb25-340" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: random-effect-meta-analysis</span></span>
+<span id="cb25-341"><a href="#cb25-341" aria-hidden="true" tabindex="-1"></a>pool <span class="ot">&lt;-</span> <span class="cf">function</span>(est, se) {</span>
+<span id="cb25-342"><a href="#cb25-342" aria-hidden="true" tabindex="-1"></a>  m <span class="ot">&lt;-</span> <span class="fu">rma</span>(<span class="at">yi =</span> est, <span class="at">sei =</span> se, <span class="at">method =</span> <span class="st">"REML"</span>)</span>
+<span id="cb25-343"><a href="#cb25-343" aria-hidden="true" tabindex="-1"></a>  p <span class="ot">&lt;-</span> <span class="fu">predict</span>(m)</span>
+<span id="cb25-344"><a href="#cb25-344" aria-hidden="true" tabindex="-1"></a>  <span class="fu">data.table</span>(<span class="at">k =</span> m<span class="sc">$</span>k, <span class="at">pooled =</span> m<span class="sc">$</span>beta[<span class="dv">1</span>], <span class="at">tau =</span> <span class="fu">sqrt</span>(m<span class="sc">$</span>tau2),</span>
+<span id="cb25-345"><a href="#cb25-345" aria-hidden="true" tabindex="-1"></a>             <span class="at">pi_lb =</span> p<span class="sc">$</span>pi.lb, <span class="at">pi_ub =</span> p<span class="sc">$</span>pi.ub)</span>
+<span id="cb25-346"><a href="#cb25-346" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb25-347"><a href="#cb25-347" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-348"><a href="#cb25-348" aria-hidden="true" tabindex="-1"></a>iecv_table <span class="ot">&lt;-</span> iecv[, <span class="fu">pool</span>(est, se), by <span class="ot">=</span> metric]</span>
+<span id="cb25-349"><a href="#cb25-349" aria-hidden="true" tabindex="-1"></a>iecv_table[, (<span class="dv">3</span><span class="sc">:</span><span class="dv">6</span>) <span class="sc">:</span><span class="er">=</span> <span class="fu">lapply</span>(.SD, round, <span class="dv">3</span>), .SDcols <span class="ot">=</span> <span class="dv">3</span><span class="sc">:</span><span class="dv">6</span>][]</span>
+<span id="cb25-350"><a href="#cb25-350" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb25-351"><a href="#cb25-351" aria-hidden="true" tabindex="-1"></a>Across the twelve studies, the model discriminates moderately between patients with a better and a worse prognosis (Somers' D). The model's discriminative ability increases for higher thresholds as indicated by the c-statistics (more interpretation of the results needed here).</span>
+<span id="cb25-352"><a href="#cb25-352" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-353"><a href="#cb25-353" aria-hidden="true" tabindex="-1"></a><span class="fu">## Final Model</span></span>
+<span id="cb25-354"><a href="#cb25-354" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-357"><a href="#cb25-357" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb25-358"><a href="#cb25-358" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: final-model</span></span>
+<span id="cb25-359"><a href="#cb25-359" aria-hidden="true" tabindex="-1"></a><span class="co">#| cache: true</span></span>
+<span id="cb25-360"><a href="#cb25-360" aria-hidden="true" tabindex="-1"></a>final_fit <span class="ot">&lt;-</span> <span class="fu">fit_risk_model</span>(df, forms)</span>
+<span id="cb25-361"><a href="#cb25-361" aria-hidden="true" tabindex="-1"></a><span class="fu">summary</span>(final_fit)</span>
+<span id="cb25-362"><a href="#cb25-362" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb25-363"><a href="#cb25-363" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-364"><a href="#cb25-364" aria-hidden="true" tabindex="-1"></a>Fitting takes around 30 seconds. <span class="in">`export_risk_model()`</span> writes the coefficients,</span>
+<span id="cb25-365"><a href="#cb25-365" aria-hidden="true" tabindex="-1"></a>thresholds, knots and centering constants to <span class="in">`models/risk_score_model.rds`</span>. Stage 2 then</span>
+<span id="cb25-366"><a href="#cb25-366" aria-hidden="true" tabindex="-1"></a>reads it through <span class="in">`predict_phq9()`</span>.</span>
+<span id="cb25-367"><a href="#cb25-367" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb25-370"><a href="#cb25-370" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb25-371"><a href="#cb25-371" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: export</span></span>
+<span id="cb25-372"><a href="#cb25-372" aria-hidden="true" tabindex="-1"></a><span class="fu">export_risk_model</span>(final_fit, df, prepared<span class="sc">$</span>scaling, knots_c, forms)</span>
+<span id="cb25-373"><a href="#cb25-373" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+</code></pre></div><button title="Copy to Clipboard" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+</div></div></div></div></div>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
