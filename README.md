@@ -119,11 +119,11 @@ uv run pytest
 
 The modelling is reported in three Quarto documents under `reports/`:
 
-1. `Step-1_Risk-Model.qmd` (R) fits the stage-1 risk model, using
+1. `Step-1_Risk-Model.qmd` ([view](https://dssgxmunich.github.io/collaborative-care-analysis/reports/Step-1_Risk-Model.html)) fits the stage-1 risk model, using
    `collaborative_care_analysis/data_analysis/risk_score_model.R`
-2. `Step-2_CNMA.qmd` (Python) fits the component network meta-analysis on top of
+2. `Step-2_CNMA.qmd` ([view](https://dssgxmunich.github.io/collaborative-care-analysis/reports/Step-2_CNMA.html)) fits the component network meta-analysis on top of
    the risk scores from step 1.
-3. `Step-2_Assumption_Checks.qmd` (Python) checks the assumptions behind the CNMA.
+3. `Step-2_Assumption_Checks.qmd` ([view](https://dssgxmunich.github.io/collaborative-care-analysis/reports/Step-2_Assumption_Checks.html)) checks the assumptions behind the CNMA.
 
 Install [R](https://cran.r-project.org/) 4.6 or later and
 [Quarto](https://quarto.org/docs/get-started/), which is not an R package and
