@@ -88,6 +88,7 @@ TUNE = 4_000
 CHAINS = 4
 TARGET_ACCEPT = 0.99
 RANDOM_SEED = 42
+MP_CTX = "spawn"
 
 INTERCEPT_PRIOR_MEAN = 13.5
 INTERCEPT_PRIOR_SD = 6.5
@@ -680,6 +681,7 @@ with path_cnma_model:
         target_accept=TARGET_ACCEPT,
         random_seed=RANDOM_SEED,
         progressbar=False,
+        mp_ctx=MP_CTX,
     )
 ````
 
@@ -1100,6 +1102,7 @@ for prior_index, (prior_name, (intercept_mean, intercept_sd)) in enumerate(
             target_accept=TARGET_ACCEPT,
             random_seed=RANDOM_SEED + prior_index,
             progressbar=False,
+            mp_ctx=MP_CTX,
         )
 ````
 
