@@ -54,7 +54,6 @@ source(file.path(REPO_ROOT, "collaborative_care_analysis", "data_analysis",
 #   uv run collaborative_care_analysis/dataset.py analysis-data phq9_12mo_core
 df <- load_model_data(DATA_PATH)
 
-html(describe(df), which = "categorical", scroll = TRUE)
 
 # inspect marginal distributions for covariates and baseline
 tab <- table(df$arm, df$study_id)
