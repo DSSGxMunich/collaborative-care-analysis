@@ -81,10 +81,13 @@ def load() -> pd.DataFrame:
         .reset_index(drop=True)
     )
 
-    # Drop patients with no age or gender at any wave. Both are recorded only
-    # at screening, so filtering rows would discard every follow-up visit.
-    recorded = long.groupby("patient_id")[["age", "gender"]].transform("count").gt(0)
-    long = long[recorded.all(axis=1)]
+    # Age and gender are recorded only at screening, so after the stack they
+    # are missing on the 6/12/18-month rows. Broadcast each patient's value to
+    # all their visits
+    demographics = ["age", "gender"]
+    if long.groupby("patient_id")[demographics].nunique().gt(1).any().any():
+        raise ValueError("Patients with conflicting age/gender across waves")
+    long[demographics] = long.groupby("patient_id")[demographics].transform("first")
 
     if long.duplicated(["patient_id", "follow_up_months"]).any():
         raise ValueError("Duplicate patient/time-point combinations")
