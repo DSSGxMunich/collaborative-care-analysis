@@ -117,8 +117,13 @@ uv run pytest
 
 ### R and Quarto
 
-`risk_score_model.R` is written in R, the reports under `reports/` are Quarto documents
-with embedded R chunks.
+The modelling is reported in three Quarto documents under `reports/`:
+
+1. `Step-1_Risk-Model.qmd` (R) fits the stage-1 risk model, using
+   `collaborative_care_analysis/data_analysis/risk_score_model.R`
+2. `Step-2_CNMA.qmd` (Python) fits the component network meta-analysis on top of
+   the risk scores from step 1.
+3. `Step-2_Assumption_Checks.qmd` (Python) checks the assumptions behind the CNMA.
 
 Install [R](https://cran.r-project.org/) 4.6 or later and
 [Quarto](https://quarto.org/docs/get-started/), which is not an R package and
@@ -129,19 +134,31 @@ install.packages("renv")
 renv::restore()
 ```
 
-Either fit the model directly, or render the report, which fits it the same way:
+All reports read `data/processed/analysis_datasets/phq9_12mo_core/wide.csv`, so the pipeline needs to be run first. Render step 1 before the step 2 reports, as they read the fitted risk model. Run `quarto` through `uv run` so the Python reports use the project environment:
+
+```bash
+# Run the pipeline
+uv run collaborative_care_analysis/dataset.py run
+
+# Fit and check models
+uv run quarto render reports/Step-1_Risk-Model.qmd
+uv run quarto render reports/Step-2_CNMA.qmd
+uv run quarto render reports/Step-2_Assumption_Checks.qmd
+```
+
+To fit the risk model without rendering the report:
 
 ```bash
 Rscript collaborative_care_analysis/data_analysis/risk_score_model.R fit
-quarto render reports/risk-model.qmd
 ```
 
-Both read `data/interim/analysis_datasets/phq9_12mo_core/wide.csv`, built by
-`uv run collaborative_care_analysis/dataset.py analysis-data phq9_12mo_core`,
-and both write `models/risk_score_model.rds`.
-
 ### Linting and Formatting
-Most tests check the pipeline output, so run the pipeline first. Otherwise these tests are skipped.
+
+We use [ruff](https://docs.astral.sh/ruff/) for linting and formatting:
+
+```bash
+uv run ruff check . --fix && uv run ruff format
+```
 
 ### Run the notebooks
 
@@ -156,6 +173,7 @@ collaborative-care-analysis/
 ├── docs/                          # Technical documentation (MkDocs)
 ├── models/                        # Fitted models
 ├── notebooks/                     # Exploration and modelling notebooks
+├── reports/                       # Quarto reports: risk model, CNMA, assumption checks
 ├── tests/                         # Checks on the pipeline output
 ├── AGENTS.md                      # Data privacy rules
 ├── HARMONIZATION_CONVENTIONS.md   # How harmonized variables are named and coded
