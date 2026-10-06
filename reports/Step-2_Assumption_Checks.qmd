@@ -1,15 +1,19 @@
 ---
-title: "09.6 PATH-CNMA assumption checks"
-format:
-  html:
-    toc: true
-    code-fold: true
-    code-tools: true
-    embed-resources: true
+subtitle: "Stage 2: CNMA Assumption Checks"
+date: 2026-10-06
+metadata-files:
+  - _metadata-shared.yml
+other-links:
+  - text: "Stage 1: The Risk Model"
+    href: Step-1_Risk-Model.html
+    icon: file-earmark-text
+  - text: "Stage 2: Component Network Meta-Analysis"
+    href: Step-2_CNMA.html
+    icon: file-earmark-text
 jupyter: python3
 ---
 
-Companion to the [primary Stage-2 report](STEP2_CNMA.qmd), which shows the treatment network and component contrast matrix. These checks follow the additive-CNMA framework of [Rücker, Schmitz, and Schwarzer](https://doi.org/10.1002/bimj.201900339).
+Companion to the [primary Stage-2 report](Step-2_CNMA.html), which shows the treatment network and component contrast matrix. These checks follow the additive-CNMA framework of [Rücker, Schmitz, and Schwarzer](https://doi.org/10.1002/bimj.201900339).
 
 No component-by-component interaction terms are fitted. Global additivity is checked with
 
@@ -670,7 +674,7 @@ assumption_summary.to_csv(EXPORT_DIR / "assumption_summary.csv")
 
 manifest = {
     "analysis": "PATH-CNMA assumption checks",
-    "source_report": "reports/STEP2_CNMA.qmd",
+    "source_report": "reports/Step-2_CNMA.html",
     "reference": (
         "Rücker G, Schmitz S, Schwarzer G. Component network meta-analysis compared "
         "to a matching method in a disconnected network: A case study. "

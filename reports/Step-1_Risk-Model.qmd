@@ -1,20 +1,15 @@
 ---
-title: "The Two-Stage Prediction Model for Individualized Treatment Benefit Behind the *Collaborative Care Compass*"
 subtitle: "Stage 1: The Risk Model"
-author:
-  - name: DSSGx Munich 2026 Fellows
-    url: https://www.dssgxmunich.org/project-2026
-    affiliations:
-      - name: Social Data Science and AI Lab, LMU Munich
-        url: https://www.stat.lmu.de/soda/en/
-      - name: Munich Center for Machine Learning
-        url: https://mcml.ai/
 date: 2026-10-02
-format:
-  html:
-    code-fold: true
-    code-summary: "Code"
-    code-tools: true
+metadata-files:
+  - _metadata-shared.yml
+other-links:
+  - text: "Stage 2: Component Network Meta-Analysis"
+    href: Step-2_CNMA.html
+    icon: file-earmark-text
+  - text: "Stage 2: CNMA Assumption Checks"
+    href: Step-2_Assumption_Checks.html
+    icon: file-earmark-text
 ---
 
 # Overview
@@ -23,7 +18,7 @@ The [<i>Collaborative Care Compass</i>](https://dssgxmunich.github.io/collaborat
 
 The model consists of two parts: The first part is a risk model, predicting depressive symptom severity at 12 months from baseline characteristics. The output of the model is a risk score, used as input to the second part which estimates how the effects of collaborative care components vary by baseline risk, following the [PATH framework by Kent et al. (2020)](https://pubmed.ncbi.nlm.nih.gov/31711134/).
 
-**This report covers stage 1, the risk model.** Stage 2, the component network meta-analysis, is documented separately.
+**This report covers stage 1, the risk model.** Stage 2, the component network meta-analysis, is documented in [a separate report](Step-2_CNMA.html), with its assumptions checked in [a companion report](Step-2_Assumption_Checks.html).
 
 
 # Risk Model

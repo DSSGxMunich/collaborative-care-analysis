@@ -1,0 +1,18 @@
+title: "The Two-Stage Prediction Model for Individualized Treatment Benefit Behind the *Collaborative Care Compass*"
+author:
+  - name: DSSGx Munich 2026 Fellows
+    url: https://www.dssgxmunich.org/project-2026
+    affiliations:
+      - name: Social Data Science and AI Lab, LMU Munich
+        url: https://www.stat.lmu.de/soda/en/
+      - name: Munich Center for Machine Learning
+        url: https://mcml.ai/
+language:
+  other-links-title: "Related Reports"
+format:
+  html:
+    toc: true
+    code-fold: true
+    code-summary: "Code"
+    code-tools: true
+    embed-resources: true

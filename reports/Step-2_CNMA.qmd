@@ -1,17 +1,21 @@
 ---
-title: "09.5 Primary PATH-CNMA"
-format:
-  html:
-    toc: true
-    code-fold: true
-    code-tools: true
-    embed-resources: true
+subtitle: "Stage 2: Component Network Meta-Analysis"
+date: 2026-10-06
+metadata-files:
+  - _metadata-shared.yml
+other-links:
+  - text: "Stage 1: The Risk Model"
+    href: Step-1_Risk-Model.html
+    icon: file-earmark-text
+  - text: "Stage 2: CNMA Assumption Checks"
+    href: Step-2_Assumption_Checks.html
+    icon: file-earmark-text
 jupyter: python3
 ---
 
 Estimate 10 component effects and their variation by predicted severity across 12 studies. The outcome is 12-month PHQ-9; negative effects are favorable.
 
-This report fits and checks the Bayesian model. [The assumption-check report](STEP2_ASSUMPTION_CHECKS.qmd) evaluates the CNMA assumptions.
+This report fits and checks the Bayesian model. [The assumption-check report](Step-2_Assumption_Checks.html) evaluates the CNMA assumptions.
 
 $$
 y_i \sim \mathcal{N}\!\left(\mu_i,\sigma^2\right)
@@ -1242,7 +1246,7 @@ fig.tight_layout()
 
 ## 8. Export
 
-Export model results, diagnostics, and sensitivity results. Continue with the [assumption-check report](STEP2_ASSUMPTION_CHECKS.qmd).
+Export model results, diagnostics, and sensitivity results. Continue with the [assumption-check report](Step-2_Assumption_Checks.html).
 
 ````{python}
 #| label: cell-025
