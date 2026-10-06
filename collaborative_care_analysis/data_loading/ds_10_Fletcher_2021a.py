@@ -83,7 +83,7 @@ def load() -> pd.DataFrame:
 
     # Age and gender are recorded only at screening, so after the stack they
     # are missing on the 6/12/18-month rows. Broadcast each patient's value to
-    # all their visits, then drop patients with no age or gender at all.
+    # all their visits
     demographics = ["age", "gender"]
     if long.groupby("patient_id")[demographics].nunique().gt(1).any().any():
         raise ValueError("Patients with conflicting age/gender across waves")

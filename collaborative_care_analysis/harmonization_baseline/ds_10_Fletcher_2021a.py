@@ -2,9 +2,6 @@ import pandas as pd
 
 from collaborative_care_analysis.utils import map_with_check
 
-# Age and gender are collected only at screening; load() already broadcasts
-# them to every visit row of the patient.
-
 
 def harmonize_baseline(df: pd.DataFrame) -> pd.DataFrame:
     harmonized_df = df.copy()
